@@ -690,11 +690,11 @@ function renderPay() {
   const totalHrs=payable.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
   const totalDed=payable.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
   let totalPay=payable.reduce((s,e)=>{
-    const ded=parseFloat(e.deduction||0);
-    const pay=parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate));
+    const hrs=parseFloat(e.billableHrs||0);
+    const pay=hrs>0?Math.min(dailyRate, hrs/7*dailyRate):0;
     return s+pay;
   },0);
-  totalPay=Math.min(totalPay,cutoffRate); // cap at cutoff rate
+  totalPay=Math.min(totalPay,cutoffRate);
   document.getElementById("pay-days").textContent=payable.length;
   document.getElementById("pay-hours").textContent=totalHrs.toFixed(2);
   document.getElementById("pay-deductions").textContent="-"+totalDed.toFixed(2);
@@ -796,7 +796,7 @@ async function loadPayslip() {
   renderPayslip();
 }
 
-function renderPayslip() {
+async async function renderPayslip() {
   const filtered = filterByCutoff(allEntries, payslipCutoff).filter(e=>e.clockIn);
   const monthlyRate = currentUser.rate||0;
   const cutoffRate = monthlyRate/2;
@@ -825,17 +825,40 @@ function renderPayslip() {
   const totalHrs = filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
   const totalDed = filtered.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
   const totalPay = filtered.reduce((s,e)=>{
-    const ded=parseFloat(e.deduction||0);
-    return s+(parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate)));
+    const hrs=parseFloat(e.billableHrs||0);
+    return s+(hrs>0?Math.min(dailyRate, hrs/7*dailyRate):0);
   },0);
 
   document.getElementById("ps-days").textContent = filtered.length+" days";
   document.getElementById("ps-total-hrs").textContent = totalHrs.toFixed(2)+" hrs";
   document.getElementById("ps-total-ded").textContent = totalDed>0?"-"+totalDed.toFixed(2)+" hrs":"None";
   const cappedPay = Math.min(totalPay, cutoffRate);
-  document.getElementById("ps-net-pay").textContent = "AUD $"+cappedPay.toFixed(2);
+  // Load approved timesheet for incentive data
+  let tsIncentive=0; let tsGrandTotal=cappedPay;
+  try {
+    const tsr=await apiPost({action:"getTimesheets"});
+    const cutoffKey=getCutoffPeriodKey(payslipCutoff);
+    const matchTs=(tsr.timesheets||[]).find(t=>t.sdrName===currentUser.name&&t.cutoffKey===cutoffKey&&t.status==="Approved");
+    if(matchTs){ tsIncentive=parseFloat(matchTs.totalIncentive||0); tsGrandTotal=parseFloat(matchTs.grandTotal||cappedPay); }
+  } catch(e){}
+  // Render incentive line if any
+  const existingIncentiveLine=document.getElementById("ps-incentive-line");
+  if(existingIncentiveLine) existingIncentiveLine.remove();
+  if(tsIncentive>0){
+    const iLine=document.createElement("div");
+    iLine.id="ps-incentive-line";
+    iLine.style.cssText="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:#0369a1;";
+    iLine.innerHTML=`<span>Incentive</span><span>+AUD $${tsIncentive.toFixed(2)}</span>`;
+    document.getElementById("ps-net-pay").parentNode.insertBefore(iLine, document.getElementById("ps-net-pay"));
+  }
+  document.getElementById("ps-net-pay").textContent = "AUD $"+tsGrandTotal.toFixed(2);
+  const existingCapNote=document.getElementById("ps-cap-note");
+  if(existingCapNote) existingCapNote.remove();
   if(cappedPay < totalPay) {
-    document.getElementById("ps-net-pay").insertAdjacentHTML("afterend", '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Capped at monthly rate limit</div>');
+    const cn=document.createElement("div"); cn.id="ps-cap-note";
+    cn.style.cssText="font-size:11px;color:var(--muted);margin-top:4px;";
+    cn.textContent="Capped at monthly rate limit";
+    document.getElementById("ps-net-pay").insertAdjacentElement("afterend", cn);
   }
 
   document.getElementById("ps-rows").innerHTML = filtered.length===0
@@ -843,11 +866,12 @@ function renderPayslip() {
     : filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
         const ded=parseFloat(e.deduction||0);
         const pay=parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate));
+        const payPs=hrs>0?Math.min(dailyRate, hrs/7*dailyRate):0;
         return `<tr style="border-bottom:1px solid #f0f4f8;">
           <td style="padding:10px 12px;">${formatDate(e.workDate)}</td>
-          <td style="padding:10px 12px;">${parseFloat(e.billableHrs||0).toFixed(2)} hrs</td>
+          <td style="padding:10px 12px;">${hrs.toFixed(2)} hrs</td>
           <td style="padding:10px 12px;">${ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+"h</span>":"—"}</td>
-          <td style="padding:10px 12px;text-align:right;"><strong>$${pay.toFixed(2)}</strong></td>
+          <td style="padding:10px 12px;text-align:right;"><strong>$${payPs.toFixed(2)}</strong></td>
         </tr>`;
       }).join("");
 
@@ -1020,13 +1044,15 @@ function renderSubmitPage() {
   document.getElementById("submit-entries-body").innerHTML = filtered.length===0
     ? `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No entries for this period.</td></tr>`
     : filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
+        const hrs=parseFloat(e.billableHrs||0);
         const ded=parseFloat(e.deduction||0);
-        const pay=parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate));
+        // Correct formula: dailyRate × (billableHrs / 7), capped at dailyRate
+        const pay=hrs>0?Math.min(dailyRate, hrs/7*dailyRate):0;
         return `<tr>
           <td>${formatDate(e.workDate)}</td>
           <td>${e.clockIn||"—"}</td>
           <td>${e.clockOut||"—"}</td>
-          <td>${parseFloat(e.billableHrs||0).toFixed(2)} hrs</td>
+          <td>${hrs.toFixed(2)} hrs</td>
           <td>${ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+"h</span>":"—"}</td>
           <td><strong>$${pay.toFixed(2)}</strong></td>
         </tr>`;
@@ -1049,7 +1075,12 @@ function renderSubmitPage() {
   } else if (existing.status === "Approved") {
     banner.style.display="block";
     banner.style.background="#f0fdf4"; banner.style.border="1.5px solid #bbf7d0"; banner.style.color="#15803d";
-    banner.textContent="✓ Timesheet approved! Payment will be processed on the due date.";
+    const incentiveAmt=parseFloat(existing.totalIncentive||0);
+    const grandTotal=parseFloat(existing.grandTotal||existing.totalPay||0);
+    let bannerText="✓ Timesheet approved! Total pay: AUD $"+grandTotal.toFixed(2);
+    if(incentiveAmt>0) bannerText+=" (Base: $"+parseFloat(existing.totalPay||0).toFixed(2)+" + Incentive: $"+incentiveAmt.toFixed(2)+")";
+    bannerText+=" — Payment will be processed on the due date.";
+    banner.textContent=bannerText;
   } else if (existing.status === "Rejected") {
     banner.style.display="block";
     banner.style.background="#fef2f2"; banner.style.border="1.5px solid #fecaca"; banner.style.color="#b91c1c";
@@ -1074,7 +1105,7 @@ async function submitTimesheet() {
     const workingDays=getWorkingDaysInCutoff(submitCutoff);
     const dailyRate=cutoffRate/workingDays;
     const hourlyDeductRate=dailyRate/7;
-    let totalPay=filtered.reduce((s,e)=>{const ded=parseFloat(e.deduction||0);return s+(parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate)));},0);
+    let totalPay=filtered.reduce((s,e)=>{const hrs=parseFloat(e.billableHrs||0);return s+(hrs>0?Math.min(dailyRate,hrs/7*dailyRate):0);},0);
     totalPay=Math.min(totalPay,cutoffRate);
     await apiPost({
       action:"addTimesheet",

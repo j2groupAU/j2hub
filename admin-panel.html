@@ -598,7 +598,13 @@ async function renderPayroll(){
   // Load user rates
   let userRates={};
   try { const ur=await apiPost({action:"getUsers"}); (ur.users||[]).forEach(u=>{userRates[u.name]=parseFloat(u.rate)||0;}); } catch(e){}
-  const totalPay=pe.reduce((s,e)=>s+parseFloat(e.dailyPay||0),0);
+  const totalPay=pe.reduce((s,e)=>{
+    const sdrRate=(userRates[e.sdrName]||0)/2;
+    const wDays=getWorkingDaysInCutoff(payrollCutoff);
+    const dRate=sdrRate/wDays;
+    const hrs=parseFloat(e.billableHrs||0);
+    return s+(hrs>0?Math.min(dRate,hrs/7*dRate):0);
+  },0);
   const totalHrs=pe.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
   let html=`<div style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:16px;">Period: ${label}</div>
     <div class="stats-grid">
@@ -608,30 +614,85 @@ async function renderPayroll(){
       <div class="stat-card"><div class="label">Total Payroll</div><div class="value green">$${totalPay.toFixed(2)}</div><div class="sub">AUD</div></div>
     </div>`;
   Object.entries(bySdr).sort().forEach(([name,entries])=>{
-    const sdrHrs=entries.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
-    const sdrDed=entries.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
-    const sdrPay=entries.reduce((s,e)=>s+parseFloat(e.dailyPay||0),0);
     const sdrMonthlyRate=userRates[name]||0;
     const sdrCutoffRate=sdrMonthlyRate/2;
     const sdrWorkingDays=getWorkingDaysInCutoff(payrollCutoff);
     const sdrDailyRate=sdrCutoffRate/sdrWorkingDays;
-    const sdrHourlyDeductRate=sdrDailyRate/7;
+    const sdrHrs=entries.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
+    const sdrDed=entries.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
+    const sdrPay=Math.min(sdrCutoffRate, entries.reduce((s,e)=>{const hrs=parseFloat(e.billableHrs||0);return s+(hrs>0?Math.min(sdrDailyRate,hrs/7*sdrDailyRate):0);},0));
+    // Find approved timesheet for this SDR
+    const approvedTs=allTimesheets.find(t=>t.sdrName===name&&t.status==="Approved");
     html+=`<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-        <div style="font-size:15px;font-weight:700;color:var(--navy);">${name}</div>
-        <div style="font-size:12px;color:var(--muted);">Monthly: <strong>AUD $${sdrMonthlyRate.toFixed(2)}</strong> &nbsp;|&nbsp; This cutoff: <strong>AUD $${sdrCutoffRate.toFixed(2)}</strong></div>
+      <!-- SDR Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--navy);">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--navy);">${name}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Period: ${getCutoffDisplayLabel(payrollCutoff)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Net Pay</div>
+          <div style="font-size:24px;font-weight:700;color:#15803d;">AUD $${sdrPay.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--muted);">of AUD $${sdrCutoffRate.toFixed(2)} cutoff rate</div>
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">
-        <div class="stat-card" style="padding:12px;"><div class="label">Days</div><div class="value" style="font-size:20px;">${entries.length}</div></div>
-        <div class="stat-card" style="padding:12px;"><div class="label">Billable Hrs</div><div class="value cyan" style="font-size:20px;">${sdrHrs.toFixed(2)}</div></div>
-        <div class="stat-card" style="padding:12px;"><div class="label">Deductions</div><div class="value red" style="font-size:20px;">${sdrDed.toFixed(2)}</div></div>
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+        <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px;">Days</div>
+          <div style="font-size:20px;font-weight:700;color:var(--navy);">${entries.length}</div>
+          <div style="font-size:10px;color:var(--muted);">of ${sdrWorkingDays} working</div>
+        </div>
+        <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px;">Billable Hrs</div>
+          <div style="font-size:20px;font-weight:700;color:var(--cyan);">${sdrHrs.toFixed(1)}</div>
+          <div style="font-size:10px;color:var(--muted);">of ${(entries.length*7).toFixed(0)} expected</div>
+        </div>
+        <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px;">Deductions</div>
+          <div style="font-size:20px;font-weight:700;color:var(--red);">${sdrDed.toFixed(1)}h</div>
+          <div style="font-size:10px;color:var(--muted);">hours short</div>
+        </div>
+        <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px;">Daily Rate</div>
+          <div style="font-size:20px;font-weight:700;color:var(--navy);">$${sdrDailyRate.toFixed(2)}</div>
+          <div style="font-size:10px;color:var(--muted);">AUD / day</div>
+        </div>
       </div>
-      <div class="pay-total-row"><span class="label">Total Pay this period</span><span class="amount">AUD $${sdrPay.toFixed(2)}</span></div>
-      <div style="margin-top:14px;">
-        <table style="font-size:12px;">
-          <thead><tr><th>Date</th><th>Billable Hrs</th><th>Deduction</th><th>Daily Pay</th><th>Dispute</th></tr></thead>
-          <tbody>${entries.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>`<tr><td>${formatDate(e.workDate)}</td><td>${parseFloat(e.billableHrs||0).toFixed(2)}</td><td>${e.deduction>0?`<span style="color:var(--red)">-${parseFloat(e.deduction).toFixed(2)}</span>`:"—"}</td><td><strong>$${(parseFloat(e.dailyPay)||Math.max(0,sdrDailyRate-(parseFloat(e.deduction||0)*sdrHourlyDeductRate))).toFixed(2)}</strong></td><td>${getDisputeBadge(e.disputeStatus)}</td></tr>`).join("")}</tbody>
+      <!-- Daily breakdown -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:10px;">Daily Breakdown</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="background:#f8fafc;">
+            <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Date</th>
+            <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Clock In → Out</th>
+            <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Actual</th>
+            <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Billable</th>
+            <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Deduction</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Daily Pay</th>
+          </tr></thead>
+          <tbody>${entries.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
+            const hrs=parseFloat(e.billableHrs||0);
+            const ded=parseFloat(e.deduction||0);
+            const dp=hrs>0?Math.min(sdrDailyRate,hrs/7*sdrDailyRate):0;
+            return`<tr style="border-bottom:1px solid #f0f4f8;">
+              <td style="padding:10px 12px;"><strong>${formatDate(e.workDate)}</strong></td>
+              <td style="padding:10px 12px;font-size:12px;">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
+              <td style="padding:10px 12px;font-size:12px;">${e.actualStart||"—"}${e.actualEnd?" → "+e.actualEnd:""}</td>
+              <td style="padding:10px 12px;">${hrs.toFixed(2)} hrs</td>
+              <td style="padding:10px 12px;">${ded>0?`<span style="color:var(--red)">-${ded.toFixed(2)}h</span>`:"—"}</td>
+              <td style="padding:10px 12px;text-align:right;"><strong>$${dp.toFixed(2)}</strong></td>
+            </tr>`;
+          }).join("")}</tbody>
         </table>
+      </div>
+      <!-- Payment summary row -->
+      <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#15803d;">TOTAL PAY THIS CUTOFF</div>
+          <div style="font-size:11px;color:#166534;margin-top:2px;">Monthly $${sdrMonthlyRate.toFixed(2)} ÷ 2 = $${sdrCutoffRate.toFixed(2)} cutoff rate</div>
+        </div>
+        <div style="font-size:26px;font-weight:700;color:#15803d;">AUD $${sdrPay.toFixed(2)}</div>
       </div>
     </div>`;
   });
@@ -930,21 +991,44 @@ function renderTimesheets() {
     html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">Needs Action (${pending.length})</div>`;
     html += pending.map(t => {
       const isDisputed = t.status==="Disputed";
+      const existingIncentives = (t.incentives||"") ? JSON.parse(t.incentives||"[]") : [];
       return `<div class="card" style="margin-bottom:14px;${isDisputed?"border-color:#fed7aa;background:#fffbf5":""}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
           <div>
             <div style="font-size:15px;font-weight:700;color:var(--navy);">${t.sdrName}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:3px;">${t.cutoffLabel||t.cutoffKey} &nbsp;|&nbsp; ${t.totalDays} days &nbsp;|&nbsp; <strong>AUD $${parseFloat(t.totalPay||0).toFixed(2)}</strong></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;">${t.cutoffLabel||t.cutoffKey} &nbsp;|&nbsp; ${t.totalDays} days &nbsp;|&nbsp; Base Pay: <strong>AUD $${parseFloat(t.totalPay||0).toFixed(2)}</strong></div>
           </div>
           ${getTsBadge(t.status)}
         </div>
         ${isDisputed&&t.disputeNotes?`<div class="dispute-box" style="margin-bottom:14px;"><div class="dispute-label">Dispute Reason</div><div class="dispute-text">${t.disputeNotes}</div></div>`:""}
+
+        <!-- INCENTIVES SECTION -->
+        <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">💰 Incentives (optional)</div>
+          <div id="incentive-rows-${t.id}">
+            <div class="incentive-row" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;">
+              <input type="text" placeholder="Description (e.g. Booked Meetings)" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-desc" />
+              <input type="number" placeholder="Units" min="0" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-units" oninput="updateIncentiveTotal('${t.id}')" />
+              <input type="number" placeholder="Rate (AUD)" min="0" step="0.01" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-rate" oninput="updateIncentiveTotal('${t.id}')" />
+              <button onclick="removeIncentiveRow(this,'${t.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px;">✕</button>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="addIncentiveRow('${t.id}')">+ Add Another</button>
+            <div style="font-size:14px;font-weight:700;color:var(--navy);">Total Incentive: <span id="incentive-total-${t.id}" style="color:var(--cyan);">AUD $0.00</span></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:#15803d;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">
+            <span>Total Pay (Base + Incentive)</span>
+            <span id="grand-total-${t.id}">AUD $${parseFloat(t.totalPay||0).toFixed(2)}</span>
+          </div>
+        </div>
+
         <div class="field-group" style="margin-bottom:12px;">
           <label>Admin Note (optional)</label>
           <input type="text" id="ts-note-${t.id}" placeholder="Add a note for the SDR…" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;width:100%;outline:none;" />
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-success btn-sm" onclick="approveTimesheet('${t.id}')">✓ Approve</button>
+          <button class="btn btn-success btn-sm" onclick="approveTimesheet('${t.id}',${parseFloat(t.totalPay||0)})">✓ Approve</button>
           <button class="btn btn-danger btn-sm" onclick="rejectTimesheet('${t.id}')">✗ Reject</button>
         </div>
       </div>`;
@@ -954,15 +1038,21 @@ function renderTimesheets() {
   if(resolved.length > 0) {
     html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:20px 0 12px;">Resolved</div>`;
     html += `<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table>
-      <thead><tr><th>SDR</th><th>Period</th><th>Days</th><th>Total Pay</th><th>Status</th><th>Admin Note</th></tr></thead>
-      <tbody>${resolved.sort((a,b)=>(b.cutoffKey||"").localeCompare(a.cutoffKey||"")).map(t=>`<tr>
-        <td><strong>${t.sdrName}</strong></td>
-        <td style="font-size:12px;">${t.cutoffLabel||t.cutoffKey}</td>
-        <td>${t.totalDays}</td>
-        <td><strong>$${parseFloat(t.totalPay||0).toFixed(2)}</strong></td>
-        <td>${getTsBadge(t.status)}</td>
-        <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
-      </tr>`).join("")}</tbody>
+      <thead><tr><th>SDR</th><th>Period</th><th>Days</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Status</th><th>Admin Note</th></tr></thead>
+      <tbody>${resolved.sort((a,b)=>(b.cutoffKey||"").localeCompare(a.cutoffKey||"")).map(t=>{
+        const incentive=parseFloat(t.totalIncentive||0);
+        const grand=parseFloat(t.grandTotal||t.totalPay||0);
+        return`<tr>
+          <td><strong>${t.sdrName}</strong></td>
+          <td style="font-size:12px;">${t.cutoffLabel||t.cutoffKey}</td>
+          <td>${t.totalDays}</td>
+          <td>$${parseFloat(t.totalPay||0).toFixed(2)}</td>
+          <td>${incentive>0?`<span style="color:var(--cyan);">+$${incentive.toFixed(2)}</span>`:"—"}</td>
+          <td><strong>$${grand.toFixed(2)}</strong></td>
+          <td>${getTsBadge(t.status)}</td>
+          <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
+        </tr>`;
+      }).join("")}</tbody>
     </table></div></div>`;
   }
 
@@ -976,12 +1066,27 @@ function getTsBadge(status) {
   return '<span class="badge badge-amber">⏳ Pending</span>';
 }
 
-async function approveTimesheet(id) {
+async function approveTimesheet(id, basePay) {
   const note = document.getElementById("ts-note-"+id)?.value||"";
   const alert = document.getElementById("alert-timesheets");
+  // Collect incentives
+  const rows = document.querySelectorAll(`#incentive-rows-${id} .incentive-row`);
+  const incentives = [];
+  rows.forEach(row => {
+    const desc = row.querySelector(".inc-desc")?.value.trim();
+    const units = parseFloat(row.querySelector(".inc-units")?.value)||0;
+    const rate = parseFloat(row.querySelector(".inc-rate")?.value)||0;
+    if(desc && units > 0 && rate > 0) incentives.push({desc, units, rate, total: units*rate});
+  });
+  const totalIncentive = incentives.reduce((s,i)=>s+i.total, 0);
+  const grandTotal = (parseFloat(basePay)||0) + totalIncentive;
   try {
-    await apiPost({action:"updateTimesheet",id,status:"Approved",adminNote:note});
-    showAlert(alert,"success","✓ Timesheet approved.");
+    await apiPost({action:"updateTimesheet", id, status:"Approved", adminNote:note,
+      incentives: JSON.stringify(incentives),
+      totalIncentive: totalIncentive.toFixed(2),
+      grandTotal: grandTotal.toFixed(2)
+    });
+    showAlert(alert,"success",`✓ Timesheet approved. Total pay: AUD $${grandTotal.toFixed(2)}`);
     loadTimesheets();
   } catch(e){ showAlert(alert,"error","Failed: "+e.message); }
 }
@@ -1113,6 +1218,47 @@ async function rejectLeave(id) {
     showAlert(alert,"success","Leave rejected.");
     loadLeave();
   } catch(e){showAlert(alert,"error","Failed: "+e.message);}
+}
+
+function addIncentiveRow(tsId) {
+  const container = document.getElementById("incentive-rows-"+tsId);
+  const row = document.createElement("div");
+  row.className = "incentive-row";
+  row.style.cssText = "display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;";
+  row.innerHTML = `
+    <input type="text" placeholder="Description (e.g. Qualified Leads)" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-desc" />
+    <input type="number" placeholder="Units" min="0" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-units" oninput="updateIncentiveTotal('${tsId}')" />
+    <input type="number" placeholder="Rate (AUD)" min="0" step="0.01" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-rate" oninput="updateIncentiveTotal('${tsId}')" />
+    <button onclick="removeIncentiveRow(this,'${tsId}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px;">✕</button>
+  `;
+  container.appendChild(row);
+}
+
+function removeIncentiveRow(btn, tsId) {
+  const rows = document.querySelectorAll(`#incentive-rows-${tsId} .incentive-row`);
+  if(rows.length > 1) { btn.closest(".incentive-row").remove(); updateIncentiveTotal(tsId); }
+  else {
+    // Clear the row instead of removing it
+    btn.closest(".incentive-row").querySelectorAll("input").forEach(i=>i.value="");
+    updateIncentiveTotal(tsId);
+  }
+}
+
+function updateIncentiveTotal(tsId) {
+  const rows = document.querySelectorAll(`#incentive-rows-${tsId} .incentive-row`);
+  let total = 0;
+  rows.forEach(row => {
+    const units = parseFloat(row.querySelector(".inc-units")?.value)||0;
+    const rate = parseFloat(row.querySelector(".inc-rate")?.value)||0;
+    total += units * rate;
+  });
+  const el = document.getElementById("incentive-total-"+tsId);
+  if(el) el.textContent = "AUD $"+total.toFixed(2);
+  // Update grand total
+  const ts = allTimesheets.find(t=>t.id==tsId);
+  const basePay = parseFloat(ts?.totalPay||0);
+  const grandEl = document.getElementById("grand-total-"+tsId);
+  if(grandEl) grandEl.textContent = "AUD $"+(basePay+total).toFixed(2);
 }
 </script>
 </body>
