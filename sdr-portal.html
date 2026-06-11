@@ -896,14 +896,7 @@ async function loadTimeSummary() {
     const cutoffRate=monthlyRate/2;
     const wDays=getWorkingDaysInCutoff("current");
     const dailyRate=cutoffRate/wDays;
-    // Include approved meeting hours in total
-    const meetingHrsForSummary = allMeetings.filter(m=>m.status==="Approved").reduce((s,m)=>{
-      if(filterByCutoff([{workDate:m.date,clockIn:true}],"current").length>0) {
-        return s + calcMins(m.startTime,m.endTime)/60;
-      }
-      return s;
-    },0);
-    const totalHrs=filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0)+meetingHrsForSummary;
+    const totalHrs=filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
     let totalPay=filtered.reduce((s,e)=>s+calcEntryPay(e,dailyRate).pay,0);
     totalPay=Math.min(totalPay,cutoffRate);
     // Get timesheet status
@@ -966,7 +959,10 @@ function renderTimesheetGrouped() {
     const tsStatus=ts?ts.status:"Not submitted";
     const tsStatusBadge=getTsBadge(tsStatus);
     const totalHrs=entries.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
-    const totalMeetingHrs=cutoffMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+    const totalMeetingHrs=cutoffMeetings.reduce((s,m)=>{
+      const mins=calcMins(m.startTime,m.endTime);
+      return s+(mins>0?mins/60:0);
+    },0);
     const grandTotalHrs=totalHrs+totalMeetingHrs;
     // Get approved meetings for this cutoff's dates
     const cutoffDates = new Set(entries.map(e=>e.workDate));
@@ -991,8 +987,6 @@ function renderTimesheetGrouped() {
               :'<span style="color:var(--muted);font-size:11px;">None</span>';
             // Get meetings for this specific date
             const dayMeetings=cutoffMeetings.filter(m=>m.date===e.workDate);
-            // Calculate display billable: stored value OR clock-based estimate
-            const clockHrs = (e.clockIn&&e.clockOut) ? Math.max(0,(parseFloat(e.clockOut.replace(":","."))-parseFloat(e.clockIn.replace(":","."))) ) : 0;
             const lunchAdd = e.lunchTaken==="TRUE" ? 1 : 0;
             const displayBillable = parseFloat(e.billableHrs||0);
             const billableDisplay = displayBillable>0
