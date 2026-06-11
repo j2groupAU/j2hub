@@ -140,6 +140,9 @@
     <div class="nav-tab active" onclick="switchTab('entries')" id="tab-entries">📋 All Entries</div>
     <div class="nav-tab" onclick="switchTab('disputes')" id="tab-disputes">⚠️ Disputes <span class="badge-count" id="dispute-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('payroll')" id="tab-payroll">💰 Payroll Summary</div>
+    <div class="nav-tab" onclick="switchTab('timesheets')" id="tab-timesheets">📤 Timesheets <span class="badge-count" id="ts-count" style="display:none">0</span></div>
+    <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">🏖️ Leave <span class="badge-count" id="leave-count" style="display:none">0</span></div>
+    <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">📅 Meetings <span class="badge-count" id="meeting-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('users')" id="tab-users">👥 Users</div>
   </div>
   <div class="main">
@@ -225,6 +228,51 @@
           </table>
         </div>
       </div>
+    </div>
+
+    <!-- LEAVE -->
+    <div class="page" id="page-leave">
+      <div class="page-header">
+        <div class="page-header-left"><h2>Leave Requests</h2><p>Review and approve leave. Choose paid or unpaid when approving.</p></div>
+        <button class="btn btn-primary" onclick="loadLeave()">↻ Refresh</button>
+      </div>
+      <div id="alert-leave" class="alert"></div>
+      <div class="filter-bar">
+        <div class="field-group"><label>Filter by SDR</label><select id="leave-filter-sdr" onchange="renderLeave()"><option value="">All SDRs</option></select></div>
+        <div class="field-group"><label>Status</label><select id="leave-filter-status" onchange="renderLeave()"><option value="">All</option><option value="Pending">Pending</option><option value="Approved">Approved</option><option value="Rejected">Rejected</option></select></div>
+      </div>
+      <div id="leave-loading" class="loading-block">Loading leave requests…</div>
+      <div id="leave-empty" class="empty-block" style="display:none;"><div class="icon">🏖️</div><p>No leave requests found.</p></div>
+      <div id="leave-content" style="display:none;"></div>
+    </div>
+
+    <!-- TIMESHEETS -->
+    <div class="page" id="page-timesheets">
+      <div class="page-header">
+        <div class="page-header-left"><h2>Timesheet Approvals</h2><p>Review and approve SDR timesheet submissions per cutoff period. Only approved timesheets are included in payroll.</p></div>
+        <button class="btn btn-primary" onclick="loadTimesheets()">↻ Refresh</button>
+      </div>
+      <div id="alert-timesheets" class="alert"></div>
+      <div class="cutoff-selector">
+        <button class="cutoff-btn active" onclick="selectTsCutoff('current')" id="tscobtn-current">Current Period</button>
+        <button class="cutoff-btn" onclick="selectTsCutoff('prev')" id="tscobtn-prev">Previous Period</button>
+        <button class="cutoff-btn" onclick="selectTsCutoff('all')" id="tscobtn-all">All</button>
+      </div>
+      <div id="timesheets-loading" class="loading-block">Loading timesheets…</div>
+      <div id="timesheets-empty" class="empty-block" style="display:none;"><div class="icon">📭</div><p>No timesheet submissions yet.</p></div>
+      <div id="timesheets-content" style="display:none;"></div>
+    </div>
+
+    <!-- MEETINGS -->
+    <div class="page" id="page-meetings">
+      <div class="page-header">
+        <div class="page-header-left"><h2>Meeting Approvals</h2><p>Review and approve SDR meeting submissions. Approved meetings add to their billable hours.</p></div>
+        <button class="btn btn-primary" onclick="loadMeetings()">↻ Refresh</button>
+      </div>
+      <div id="alert-meetings" class="alert"></div>
+      <div id="meetings-loading" class="loading-block">Loading meetings…</div>
+      <div id="meetings-empty" class="empty-block" style="display:none;"><div class="icon">✅</div><p>No pending meetings.</p></div>
+      <div id="meetings-content" style="display:none;"></div>
     </div>
 
   </div>
@@ -325,7 +373,9 @@ async function loadAllEntries() {
   try {
     const result = await apiPost({ action: "getEntries" });
     allEntries = (result.entries || []).sort((a,b) => b.workDate.localeCompare(a.workDate));
-    populateSdrFilter(); applyFilters(); renderDisputes(); await renderPayroll(); updateDisputeCount();
+    populateSdrFilter(); applyFilters(); renderDisputes(); await renderPayroll(); updateDisputeCount(); try{ const mr=await apiPost({action:"getMeetings"}); allMeetings=mr.meetings||[]; updateMeetingCount(); }catch(e){}
+    try{ const tr=await apiPost({action:"getTimesheets"}); allTimesheets=tr.timesheets||[]; updateTsCount(); }catch(e){}
+    try{ const lr=await apiPost({action:"getLeaves"}); allLeaves=lr.leaves||[]; updateLeaveCount(); }catch(e){}
   } catch(e) {
     showAlert(document.getElementById("alert-entries"), "error", "Failed to load: " + e.message);
     setLoading("entries",false); setLoading("disputes",false); setLoading("payroll",false);
@@ -518,9 +568,29 @@ async function selectPayrollCutoff(val){
   await renderPayroll();
 }
 
+function getWorkingDaysInCutoff(cutoff) {
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
+  let start,end;
+  if(cutoff==="current"){
+    if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+    else{start=new Date(year,month,11);end=new Date(year,month,25);}
+  } else {
+    if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
+    else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+  }
+  let count=0; const d=new Date(start);
+  while(d<=end){const dow=d.getDay();if(dow!==0&&dow!==6)count++;d.setDate(d.getDate()+1);}
+  return count||1;
+}
+
 async function renderPayroll(){
   setLoading("payroll",false);
-  const pe=filterByCutoff(allEntries,payrollCutoff).filter(e=>parseFloat(e.billableHrs)>0);
+  // Only include entries from SDRs with approved timesheets for this cutoff
+  const approvedSdrs=new Set(allTimesheets.filter(t=>t.status==="Approved").map(t=>t.sdrName));
+  const pe=filterByCutoff(allEntries,payrollCutoff).filter(e=>parseFloat(e.billableHrs)>0&&approvedSdrs.has(e.sdrName));
   const label=getCutoffDisplayLabel(payrollCutoff);
   if(pe.length===0){document.getElementById("payroll-content").innerHTML=`<div class="empty-block"><div class="icon">💸</div><p>No payable entries for this period yet.</p></div>`;document.getElementById("payroll-content").style.display="block";return;}
   const bySdr={};
@@ -543,6 +613,9 @@ async function renderPayroll(){
     const sdrPay=entries.reduce((s,e)=>s+parseFloat(e.dailyPay||0),0);
     const sdrMonthlyRate=userRates[name]||0;
     const sdrCutoffRate=sdrMonthlyRate/2;
+    const sdrWorkingDays=getWorkingDaysInCutoff(payrollCutoff);
+    const sdrDailyRate=sdrCutoffRate/sdrWorkingDays;
+    const sdrHourlyDeductRate=sdrDailyRate/7;
     html+=`<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:15px;font-weight:700;color:var(--navy);">${name}</div>
@@ -557,7 +630,7 @@ async function renderPayroll(){
       <div style="margin-top:14px;">
         <table style="font-size:12px;">
           <thead><tr><th>Date</th><th>Billable Hrs</th><th>Deduction</th><th>Daily Pay</th><th>Dispute</th></tr></thead>
-          <tbody>${entries.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>`<tr><td>${formatDate(e.workDate)}</td><td>${parseFloat(e.billableHrs||0).toFixed(2)}</td><td>${e.deduction>0?`<span style="color:var(--red)">-${parseFloat(e.deduction).toFixed(2)}</span>`:"—"}</td><td><strong>$${parseFloat(e.dailyPay||0).toFixed(2)}</strong></td><td>${getDisputeBadge(e.disputeStatus)}</td></tr>`).join("")}</tbody>
+          <tbody>${entries.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>`<tr><td>${formatDate(e.workDate)}</td><td>${parseFloat(e.billableHrs||0).toFixed(2)}</td><td>${e.deduction>0?`<span style="color:var(--red)">-${parseFloat(e.deduction).toFixed(2)}</span>`:"—"}</td><td><strong>$${(parseFloat(e.dailyPay)||Math.max(0,sdrDailyRate-(parseFloat(e.deduction||0)*sdrHourlyDeductRate))).toFixed(2)}</strong></td><td>${getDisputeBadge(e.disputeStatus)}</td></tr>`).join("")}</tbody>
         </table>
       </div>
     </div>`;
@@ -662,6 +735,385 @@ function showAlert(el,type,msg){el.className="alert show alert-"+type;el.textCon
 function hideAlert(el){el.className="alert";el.textContent="";}
 document.getElementById("edit-modal").addEventListener("click",e=>{if(e.target===document.getElementById("edit-modal"))closeEditModal();});
 document.getElementById("resolve-modal").addEventListener("click",e=>{if(e.target===document.getElementById("resolve-modal"))closeResolveModal();});
+
+// ══════════════════════════════════════════════════
+// MEETINGS
+// ══════════════════════════════════════════════════
+let allMeetings = [];
+
+async function loadMeetings() {
+  document.getElementById("meetings-loading").style.display = "block";
+  document.getElementById("meetings-empty").style.display = "none";
+  document.getElementById("meetings-content").style.display = "none";
+  try {
+    const result = await apiPost({ action: "getMeetings" });
+    allMeetings = result.meetings || [];
+    renderMeetings();
+    updateMeetingCount();
+  } catch(e) {
+    document.getElementById("meetings-loading").textContent = "Could not load: " + e.message;
+  }
+}
+
+function updateMeetingCount() {
+  const c = allMeetings.filter(m => m.status === "Pending").length;
+  const b = document.getElementById("meeting-count");
+  if(c>0){b.style.display="inline-flex";b.textContent=c;}else{b.style.display="none";}
+}
+
+function renderMeetings() {
+  document.getElementById("meetings-loading").style.display = "none";
+  if (allMeetings.length === 0) { document.getElementById("meetings-empty").style.display="block"; return; }
+  document.getElementById("meetings-content").style.display = "block";
+
+  const pending = allMeetings.filter(m=>m.status==="Pending");
+  const resolved = allMeetings.filter(m=>m.status!=="Pending");
+
+  let html = "";
+
+  if (pending.length > 0) {
+    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">Pending Approval (${pending.length})</div>`;
+    html += pending.map(m => {
+      const dur = calcDuration(m.startTime, m.endTime);
+      return `<div class="card" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--navy);">${m.sdrName} — ${m.meetingType}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;">${formatDate(m.date)} &nbsp;|&nbsp; ${m.startTime} – ${m.endTime} &nbsp;|&nbsp; <strong>${dur}</strong></div>
+          </div>
+          <span class="badge badge-amber">⏳ Pending</span>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-success btn-sm" onclick="approveMeeting('${m.id}','${m.sdrName}',${calcMins(m.startTime,m.endTime)})">✓ Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectMeeting('${m.id}')">✗ Reject</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  if (resolved.length > 0) {
+    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:20px 0 12px;">Resolved</div>`;
+    html += `<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table>
+      <thead><tr><th>SDR</th><th>Date</th><th>Type</th><th>Time</th><th>Duration</th><th>Status</th></tr></thead>
+      <tbody>${resolved.sort((a,b)=>b.date.localeCompare(a.date)).map(m=>`<tr>
+        <td><strong>${m.sdrName}</strong></td>
+        <td>${formatDate(m.date)}</td>
+        <td>${m.meetingType}</td>
+        <td>${m.startTime} – ${m.endTime}</td>
+        <td>${calcDuration(m.startTime,m.endTime)}</td>
+        <td>${m.status==="Approved"?'<span class="badge badge-green">✓ Approved</span>':'<span class="badge badge-red">✗ Rejected</span>'}</td>
+      </tr>`).join("")}</tbody>
+    </table></div></div>`;
+  }
+
+  document.getElementById("meetings-content").innerHTML = html;
+}
+
+function calcMins(start, end) {
+  if(!start||!end) return 0;
+  const [sh,sm]=start.split(":").map(Number); const [eh,em]=end.split(":").map(Number);
+  return Math.max(0,(eh*60+em)-(sh*60+sm));
+}
+
+function calcDuration(start, end) {
+  const mins = calcMins(start, end);
+  if(mins<=0) return "—";
+  const h=Math.floor(mins/60); const m=mins%60;
+  return h>0?h+"h "+m+"m":m+"m";
+}
+
+async function approveMeeting(id, sdrName, durationMins) {
+  const alert = document.getElementById("alert-meetings");
+  try {
+    // Update meeting status
+    await apiPost({ action: "updateMeeting", id, status: "Approved" });
+    // Add duration to today's time entry for this SDR — find their open entry for that meeting's date
+    const meeting = allMeetings.find(m=>m.id==id);
+    if (meeting) {
+      const entry = allEntries.find(e=>e.sdrName===sdrName && e.workDate===meeting.date);
+      if (entry) {
+        const addHrs = durationMins/60;
+        const currentBillable = parseFloat(entry.billableHrs||0);
+        const newBillable = currentBillable + addHrs;
+        await apiPost({ action:"updateEntry", id:entry.id, billableHrs:parseFloat(newBillable.toFixed(2)) });
+        // Refresh entries
+        const res = await apiPost({action:"getEntries"});
+        allEntries = (res.entries||[]).sort((a,b)=>b.workDate.localeCompare(a.workDate));
+      }
+    }
+    showAlert(alert, "success", "✓ Meeting approved and hours added to SDR's timesheet.");
+    loadMeetings();
+  } catch(e) { showAlert(alert, "error", "Failed: "+e.message); }
+}
+
+async function rejectMeeting(id) {
+  const alert = document.getElementById("alert-meetings");
+  try {
+    await apiPost({ action: "updateMeeting", id, status: "Rejected" });
+    showAlert(alert, "success", "Meeting rejected.");
+    loadMeetings();
+  } catch(e) { showAlert(alert, "error", "Failed: "+e.message); }
+}
+
+// ══════════════════════════════════════════════════
+// TIMESHEETS
+// ══════════════════════════════════════════════════
+let allTimesheets = [];
+let tsCutoff = 'current';
+
+function selectTsCutoff(val) {
+  tsCutoff = val;
+  document.querySelectorAll("#page-timesheets .cutoff-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("tscobtn-"+val).classList.add("active");
+  renderTimesheets();
+}
+
+async function loadTimesheets() {
+  document.getElementById("timesheets-loading").style.display="block";
+  document.getElementById("timesheets-empty").style.display="none";
+  document.getElementById("timesheets-content").style.display="none";
+  try {
+    const r = await apiPost({action:"getTimesheets"});
+    allTimesheets = r.timesheets||[];
+    renderTimesheets();
+    updateTsCount();
+  } catch(e) {
+    document.getElementById("timesheets-loading").textContent="Could not load: "+e.message;
+  }
+}
+
+function updateTsCount() {
+  const c = allTimesheets.filter(t=>t.status==="Pending"||t.status==="Disputed").length;
+  const b = document.getElementById("ts-count");
+  if(c>0){b.style.display="inline-flex";b.textContent=c;}else{b.style.display="none";}
+}
+
+function renderTimesheets() {
+  document.getElementById("timesheets-loading").style.display="none";
+  let filtered = allTimesheets;
+
+  // Filter by cutoff if needed
+  if(tsCutoff !== "all") {
+    const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+    const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
+    let start,end;
+    if(tsCutoff==="current"){
+      if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
+      else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+      else{start=new Date(year,month,11);end=new Date(year,month,25);}
+    } else {
+      if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
+      else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
+      else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+    }
+    filtered = allTimesheets.filter(t=>{
+      // match by cutoffKey containing year-month
+      const sy=start.getFullYear(), sm=start.getMonth()+1;
+      return t.cutoffKey && t.cutoffKey.startsWith(sy+"-"+sm);
+    });
+  }
+
+  if(filtered.length===0){
+    document.getElementById("timesheets-empty").style.display="block";
+    document.getElementById("timesheets-content").style.display="none";
+    return;
+  }
+  document.getElementById("timesheets-empty").style.display="none";
+  document.getElementById("timesheets-content").style.display="block";
+
+  const pending = filtered.filter(t=>t.status==="Pending"||t.status==="Disputed");
+  const resolved = filtered.filter(t=>t.status==="Approved"||t.status==="Rejected");
+
+  let html = "";
+
+  if(pending.length > 0) {
+    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">Needs Action (${pending.length})</div>`;
+    html += pending.map(t => {
+      const isDisputed = t.status==="Disputed";
+      return `<div class="card" style="margin-bottom:14px;${isDisputed?"border-color:#fed7aa;background:#fffbf5":""}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--navy);">${t.sdrName}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;">${t.cutoffLabel||t.cutoffKey} &nbsp;|&nbsp; ${t.totalDays} days &nbsp;|&nbsp; <strong>AUD $${parseFloat(t.totalPay||0).toFixed(2)}</strong></div>
+          </div>
+          ${getTsBadge(t.status)}
+        </div>
+        ${isDisputed&&t.disputeNotes?`<div class="dispute-box" style="margin-bottom:14px;"><div class="dispute-label">Dispute Reason</div><div class="dispute-text">${t.disputeNotes}</div></div>`:""}
+        <div class="field-group" style="margin-bottom:12px;">
+          <label>Admin Note (optional)</label>
+          <input type="text" id="ts-note-${t.id}" placeholder="Add a note for the SDR…" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;width:100%;outline:none;" />
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-success btn-sm" onclick="approveTimesheet('${t.id}')">✓ Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectTimesheet('${t.id}')">✗ Reject</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  if(resolved.length > 0) {
+    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:20px 0 12px;">Resolved</div>`;
+    html += `<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table>
+      <thead><tr><th>SDR</th><th>Period</th><th>Days</th><th>Total Pay</th><th>Status</th><th>Admin Note</th></tr></thead>
+      <tbody>${resolved.sort((a,b)=>(b.cutoffKey||"").localeCompare(a.cutoffKey||"")).map(t=>`<tr>
+        <td><strong>${t.sdrName}</strong></td>
+        <td style="font-size:12px;">${t.cutoffLabel||t.cutoffKey}</td>
+        <td>${t.totalDays}</td>
+        <td><strong>$${parseFloat(t.totalPay||0).toFixed(2)}</strong></td>
+        <td>${getTsBadge(t.status)}</td>
+        <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
+      </tr>`).join("")}</tbody>
+    </table></div></div>`;
+  }
+
+  document.getElementById("timesheets-content").innerHTML = html;
+}
+
+function getTsBadge(status) {
+  if(status==="Approved") return '<span class="badge badge-green">✓ Approved</span>';
+  if(status==="Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
+  if(status==="Disputed") return '<span class="badge badge-orange">⚠️ Disputed</span>';
+  return '<span class="badge badge-amber">⏳ Pending</span>';
+}
+
+async function approveTimesheet(id) {
+  const note = document.getElementById("ts-note-"+id)?.value||"";
+  const alert = document.getElementById("alert-timesheets");
+  try {
+    await apiPost({action:"updateTimesheet",id,status:"Approved",adminNote:note});
+    showAlert(alert,"success","✓ Timesheet approved.");
+    loadTimesheets();
+  } catch(e){ showAlert(alert,"error","Failed: "+e.message); }
+}
+
+async function rejectTimesheet(id) {
+  const note = document.getElementById("ts-note-"+id)?.value||"";
+  const alert = document.getElementById("alert-timesheets");
+  if(!note){ showAlert(alert,"error","Please add a note explaining why it was rejected."); return; }
+  try {
+    await apiPost({action:"updateTimesheet",id,status:"Rejected",adminNote:note});
+    showAlert(alert,"success","Timesheet rejected.");
+    loadTimesheets();
+  } catch(e){ showAlert(alert,"error","Failed: "+e.message); }
+}
+
+// ══════════════════════════════════════════════════
+// LEAVE
+// ══════════════════════════════════════════════════
+let allLeaves = [];
+
+async function loadLeave() {
+  document.getElementById("leave-loading").style.display="block";
+  document.getElementById("leave-empty").style.display="none";
+  document.getElementById("leave-content").style.display="none";
+  try {
+    const r = await apiPost({action:"getLeaves"});
+    allLeaves = r.leaves||[];
+    // Populate SDR filter
+    const names=[...new Set(allLeaves.map(l=>l.sdrName).filter(Boolean))].sort();
+    const sel=document.getElementById("leave-filter-sdr");
+    const cur=sel.value;
+    sel.innerHTML='<option value="">All SDRs</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join("");
+    sel.value=cur;
+    renderLeave();
+    updateLeaveCount();
+  } catch(e) {
+    document.getElementById("leave-loading").textContent="Could not load: "+e.message;
+  }
+}
+
+function updateLeaveCount() {
+  const c=allLeaves.filter(l=>l.status==="Pending").length;
+  const b=document.getElementById("leave-count");
+  if(c>0){b.style.display="inline-flex";b.textContent=c;}else{b.style.display="none";}
+}
+
+function renderLeave() {
+  document.getElementById("leave-loading").style.display="none";
+  const sdrFilter=document.getElementById("leave-filter-sdr").value;
+  const statusFilter=document.getElementById("leave-filter-status").value;
+  let filtered=allLeaves.filter(l=>{
+    if(sdrFilter&&l.sdrName!==sdrFilter) return false;
+    if(statusFilter&&l.status!==statusFilter) return false;
+    return true;
+  });
+
+  if(filtered.length===0){document.getElementById("leave-empty").style.display="block";document.getElementById("leave-content").style.display="none";return;}
+  document.getElementById("leave-empty").style.display="none";
+  document.getElementById("leave-content").style.display="block";
+
+  const pending=filtered.filter(l=>l.status==="Pending");
+  const resolved=filtered.filter(l=>l.status!=="Pending");
+  let html="";
+
+  if(pending.length>0){
+    html+=`<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">Pending Approval (${pending.length})</div>`;
+    html+=pending.map(l=>`
+      <div class="card" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--navy);">${l.sdrName} — ${l.leaveType}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;">${formatDate(l.leaveDate)}</div>
+            <div style="font-size:13px;color:var(--text);margin-top:6px;">${l.reason||"—"}</div>
+          </div>
+          <span class="badge badge-amber">⏳ Pending</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field-group" style="margin-bottom:0;flex:1;min-width:200px;">
+            <label>Admin Note (optional)</label>
+            <input type="text" id="leave-note-${l.id}" placeholder="Add a note…" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;width:100%;outline:none;" />
+          </div>
+          <button class="btn btn-success btn-sm" onclick="approveLeave('${l.id}','Paid')">✓ Approve — Paid</button>
+          <button class="btn btn-secondary btn-sm" onclick="approveLeave('${l.id}','Unpaid')">✓ Approve — Unpaid</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectLeave('${l.id}')">✗ Reject</button>
+        </div>
+      </div>`).join("");
+  }
+
+  if(resolved.length>0){
+    html+=`<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:20px 0 12px;">Resolved</div>`;
+    html+=`<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table>
+      <thead><tr><th>SDR</th><th>Date</th><th>Type</th><th>Reason</th><th>Status</th><th>Pay Type</th><th>Admin Note</th></tr></thead>
+      <tbody>${resolved.sort((a,b)=>b.leaveDate.localeCompare(a.leaveDate)).map(l=>`<tr>
+        <td><strong>${l.sdrName}</strong></td>
+        <td>${formatDate(l.leaveDate)}</td>
+        <td>${l.leaveType}</td>
+        <td style="font-size:12px;max-width:180px;">${l.reason||"—"}</td>
+        <td>${getLeaveBadge(l.status)}</td>
+        <td>${l.status==="Approved"?(l.payType==="Paid"?'<span class="badge badge-green">💰 Paid</span>':'<span class="badge badge-red">Unpaid</span>'):"—"}</td>
+        <td style="font-size:12px;color:var(--muted);">${l.adminNote||"—"}</td>
+      </tr>`).join("")}</tbody>
+    </table></div></div>`;
+  }
+
+  document.getElementById("leave-content").innerHTML=html;
+}
+
+function getLeaveBadge(status){
+  if(status==="Approved") return '<span class="badge badge-green">✓ Approved</span>';
+  if(status==="Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
+  return '<span class="badge badge-amber">⏳ Pending</span>';
+}
+
+async function approveLeave(id, payType) {
+  const note=document.getElementById("leave-note-"+id)?.value||"";
+  const alert=document.getElementById("alert-leave");
+  try {
+    await apiPost({action:"updateLeave",id,status:"Approved",payType,adminNote:note});
+    showAlert(alert,"success",`✓ Leave approved as ${payType}.`);
+    loadLeave();
+  } catch(e){showAlert(alert,"error","Failed: "+e.message);}
+}
+
+async function rejectLeave(id) {
+  const note=document.getElementById("leave-note-"+id)?.value||"";
+  const alert=document.getElementById("alert-leave");
+  try {
+    await apiPost({action:"updateLeave",id,status:"Rejected",payType:"",adminNote:note});
+    showAlert(alert,"success","Leave rejected.");
+    loadLeave();
+  } catch(e){showAlert(alert,"error","Failed: "+e.message);}
+}
 </script>
 </body>
 </html>

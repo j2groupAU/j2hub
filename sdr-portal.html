@@ -133,6 +133,10 @@
     <div class="nav-tab active" onclick="switchTab('clock')" id="tab-clock">🕐 Clock In / Out</div>
     <div class="nav-tab" onclick="switchTab('timesheet')" id="tab-timesheet">📋 My Timesheet</div>
     <div class="nav-tab" onclick="switchTab('pay')" id="tab-pay">💰 My Pay</div>
+    <div class="nav-tab" onclick="switchTab('payslip')" id="tab-payslip">🧾 Payslip</div>
+    <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">📅 Meetings</div>
+    <div class="nav-tab" onclick="switchTab('submit')" id="tab-submit">📤 Submit Timesheet</div>
+    <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">🏖️ Leave</div>
   </div>
   <div class="main">
 
@@ -168,7 +172,10 @@
     </div>
 
     <div class="page" id="page-timesheet">
-      <div class="page-header"><h2>My Timesheet</h2><p>Your clock records and actual times entered by your admin from JustCall.</p></div>
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div><h2>My Timesheet</h2><p>Your clock records and actual times entered by your admin from JustCall.</p></div>
+      <button class="btn btn-secondary" onclick="loadTimesheet()" style="white-space:nowrap;">↻ Refresh</button>
+    </div>
       <div id="alert-timesheet" class="alert"></div>
       <div class="cutoff-selector">
         <button class="cutoff-btn active" onclick="selectCutoff('current')" id="co-current">Current Period</button>
@@ -188,7 +195,10 @@
     </div>
 
     <div class="page" id="page-pay">
-      <div class="page-header"><h2>My Pay</h2><p>Pay computation based on billable hours for each cutoff period.</p></div>
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div><h2>My Pay</h2><p>Pay computation based on billable hours for each cutoff period.</p></div>
+      <button class="btn btn-secondary" onclick="loadPay()" style="white-space:nowrap;">↻ Refresh</button>
+    </div>
       <div class="cutoff-selector">
         <button class="cutoff-btn active" onclick="selectPayCutoff('current')" id="pco-current">Current Period</button>
         <button class="cutoff-btn" onclick="selectPayCutoff('prev')" id="pco-prev">Previous Period</button>
@@ -224,6 +234,237 @@
     </div>
 
   </div>
+    <div class="page" id="page-payslip">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div><h2>Payslip</h2><p>Your official pay summary for each cutoff period.</p></div>
+        <button class="btn btn-secondary" onclick="loadPayslip()" style="white-space:nowrap;">↻ Refresh</button>
+      </div>
+      <div class="cutoff-selector">
+        <button class="cutoff-btn active" onclick="selectPayslipCutoff('current')" id="psco-current">Current Period</button>
+        <button class="cutoff-btn" onclick="selectPayslipCutoff('prev')" id="psco-prev">Previous Period</button>
+      </div>
+      <div id="payslip-loading" class="loading-block" style="display:none;">Generating payslip…</div>
+      <div id="payslip-content" style="display:none;">
+        <div style="background:white;border:1.5px solid var(--border);border-radius:var(--radius);padding:32px;box-shadow:var(--shadow);">
+          <!-- Header -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:20px;border-bottom:2px solid var(--navy);flex-wrap:wrap;gap:16px;">
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">J2 Group Consulting Pty Ltd</div>
+              <div style="font-size:22px;font-weight:700;color:var(--navy);">PAYSLIP</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;color:var(--muted);">Period</div>
+              <div style="font-size:14px;font-weight:700;color:var(--navy);" id="ps-period">—</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;">Payment Date</div>
+              <div style="font-size:14px;font-weight:700;color:var(--cyan);" id="ps-pay-date">—</div>
+            </div>
+          </div>
+          <!-- Employee Info -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:6px;">Employee</div>
+              <div style="font-size:16px;font-weight:700;color:var(--navy);" id="ps-name">—</div>
+              <div style="font-size:13px;color:var(--muted);" id="ps-email">—</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:6px;">Employment</div>
+              <div style="font-size:13px;color:var(--text);">Contractor</div>
+              <div style="font-size:13px;color:var(--muted);" id="ps-rate-ref">—</div>
+            </div>
+          </div>
+          <!-- Earnings Table -->
+          <div style="margin-bottom:24px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">Earnings</div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="background:#f8fafc;">
+                <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Date</th>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Billable Hrs</th>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Deduction</th>
+                <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Amount</th>
+              </tr></thead>
+              <tbody id="ps-rows"></tbody>
+            </table>
+          </div>
+          <!-- Totals -->
+          <div style="border-top:2px solid var(--navy);padding-top:16px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:var(--muted);">
+              <span>Days Worked</span><span id="ps-days">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:var(--muted);">
+              <span>Total Billable Hours</span><span id="ps-total-hrs">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:var(--red);">
+              <span>Total Deductions</span><span id="ps-total-ded">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;padding:12px 0 0;color:var(--navy);border-top:1px solid var(--border);margin-top:8px;">
+              <span>NET PAY</span><span id="ps-net-pay" style="color:#15803d;">—</span>
+            </div>
+          </div>
+          <div style="margin-top:20px;padding:12px;background:#f8fafc;border-radius:8px;font-size:11px;color:var(--muted);text-align:center;">
+            This payslip is generated automatically based on your recorded hours. Contact your J2 admin for any queries.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-meetings">
+      <div class="page-header"><h2>Log a Meeting</h2><p>Log meeting time while clocked in. Admin approval required before it counts toward pay.</p></div>
+      <div id="alert-meetings" class="alert"></div>
+
+      <div class="card" id="meeting-clocked-out-msg" style="display:none;background:#f8fafc;border-style:dashed;text-align:center;padding:32px;">
+        <div style="font-size:24px;margin-bottom:8px;">🔒</div>
+        <div style="font-size:14px;font-weight:600;color:var(--muted);">You must be clocked in to log a meeting.</div>
+      </div>
+
+      <div id="meeting-form-wrap">
+        <div class="card">
+          <div class="card-title"><div class="icon">📅</div> Log Meeting Time</div>
+          <div class="field-group">
+            <label>Date</label>
+            <input type="date" id="meeting-date" readonly style="background:#f8fafc;cursor:not-allowed;" />
+          </div>
+          <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="field-group">
+              <label>Start Time</label>
+              <input type="time" id="meeting-start" />
+            </div>
+            <div class="field-group">
+              <label>End Time</label>
+              <input type="time" id="meeting-end" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Meeting Type</label>
+            <select id="meeting-type">
+              <option value="">— Select type —</option>
+              <option value="Coaching">Coaching</option>
+              <option value="Team Huddle">Team Huddle</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="submitMeeting()" id="btn-submit-meeting" style="width:100%;">Submit for Approval</button>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:16px 18px;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div class="card-title" style="margin-bottom:0;">My Meeting Submissions</div>
+            <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="loadMeetings()">↻ Refresh</button>
+          </div>
+          <div id="meetings-loading" class="loading-block">Loading…</div>
+          <div id="meetings-empty" class="empty-block" style="display:none;"><div class="empty-icon">📭</div><p>No meeting submissions yet.</p></div>
+          <div class="table-wrap" id="meetings-table-wrap" style="display:none;">
+            <table>
+              <thead><tr><th>Date</th><th>Type</th><th>Start</th><th>End</th><th>Duration</th><th>Status</th></tr></thead>
+              <tbody id="meetings-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-submit">
+      <div class="page-header"><h2>Submit Timesheet</h2><p>Review and submit your timesheet at the end of each cutoff period to get paid.</p></div>
+      <div id="alert-submit" class="alert"></div>
+
+      <div class="cutoff-selector">
+        <button class="cutoff-btn active" onclick="selectSubmitCutoff('current')" id="subco-current">Current Period</button>
+        <button class="cutoff-btn" onclick="selectSubmitCutoff('prev')" id="subco-prev">Previous Period</button>
+      </div>
+
+      <div id="submit-loading" class="loading-block">Loading…</div>
+      <div id="submit-content" style="display:none;">
+
+        <!-- Status banner -->
+        <div id="submit-status-banner" style="display:none;padding:16px 20px;border-radius:10px;margin-bottom:20px;font-size:14px;font-weight:600;"></div>
+
+        <!-- Summary card -->
+        <div class="card">
+          <div class="card-title">📋 Cutoff Summary</div>
+          <div id="submit-period-label" style="font-size:13px;color:var(--muted);margin-bottom:16px;font-weight:600;"></div>
+          <div class="pay-grid">
+            <div class="pay-stat"><div class="label">Days Worked</div><div class="value" id="sub-days">—</div></div>
+            <div class="pay-stat"><div class="label">Billable Hours</div><div class="value cyan" id="sub-hours">—</div></div>
+            <div class="pay-stat"><div class="label">Deductions</div><div class="value red" id="sub-ded">—</div></div>
+            <div class="pay-stat"><div class="label">Estimated Pay</div><div class="value green" id="sub-pay">—</div></div>
+          </div>
+        </div>
+
+        <!-- Entries preview -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:16px 18px;border-bottom:1.5px solid var(--border);"><div class="card-title" style="margin-bottom:0;">Entries in this Period</div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Billable Hrs</th><th>Deduction</th><th>Daily Pay</th></tr></thead>
+              <tbody id="submit-entries-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Submit / Dispute actions -->
+        <div id="submit-actions" style="display:none;">
+          <div class="card" style="background:#f0fdf4;border-color:#bbf7d0;">
+            <div style="font-size:14px;font-weight:700;color:#15803d;margin-bottom:8px;">Ready to submit?</div>
+            <p style="font-size:13px;color:#166534;margin-bottom:16px;">Once submitted, disputes must be raised for the entire cutoff. Make sure all entries are correct before submitting.</p>
+            <button class="btn btn-primary" onclick="submitTimesheet()" id="btn-submit-ts" style="background:#15803d;">📤 Submit Timesheet for Approval</button>
+          </div>
+        </div>
+
+        <!-- Dispute for whole cutoff (after submission, only if pending/rejected) -->
+        <div id="cutoff-dispute-wrap" style="display:none;">
+          <div class="card" style="background:#fff7ed;border-color:#fed7aa;">
+            <div style="font-size:14px;font-weight:700;color:#c2410c;margin-bottom:8px;">⚠️ Dispute this Timesheet</div>
+            <p style="font-size:13px;color:#9a3412;margin-bottom:16px;">If you believe there's an error in this cutoff's timesheet, submit a dispute below. Admin will review and correct if needed.</p>
+            <div class="field-group"><label>Dispute Reason</label><textarea id="cutoff-dispute-text" rows="3" placeholder="Describe the issue with this cutoff's timesheet…"></textarea></div>
+            <button class="btn btn-danger" onclick="submitCutoffDispute()" id="btn-cutoff-dispute">Submit Dispute</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="page" id="page-leave">
+      <div class="page-header"><h2>File a Leave</h2><p>Submit a leave request. Admin will review and mark it as paid or unpaid.</p></div>
+      <div id="alert-leave" class="alert"></div>
+
+      <div class="card">
+        <div class="card-title">🏖️ New Leave Request</div>
+        <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="field-group">
+            <label>Leave Date</label>
+            <input type="date" id="leave-date" />
+          </div>
+          <div class="field-group">
+            <label>Leave Type</label>
+            <select id="leave-type">
+              <option value="">— Select type —</option>
+              <option value="Full Day">Full Day</option>
+              <option value="Half Day AM">Half Day (AM)</option>
+              <option value="Half Day PM">Half Day (PM)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Reason</label>
+          <textarea id="leave-reason" rows="3" placeholder="Briefly describe your reason for leave…"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="submitLeave()" id="btn-submit-leave" style="width:100%;">Submit Leave Request</button>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:16px 18px;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title" style="margin-bottom:0;">My Leave Requests</div>
+          <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="loadLeave()">↻ Refresh</button>
+        </div>
+        <div id="leave-loading" class="loading-block">Loading…</div>
+        <div id="leave-empty" class="empty-block" style="display:none;"><div class="empty-icon">🏖️</div><p>No leave requests yet.</p></div>
+        <div class="table-wrap" id="leave-table-wrap" style="display:none;">
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th>Reason</th><th>Status</th><th>Pay Type</th><th>Admin Note</th></tr></thead>
+            <tbody id="leave-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
 </div>
 
 <div class="modal-overlay" id="dispute-modal">
@@ -309,7 +550,7 @@ function doLogout() {
   document.getElementById("login-password").value="";
 }
 
-function initApp() { startLiveClock(); setTodayDate(); checkOpenClockIn(); loadTimesheet(); }
+function initApp() { startLiveClock(); setTodayDate(); checkOpenClockIn(); }
 
 function startLiveClock() {
   function update() {
@@ -392,13 +633,15 @@ async function loadTimesheet() {
   catch(e){document.getElementById("timesheet-loading").textContent="Could not load entries.";}
 }
 
-function renderTimesheet() {
+async function renderTimesheet() {
   document.getElementById("timesheet-loading").style.display="none";
   const filtered=filterByCutoff(allEntries,timesheetCutoff).sort((a,b)=>b.workDate.localeCompare(a.workDate));
   if(filtered.length===0){document.getElementById("timesheet-empty").style.display="block";return;}
   document.getElementById("timesheet-table-wrap").style.display="block";
+  // Check if this cutoff has been submitted — disable row disputes if so
+  const cutoffSubmitted = await isCutoffSubmitted(timesheetCutoff);
   document.getElementById("timesheet-body").innerHTML=filtered.map(e=>{
-    const canDispute=e.actualStart&&!["Submitted","Under Review"].includes(e.disputeStatus);
+    const canDispute=!cutoffSubmitted&&e.actualStart&&!["Submitted","Under Review"].includes(e.disputeStatus);
     const actualStr=e.actualStart?(e.actualStart+(e.actualEnd?" – "+e.actualEnd:"")):'<span style="color:var(--muted)">Pending</span>';
     const disputeCell=canDispute?`${getDisputeBadge(e.disputeStatus)} <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px;margin-left:4px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Dispute</button>`:getDisputeBadge(e.disputeStatus);
     return `<tr><td><strong>${formatDate(e.workDate)}</strong></td><td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td><td>${actualStr}</td><td>${e.billableHrs>0?"<strong>"+parseFloat(e.billableHrs).toFixed(2)+" hrs</strong>":"—"}</td><td>${e.deduction>0?'<span style="color:var(--red)">-'+parseFloat(e.deduction).toFixed(2)+"</span>":"—"}</td><td style="white-space:nowrap">${disputeCell}</td></tr>`;
@@ -414,32 +657,57 @@ async function loadPay() {
   renderPay();
 }
 
+function getWorkingDaysInCutoff(cutoff) {
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
+  let start,end;
+  if(cutoff==="current"){
+    if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+    else{start=new Date(year,month,11);end=new Date(year,month,25);}
+  } else {
+    if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
+    else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+  }
+  let count=0;
+  const d=new Date(start);
+  while(d<=end){const dow=d.getDay();if(dow!==0&&dow!==6)count++;d.setDate(d.getDate()+1);}
+  return count||1;
+}
+
 function renderPay() {
   const filtered=filterByCutoff(allEntries,payCutoff);
   document.getElementById("pay-period-label").textContent="Period: "+getCutoffDisplayLabel(payCutoff);
   const monthlyRate=currentUser.rate||0;
   const cutoffRate=monthlyRate/2;
-  const workingDays=filtered.filter(e=>e.clockIn).length||1;
+  const workingDays=getWorkingDaysInCutoff(payCutoff);
   const dailyRate=cutoffRate/workingDays;
   const hourlyDeductRate=dailyRate/7;
-  // Update reference box
   if(document.getElementById("ref-monthly")) document.getElementById("ref-monthly").textContent="AUD $"+monthlyRate.toFixed(2);
   if(document.getElementById("ref-cutoff")) document.getElementById("ref-cutoff").textContent="AUD $"+cutoffRate.toFixed(2);
-  const payable=filtered.filter(e=>parseFloat(e.billableHrs)>0||e.clockIn);
+  const payable=filtered.filter(e=>e.clockIn);
   const totalHrs=payable.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
   const totalDed=payable.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
-  const totalPay=payable.reduce((s,e)=>s+parseFloat(e.dailyPay||0),0);
+  let totalPay=payable.reduce((s,e)=>{
+    const ded=parseFloat(e.deduction||0);
+    const pay=parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate));
+    return s+pay;
+  },0);
+  totalPay=Math.min(totalPay,cutoffRate); // cap at cutoff rate
   document.getElementById("pay-days").textContent=payable.length;
   document.getElementById("pay-hours").textContent=totalHrs.toFixed(2);
   document.getElementById("pay-deductions").textContent="-"+totalDed.toFixed(2);
   document.getElementById("pay-total").textContent="AUD $"+totalPay.toFixed(2);
   const body=document.getElementById("pay-body");
-  body.innerHTML=payable.length===0?`<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No entries yet.</td></tr>`:payable.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
-    const hrs=parseFloat(e.billableHrs||0);
-    const ded=parseFloat(e.deduction||0);
-    const pay=parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate));
-    return`<tr><td>${formatDate(e.workDate)}</td><td>${hrs.toFixed(2)} hrs</td><td>${ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+"h</span>":"—"}</td><td><strong>$${pay.toFixed(2)}</strong></td><td>${getDisputeBadge(e.disputeStatus)}</td></tr>`;
-  }).join("");
+  body.innerHTML=payable.length===0
+    ?`<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No entries yet.</td></tr>`
+    :payable.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
+      const hrs=parseFloat(e.billableHrs||0);
+      const ded=parseFloat(e.deduction||0);
+      const pay=parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate));
+      return`<tr><td>${formatDate(e.workDate)}</td><td>${hrs.toFixed(2)} hrs</td><td>${ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+"h</span>":"—"}</td><td><strong>$${pay.toFixed(2)}</strong></td><td>${getDisputeBadge(e.disputeStatus)}</td></tr>`;
+    }).join("");
   document.getElementById("pay-loading").style.display="none";
   document.getElementById("pay-content").style.display="block";
 }
@@ -467,8 +735,12 @@ function switchTab(tab){
   document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
   document.getElementById("page-"+tab).classList.add("active");
   document.getElementById("tab-"+tab).classList.add("active");
-  if(tab==="timesheet"&&allEntries.length===0) loadTimesheet();
+  if(tab==="timesheet") loadTimesheet();
   if(tab==="pay") loadPay();
+  if(tab==="payslip") loadPayslip();
+  if(tab==="meetings") loadMeetings();
+  if(tab==="submit") loadSubmitPage();
+  if(tab==="leave") loadLeave();
 }
 
 function filterByCutoff(entries,cutoff) {
@@ -507,6 +779,394 @@ function formatDate(d){if(!d)return"—";try{return new Date(d+"T12:00:00").toLo
 function showAlert(el,type,msg){el.className="alert show alert-"+type;el.textContent=msg;}
 function hideAlert(el){el.className="alert";el.textContent="";}
 document.getElementById("dispute-modal").addEventListener("click",function(e){if(e.target===this)closeDisputeModal();});
+
+let payslipCutoff = 'current';
+
+function selectPayslipCutoff(val) {
+  payslipCutoff = val;
+  document.querySelectorAll("#page-payslip .cutoff-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("psco-"+val).classList.add("active");
+  loadPayslip();
+}
+
+async function loadPayslip() {
+  document.getElementById("payslip-loading").style.display="block";
+  document.getElementById("payslip-content").style.display="none";
+  if(allEntries.length===0){ try{ allEntries=await fetchEntries(); }catch(e){} }
+  renderPayslip();
+}
+
+function renderPayslip() {
+  const filtered = filterByCutoff(allEntries, payslipCutoff).filter(e=>e.clockIn);
+  const monthlyRate = currentUser.rate||0;
+  const cutoffRate = monthlyRate/2;
+  const workingDays = getWorkingDaysInCutoff(payslipCutoff);
+  const dailyRate = cutoffRate/workingDays;
+  const hourlyDeductRate = dailyRate/7;
+
+  // Period label and payment date
+  const today = new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day = today.getDate(), month = today.getMonth(), year = today.getFullYear();
+  let periodLabel, payDate;
+  if(payslipCutoff==="current") {
+    if(day>=26){ periodLabel="26 "+today.toLocaleString("en-AU",{month:"long"})+" – 10 next month"; payDate="15th of next month"; }
+    else if(day<=10){ periodLabel="26 last month – 10 "+today.toLocaleString("en-AU",{month:"long",year:"numeric"}); payDate="15 "+today.toLocaleString("en-AU",{month:"long",year:"numeric"}); }
+    else{ periodLabel="11–25 "+today.toLocaleString("en-AU",{month:"long",year:"numeric"}); payDate="30 "+today.toLocaleString("en-AU",{month:"long",year:"numeric"}); }
+  } else {
+    periodLabel="Previous cutoff period"; payDate="—";
+  }
+
+  document.getElementById("ps-period").textContent = periodLabel;
+  document.getElementById("ps-pay-date").textContent = payDate;
+  document.getElementById("ps-name").textContent = currentUser.name;
+  document.getElementById("ps-email").textContent = currentUser.email||"";
+  document.getElementById("ps-rate-ref").textContent = "AUD $"+monthlyRate.toFixed(2)+"/month";
+
+  const totalHrs = filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
+  const totalDed = filtered.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
+  const totalPay = filtered.reduce((s,e)=>{
+    const ded=parseFloat(e.deduction||0);
+    return s+(parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate)));
+  },0);
+
+  document.getElementById("ps-days").textContent = filtered.length+" days";
+  document.getElementById("ps-total-hrs").textContent = totalHrs.toFixed(2)+" hrs";
+  document.getElementById("ps-total-ded").textContent = totalDed>0?"-"+totalDed.toFixed(2)+" hrs":"None";
+  const cappedPay = Math.min(totalPay, cutoffRate);
+  document.getElementById("ps-net-pay").textContent = "AUD $"+cappedPay.toFixed(2);
+  if(cappedPay < totalPay) {
+    document.getElementById("ps-net-pay").insertAdjacentHTML("afterend", '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Capped at monthly rate limit</div>');
+  }
+
+  document.getElementById("ps-rows").innerHTML = filtered.length===0
+    ? `<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted);">No entries for this period.</td></tr>`
+    : filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
+        const ded=parseFloat(e.deduction||0);
+        const pay=parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate));
+        return `<tr style="border-bottom:1px solid #f0f4f8;">
+          <td style="padding:10px 12px;">${formatDate(e.workDate)}</td>
+          <td style="padding:10px 12px;">${parseFloat(e.billableHrs||0).toFixed(2)} hrs</td>
+          <td style="padding:10px 12px;">${ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+"h</span>":"—"}</td>
+          <td style="padding:10px 12px;text-align:right;"><strong>$${pay.toFixed(2)}</strong></td>
+        </tr>`;
+      }).join("");
+
+  document.getElementById("payslip-loading").style.display="none";
+  document.getElementById("payslip-content").style.display="block";
+}
+
+let allMeetings = [];
+
+async function loadMeetings() {
+  // Show/hide form based on clock status
+  const isClockedIn = !!openClockInEntry;
+  document.getElementById("meeting-clocked-out-msg").style.display = isClockedIn ? "none" : "block";
+  document.getElementById("meeting-form-wrap").style.display = isClockedIn ? "block" : "none";
+
+  if (isClockedIn) {
+    // Auto-fill today's date
+    document.getElementById("meeting-date").value = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+  }
+
+  document.getElementById("meetings-loading").style.display = "block";
+  document.getElementById("meetings-empty").style.display = "none";
+  document.getElementById("meetings-table-wrap").style.display = "none";
+
+  try {
+    const result = await apiPost({ action: "getMeetings" });
+    allMeetings = (result.meetings||[]).filter(m => m.sdrName && m.sdrName.toLowerCase() === currentUser.name.toLowerCase());
+    renderMeetings();
+  } catch(e) {
+    document.getElementById("meetings-loading").textContent = "Could not load meetings.";
+  }
+}
+
+function renderMeetings() {
+  document.getElementById("meetings-loading").style.display = "none";
+  if (allMeetings.length === 0) { document.getElementById("meetings-empty").style.display = "block"; return; }
+  document.getElementById("meetings-table-wrap").style.display = "block";
+  document.getElementById("meetings-body").innerHTML = allMeetings.sort((a,b)=>b.date.localeCompare(a.date)).map(m => {
+    const dur = calcDuration(m.startTime, m.endTime);
+    const statusBadge = getMeetingBadge(m.status);
+    return `<tr>
+      <td>${formatDate(m.date)}</td>
+      <td><strong>${m.meetingType||"—"}</strong></td>
+      <td>${m.startTime||"—"}</td>
+      <td>${m.endTime||"—"}</td>
+      <td>${dur}</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join("");
+}
+
+async function submitMeeting() {
+  const start = document.getElementById("meeting-start").value;
+  const end = document.getElementById("meeting-end").value;
+  const type = document.getElementById("meeting-type").value;
+  const date = document.getElementById("meeting-date").value;
+  const alert = document.getElementById("alert-meetings");
+  const btn = document.getElementById("btn-submit-meeting");
+
+  if (!start || !end) { showAlert(alert, "error", "Please enter start and end time."); return; }
+  if (!type) { showAlert(alert, "error", "Please select a meeting type."); return; }
+  if (start >= end) { showAlert(alert, "error", "End time must be after start time."); return; }
+
+  btn.innerHTML = '<span class="spinner"></span> Submitting…'; btn.disabled = true;
+
+  try {
+    const result = await apiPost({ action: "addMeeting", sdrName: currentUser.name, email: currentUser.email, date, startTime: start, endTime: end, meetingType: type, status: "Pending" });
+    if (!result.success) throw new Error("Failed");
+    showAlert(alert, "success", "✓ Meeting submitted for admin approval.");
+    document.getElementById("meeting-start").value = "";
+    document.getElementById("meeting-end").value = "";
+    document.getElementById("meeting-type").value = "";
+    loadMeetings();
+  } catch(e) { showAlert(alert, "error", "Could not submit. " + e.message); }
+
+  btn.innerHTML = "Submit for Approval"; btn.disabled = false;
+}
+
+function calcDuration(start, end) {
+  if (!start || !end) return "—";
+  const [sh,sm] = start.split(":").map(Number);
+  const [eh,em] = end.split(":").map(Number);
+  const mins = (eh*60+em) - (sh*60+sm);
+  if (mins <= 0) return "—";
+  const h = Math.floor(mins/60); const m = mins%60;
+  return h > 0 ? h+"h "+m+"m" : m+"m";
+}
+
+function getMeetingBadge(status) {
+  if (status === "Approved") return '<span class="badge badge-green">✓ Approved</span>';
+  if (status === "Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
+  return '<span class="badge badge-amber">⏳ Pending</span>';
+}
+
+let submitCutoff = 'current';
+let allTimesheets = [];
+
+async function isCutoffSubmitted(cutoff) {
+  if(allTimesheets.length===0) {
+    try { const r=await apiPost({action:"getTimesheets"}); allTimesheets=r.timesheets||[]; } catch(e){ return false; }
+  }
+  const label = getCutoffPeriodKey(cutoff);
+  const ts = allTimesheets.find(t=>t.sdrName===currentUser.name && t.cutoffKey===label);
+  return ts && ["Pending","Approved"].includes(ts.status);
+}
+
+function getCutoffPeriodKey(cutoff) {
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
+  if(cutoff==="current"){
+    if(day>=26) return year+"-"+(month+1)+"-26-to-"+(month===11?year+1:year)+"-"+((month+1)%12+1)+"-10";
+    if(day<=10) return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-26-to-"+year+"-"+(month+1)+"-10";
+    return year+"-"+(month+1)+"-11-to-"+year+"-"+(month+1)+"-25";
+  } else {
+    if(day>=26) return year+"-"+(month+1)+"-11-to-"+year+"-"+(month+1)+"-25";
+    if(day<=10) return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-11-to-"+(month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-25";
+    return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-26-to-"+year+"-"+(month+1)+"-10";
+  }
+}
+
+function selectSubmitCutoff(val) {
+  submitCutoff = val;
+  document.querySelectorAll("#page-submit .cutoff-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("subco-"+val).classList.add("active");
+  loadSubmitPage();
+}
+
+async function loadSubmitPage() {
+  document.getElementById("submit-loading").style.display="block";
+  document.getElementById("submit-content").style.display="none";
+  allTimesheets = [];
+  if(allEntries.length===0){ try{ allEntries=await fetchEntries(); }catch(e){} }
+  try {
+    const r = await apiPost({action:"getTimesheets"});
+    allTimesheets = r.timesheets||[];
+  } catch(e){}
+  renderSubmitPage();
+}
+
+function renderSubmitPage() {
+  document.getElementById("submit-loading").style.display="none";
+  document.getElementById("submit-content").style.display="block";
+
+  const filtered = filterByCutoff(allEntries, submitCutoff).filter(e=>e.clockIn);
+  const cutoffKey = getCutoffPeriodKey(submitCutoff);
+  const existing = allTimesheets.find(t=>t.sdrName===currentUser.name && t.cutoffKey===cutoffKey);
+
+  const monthlyRate = currentUser.rate||0;
+  const cutoffRate = monthlyRate/2;
+  const workingDays = getWorkingDaysInCutoff(submitCutoff);
+  const dailyRate = cutoffRate/workingDays;
+  const hourlyDeductRate = dailyRate/7;
+
+  document.getElementById("submit-period-label").textContent = "Period: "+getCutoffDisplayLabel(submitCutoff);
+  document.getElementById("sub-days").textContent = filtered.length;
+
+  const totalHrs = filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
+  const totalDed = filtered.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
+  let totalPay = filtered.reduce((s,e)=>{
+    const ded=parseFloat(e.deduction||0);
+    return s+(parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate)));
+  },0);
+  totalPay = Math.min(totalPay, cutoffRate);
+
+  document.getElementById("sub-hours").textContent = totalHrs.toFixed(2)+" hrs";
+  document.getElementById("sub-ded").textContent = "-"+totalDed.toFixed(2);
+  document.getElementById("sub-pay").textContent = "AUD $"+totalPay.toFixed(2);
+
+  // Entries table
+  document.getElementById("submit-entries-body").innerHTML = filtered.length===0
+    ? `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No entries for this period.</td></tr>`
+    : filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
+        const ded=parseFloat(e.deduction||0);
+        const pay=parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate));
+        return `<tr>
+          <td>${formatDate(e.workDate)}</td>
+          <td>${e.clockIn||"—"}</td>
+          <td>${e.clockOut||"—"}</td>
+          <td>${parseFloat(e.billableHrs||0).toFixed(2)} hrs</td>
+          <td>${ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+"h</span>":"—"}</td>
+          <td><strong>$${pay.toFixed(2)}</strong></td>
+        </tr>`;
+      }).join("");
+
+  // Status banner + actions
+  const banner = document.getElementById("submit-status-banner");
+  const actions = document.getElementById("submit-actions");
+  const disputeWrap = document.getElementById("cutoff-dispute-wrap");
+  banner.style.display="none"; actions.style.display="none"; disputeWrap.style.display="none";
+
+  if (!existing) {
+    // Not submitted yet
+    if(filtered.length > 0) { actions.style.display="block"; }
+  } else if (existing.status === "Pending") {
+    banner.style.display="block";
+    banner.style.background="#eff6ff"; banner.style.border="1.5px solid #bfdbfe"; banner.style.color="#1d4ed8";
+    banner.textContent="⏳ Timesheet submitted — awaiting admin approval.";
+    disputeWrap.style.display="block";
+  } else if (existing.status === "Approved") {
+    banner.style.display="block";
+    banner.style.background="#f0fdf4"; banner.style.border="1.5px solid #bbf7d0"; banner.style.color="#15803d";
+    banner.textContent="✓ Timesheet approved! Payment will be processed on the due date.";
+  } else if (existing.status === "Rejected") {
+    banner.style.display="block";
+    banner.style.background="#fef2f2"; banner.style.border="1.5px solid #fecaca"; banner.style.color="#b91c1c";
+    banner.innerHTML="✗ Timesheet rejected. <strong>Admin note:</strong> "+(existing.adminNote||"No note provided.")+". Please raise a dispute below.";
+    disputeWrap.style.display="block";
+  } else if (existing.status === "Disputed") {
+    banner.style.display="block";
+    banner.style.background="#fff7ed"; banner.style.border="1.5px solid #fed7aa"; banner.style.color="#c2410c";
+    banner.textContent="⚠️ Dispute submitted — admin is reviewing.";
+  }
+}
+
+async function submitTimesheet() {
+  const btn = document.getElementById("btn-submit-ts");
+  const alert = document.getElementById("alert-submit");
+  btn.innerHTML='<span class="spinner"></span> Submitting…'; btn.disabled=true;
+  try {
+    const cutoffKey = getCutoffPeriodKey(submitCutoff);
+    const filtered = filterByCutoff(allEntries,submitCutoff).filter(e=>e.clockIn);
+    const monthlyRate=currentUser.rate||0;
+    const cutoffRate=monthlyRate/2;
+    const workingDays=getWorkingDaysInCutoff(submitCutoff);
+    const dailyRate=cutoffRate/workingDays;
+    const hourlyDeductRate=dailyRate/7;
+    let totalPay=filtered.reduce((s,e)=>{const ded=parseFloat(e.deduction||0);return s+(parseFloat(e.dailyPay)||Math.max(0,dailyRate-(ded*hourlyDeductRate)));},0);
+    totalPay=Math.min(totalPay,cutoffRate);
+    await apiPost({
+      action:"addTimesheet",
+      sdrName:currentUser.name, email:currentUser.email,
+      cutoffKey, cutoffLabel:getCutoffDisplayLabel(submitCutoff),
+      totalDays:filtered.length, totalPay:totalPay.toFixed(2),
+      status:"Pending", disputeNotes:"", adminNote:""
+    });
+    showAlert(alert,"success","✓ Timesheet submitted! Your admin will review and approve it.");
+    allTimesheets=[];
+    loadSubmitPage();
+  } catch(e){ showAlert(alert,"error","Could not submit: "+e.message); }
+  btn.innerHTML="📤 Submit Timesheet for Approval"; btn.disabled=false;
+}
+
+async function submitCutoffDispute() {
+  const notes = document.getElementById("cutoff-dispute-text").value.trim();
+  const alert = document.getElementById("alert-submit");
+  const btn = document.getElementById("btn-cutoff-dispute");
+  if(!notes){ showAlert(alert,"error","Please describe your dispute reason."); return; }
+  btn.innerHTML='<span class="spinner"></span> Submitting…'; btn.disabled=true;
+  try {
+    const cutoffKey = getCutoffPeriodKey(submitCutoff);
+    const existing = allTimesheets.find(t=>t.sdrName===currentUser.name&&t.cutoffKey===cutoffKey);
+    if(existing){
+      await apiPost({action:"updateTimesheet",id:existing.id,status:"Disputed",disputeNotes:notes});
+      showAlert(alert,"success","✓ Dispute submitted. Admin will review.");
+      document.getElementById("cutoff-dispute-text").value="";
+      allTimesheets=[]; loadSubmitPage();
+    }
+  } catch(e){ showAlert(alert,"error","Could not submit dispute: "+e.message); }
+  btn.innerHTML="Submit Dispute"; btn.disabled=false;
+}
+
+let allLeaves = [];
+
+async function loadLeave() {
+  document.getElementById("leave-loading").style.display="block";
+  document.getElementById("leave-empty").style.display="none";
+  document.getElementById("leave-table-wrap").style.display="none";
+  try {
+    const result = await apiPost({action:"getLeaves"});
+    allLeaves = (result.leaves||[]).filter(l=>l.sdrName&&l.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    renderLeave();
+  } catch(e) { document.getElementById("leave-loading").textContent="Could not load leave requests."; }
+}
+
+function renderLeave() {
+  document.getElementById("leave-loading").style.display="none";
+  if(allLeaves.length===0){document.getElementById("leave-empty").style.display="block";return;}
+  document.getElementById("leave-table-wrap").style.display="block";
+  document.getElementById("leave-body").innerHTML=allLeaves.sort((a,b)=>b.leaveDate.localeCompare(a.leaveDate)).map(l=>{
+    const statusBadge=getLeaveBadge(l.status);
+    const payBadge=l.status==="Approved"?(l.payType==="Paid"?'<span class="badge badge-green">💰 Paid</span>':'<span class="badge badge-red">Unpaid</span>'):"—";
+    return `<tr>
+      <td><strong>${formatDate(l.leaveDate)}</strong></td>
+      <td>${l.leaveType||"—"}</td>
+      <td style="max-width:200px;font-size:12px;">${l.reason||"—"}</td>
+      <td>${statusBadge}</td>
+      <td>${payBadge}</td>
+      <td style="font-size:12px;color:var(--muted);">${l.adminNote||"—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+async function submitLeave() {
+  const date=document.getElementById("leave-date").value;
+  const type=document.getElementById("leave-type").value;
+  const reason=document.getElementById("leave-reason").value.trim();
+  const alert=document.getElementById("alert-leave");
+  const btn=document.getElementById("btn-submit-leave");
+  if(!date){showAlert(alert,"error","Please select a leave date.");return;}
+  if(!type){showAlert(alert,"error","Please select a leave type.");return;}
+  if(!reason){showAlert(alert,"error","Please provide a reason.");return;}
+  btn.innerHTML='<span class="spinner"></span> Submitting…'; btn.disabled=true;
+  try {
+    const result=await apiPost({action:"addLeave",sdrName:currentUser.name,email:currentUser.email||"",leaveDate:date,leaveType:type,reason,status:"Pending",payType:"",adminNote:""});
+    if(!result.success) throw new Error("Failed");
+    showAlert(alert,"success","✓ Leave request submitted. Admin will review it shortly.");
+    document.getElementById("leave-date").value="";
+    document.getElementById("leave-type").value="";
+    document.getElementById("leave-reason").value="";
+    loadLeave();
+  } catch(e){showAlert(alert,"error","Could not submit: "+e.message);}
+  btn.innerHTML="Submit Leave Request"; btn.disabled=false;
+}
+
+function getLeaveBadge(status) {
+  if(status==="Approved") return '<span class="badge badge-green">✓ Approved</span>';
+  if(status==="Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
+  return '<span class="badge badge-amber">⏳ Pending</span>';
+}
 </script>
 </body>
 </html>
