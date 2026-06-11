@@ -6,654 +6,158 @@
 <title>J2 Group — SDR Time Portal</title>
 <style>
   :root {
-    --navy: #0D1B2A;
-    --steel: #1B3A5C;
-    --cyan: #2EBFC0;
-    --cyan-dim: #1a8f90;
-    --white: #F5F8FA;
-    --soft: #E8EEF4;
-    --muted: #8A9BB0;
-    --green: #22C55E;
-    --red: #EF4444;
-    --amber: #F59E0B;
-    --text: #1a2535;
-    --border: #d0dae6;
-    --card: #ffffff;
-    --radius: 10px;
-    --shadow: 0 2px 12px rgba(13,27,42,0.10);
+    --navy: #0D1B2A; --steel: #1B3A5C; --cyan: #2EBFC0; --cyan-dim: #1a8f90;
+    --white: #F5F8FA; --soft: #E8EEF4; --muted: #8A9BB0; --green: #22C55E;
+    --red: #EF4444; --amber: #F59E0B; --text: #1a2535; --border: #d0dae6;
+    --card: #ffffff; --radius: 10px; --shadow: 0 2px 12px rgba(13,27,42,0.10);
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: Arial, Helvetica, sans-serif;
-    background: #f0f4f8;
-    color: var(--text);
-    min-height: 100vh;
-  }
-
-  /* ── LOGIN ── */
-  #login-screen {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--navy) 0%, var(--steel) 100%);
-    padding: 20px;
-  }
-
-  .login-card {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 48px 40px 40px;
-    width: 100%;
-    max-width: 420px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  }
-
-  .login-logo {
-    text-align: center;
-    margin-bottom: 32px;
-  }
-
-  .login-logo .brand {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-
-  .login-logo h1 {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--navy);
-  }
-
-  .login-logo .accent {
-    color: var(--cyan);
-  }
-
-  .field-group {
-    margin-bottom: 20px;
-  }
-
-  .field-group label {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-
-  .field-group input, .field-group select, .field-group textarea {
-    width: 100%;
-    padding: 11px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 14px;
-    font-family: Arial, sans-serif;
-    color: var(--text);
-    background: var(--white);
-    transition: border-color 0.2s;
-    outline: none;
-  }
-
-  .field-group input:focus, .field-group select:focus, .field-group textarea:focus {
-    border-color: var(--cyan);
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 24px;
-    border-radius: var(--radius);
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    border: none;
-    transition: all 0.18s;
-    text-decoration: none;
-  }
-
-  .btn-primary {
-    background: var(--cyan);
-    color: white;
-    width: 100%;
-  }
-
+  body { font-family: Arial, Helvetica, sans-serif; background: #f0f4f8; color: var(--text); min-height: 100vh; }
+  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--navy) 0%, var(--steel) 100%); padding: 20px; }
+  .login-card { background: var(--card); border-radius: 16px; padding: 48px 40px 40px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .login-logo { text-align: center; margin-bottom: 32px; }
+  .login-logo .brand { font-size: 13px; font-weight: 700; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .login-logo h1 { font-size: 24px; font-weight: 700; color: var(--navy); }
+  .login-logo .accent { color: var(--cyan); }
+  .field-group { margin-bottom: 20px; }
+  .field-group label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .field-group input, .field-group select, .field-group textarea { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 14px; font-family: Arial, sans-serif; color: var(--text); background: var(--white); transition: border-color 0.2s; outline: none; }
+  .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--cyan); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; border-radius: var(--radius); font-size: 14px; font-weight: 700; cursor: pointer; border: none; transition: all 0.18s; }
+  .btn-primary { background: var(--cyan); color: white; width: 100%; }
   .btn-primary:hover { background: var(--cyan-dim); }
-
-  .btn-secondary {
-    background: var(--soft);
-    color: var(--steel);
-  }
-
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-secondary { background: var(--soft); color: var(--steel); }
   .btn-secondary:hover { background: var(--border); }
-
-  .btn-danger {
-    background: #fef2f2;
-    color: var(--red);
-    border: 1.5px solid #fecaca;
-  }
-
+  .btn-danger { background: #fef2f2; color: var(--red); border: 1.5px solid #fecaca; }
   .btn-danger:hover { background: #fee2e2; }
-
-  .btn-success {
-    background: #f0fdf4;
-    color: #15803d;
-    border: 1.5px solid #bbf7d0;
-  }
-
-  .btn-success:hover { background: #dcfce7; }
-
-  .login-error {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: var(--red);
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    margin-bottom: 16px;
-    display: none;
-  }
-
-  /* ── APP SHELL ── */
+  .login-error { background: #fef2f2; border: 1px solid #fecaca; color: var(--red); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
   #app { display: none; }
-
-  .topbar {
-    background: var(--navy);
-    padding: 0 24px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .topbar-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .topbar-brand .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--cyan);
-  }
-
-  .topbar-brand span {
-    font-size: 14px;
-    font-weight: 700;
-    color: white;
-    letter-spacing: 0.3px;
-  }
-
-  .topbar-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .user-chip {
-    background: rgba(255,255,255,0.1);
-    border-radius: 20px;
-    padding: 5px 14px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.85);
-    font-weight: 600;
-  }
-
-  .logout-btn {
-    background: none;
-    border: 1px solid rgba(255,255,255,0.25);
-    color: rgba(255,255,255,0.7);
-    border-radius: 8px;
-    padding: 6px 14px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .logout-btn:hover {
-    border-color: rgba(255,255,255,0.5);
-    color: white;
-  }
-
-  /* ── NAV TABS ── */
-  .nav-tabs {
-    background: white;
-    border-bottom: 2px solid var(--border);
-    display: flex;
-    padding: 0 24px;
-    gap: 0;
-  }
-
-  .nav-tab {
-    padding: 14px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-
+  .topbar { background: var(--navy); padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .topbar-brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); }
+  .topbar-brand span { font-size: 14px; font-weight: 700; color: white; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .user-chip { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 5px 14px; font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 600; }
+  .logout-btn { background: none; border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .logout-btn:hover { border-color: rgba(255,255,255,0.5); color: white; }
+  .nav-tabs { background: white; border-bottom: 2px solid var(--border); display: flex; padding: 0 24px; }
+  .nav-tab { padding: 14px 20px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; white-space: nowrap; }
   .nav-tab:hover { color: var(--steel); }
-
-  .nav-tab.active {
-    color: var(--cyan);
-    border-bottom-color: var(--cyan);
-  }
-
-  /* ── MAIN CONTENT ── */
-  .main {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 28px 24px;
-  }
-
+  .nav-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .main { max-width: 900px; margin: 0 auto; padding: 28px 24px; }
   .page { display: none; }
   .page.active { display: block; }
-
-  .page-header {
-    margin-bottom: 24px;
-  }
-
-  .page-header h2 {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 4px;
-  }
-
-  .page-header p {
-    font-size: 13px;
-    color: var(--muted);
-  }
-
-  /* ── CARDS ── */
-  .card {
-    background: var(--card);
-    border-radius: var(--radius);
-    border: 1.5px solid var(--border);
-    padding: 24px;
-    box-shadow: var(--shadow);
-    margin-bottom: 20px;
-  }
-
-  .card-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .card-title .icon {
-    width: 28px; height: 28px;
-    background: #e8f7f7;
-    border-radius: 7px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-  }
-
-  /* ── CLOCK STATUS ── */
-  .clock-status {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .clock-status.clocked-out {
-    background: #f8fafc;
-    border: 1.5px solid var(--border);
-    color: var(--muted);
-  }
-
-  .clock-status.clocked-in {
-    background: #f0fdf4;
-    border: 1.5px solid #bbf7d0;
-    color: #15803d;
-  }
-
-  .status-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
+  .page-header { margin-bottom: 24px; }
+  .page-header h2 { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .page-header p { font-size: 13px; color: var(--muted); }
+  .card { background: var(--card); border-radius: var(--radius); border: 1.5px solid var(--border); padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .card-title .icon { width: 28px; height: 28px; background: #e8f7f7; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .clock-status { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 600; }
+  .clock-status.clocked-out { background: #f8fafc; border: 1.5px solid var(--border); color: var(--muted); }
+  .clock-status.clocked-in { background: #f0fdf4; border: 1.5px solid #bbf7d0; color: #15803d; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .clocked-out .status-dot { background: var(--muted); }
-  .clocked-in .status-dot {
-    background: var(--green);
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
-    50% { box-shadow: 0 0 0 6px rgba(34,197,94,0.1); }
-  }
-
-  /* ── TABLE ── */
+  .clocked-in .status-dot { background: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,0.2); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.2); } 50% { box-shadow: 0 0 0 6px rgba(34,197,94,0.1); } }
   .table-wrap { overflow-x: auto; }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-
-  th {
-    background: #f8fafc;
-    padding: 10px 12px;
-    text-align: left;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--muted);
-    border-bottom: 1.5px solid var(--border);
-    white-space: nowrap;
-  }
-
-  td {
-    padding: 12px 12px;
-    border-bottom: 1px solid #f0f4f8;
-    color: var(--text);
-    vertical-align: top;
-  }
-
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f8fafc; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1.5px solid var(--border); white-space: nowrap; }
+  td { padding: 12px 12px; border-bottom: 1px solid #f0f4f8; color: var(--text); vertical-align: top; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: #fafcff; }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 9px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-
+  .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
   .badge-green { background: #dcfce7; color: #15803d; }
   .badge-amber { background: #fef9c3; color: #92400e; }
   .badge-red { background: #fee2e2; color: #b91c1c; }
   .badge-blue { background: #dbeafe; color: #1d4ed8; }
   .badge-gray { background: #f1f5f9; color: #64748b; }
-
-  /* ── PAY SUMMARY ── */
-  .pay-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
-  }
-
-  .pay-stat {
-    background: #f8fafc;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-  }
-
-  .pay-stat .label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-
-  .pay-stat .value {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--navy);
-  }
-
+  .pay-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .pay-stat { background: #f8fafc; border: 1.5px solid var(--border); border-radius: 10px; padding: 16px; }
+  .pay-stat .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
+  .pay-stat .value { font-size: 22px; font-weight: 700; color: var(--navy); }
   .pay-stat .value.cyan { color: var(--cyan); }
   .pay-stat .value.green { color: #15803d; }
   .pay-stat .value.red { color: var(--red); }
-
-  .pay-stat .sub {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-
-  /* ── CUTOFF SELECTOR ── */
-  .cutoff-selector {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-  }
-
-  .cutoff-btn {
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1.5px solid var(--border);
-    background: white;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--muted);
-    transition: all 0.15s;
-  }
-
-  .cutoff-btn.active {
-    border-color: var(--cyan);
-    color: var(--cyan);
-    background: #e8f7f7;
-  }
-
-  /* ── DISPUTE MODAL ── */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(13,27,42,0.5);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-    padding: 20px;
-  }
-
+  .pay-stat .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .cutoff-selector { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .cutoff-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--border); background: white; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+  .cutoff-btn.active { border-color: var(--cyan); color: var(--cyan); background: #e8f7f7; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(13,27,42,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
   .modal-overlay.open { display: flex; }
-
-  .modal {
-    background: white;
-    border-radius: 14px;
-    padding: 28px;
-    width: 100%;
-    max-width: 500px;
-    box-shadow: 0 25px 60px rgba(0,0,0,0.25);
-  }
-
-  .modal-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 6px;
-  }
-
-  .modal-sub {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 20px;
-  }
-
-  .modal-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-  }
-
-  /* ── ALERTS ── */
-  .alert {
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    margin-bottom: 16px;
-    display: none;
-  }
-
+  .modal { background: white; border-radius: 14px; padding: 28px; width: 100%; max-width: 500px; box-shadow: 0 25px 60px rgba(0,0,0,0.25); }
+  .modal-title { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
   .alert.show { display: block; }
   .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
   .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-  .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
-
-  /* ── LOADING ── */
-  .spinner {
-    display: inline-block;
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.4);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  .loading-block {
-    text-align: center;
-    padding: 32px;
-    color: var(--muted);
-    font-size: 14px;
-  }
-
-  .empty-block {
-    text-align: center;
-    padding: 40px;
-    color: var(--muted);
-  }
-
+  .loading-block { text-align: center; padding: 32px; color: var(--muted); font-size: 14px; }
+  .empty-block { text-align: center; padding: 40px; color: var(--muted); }
   .empty-block .empty-icon { font-size: 32px; margin-bottom: 10px; }
-  .empty-block p { font-size: 14px; }
-
-  /* ── TIME DISPLAY ── */
-  .time-display {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--navy);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.5px;
-  }
-
+  .time-display { font-size: 28px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
   .time-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-
-  @media (max-width: 600px) {
-    .two-col { grid-template-columns: 1fr; }
-    .topbar { padding: 0 16px; }
-    .main { padding: 20px 16px; }
-    .nav-tab { padding: 12px 14px; font-size: 12px; }
-    .login-card { padding: 32px 24px; }
-  }
+  @media (max-width: 600px) { .topbar { padding: 0 16px; } .main { padding: 20px 16px; } .nav-tab { padding: 12px 14px; font-size: 12px; } .login-card { padding: 32px 24px; } }
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════ LOGIN ═══════════════════════════════ -->
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
       <div class="brand">J2 Group Consulting</div>
       <h1>SDR <span class="accent">Time Portal</span></h1>
     </div>
+    <div id="login-loading" style="text-align:center;padding:12px;color:var(--muted);font-size:13px;display:none;">Checking credentials…</div>
     <div class="login-error" id="login-error">Incorrect name or password. Please try again.</div>
     <div class="field-group">
       <label>Your Name</label>
-      <input type="text" id="login-name" placeholder="e.g. Maria Santos" autocomplete="name" />
+      <input type="text" id="login-name" placeholder="e.g. Richard Dreje" autocomplete="name" />
     </div>
     <div class="field-group">
       <label>Password</label>
       <input type="password" id="login-password" placeholder="Enter your password" />
     </div>
-    <button class="btn btn-primary" onclick="doLogin()">
-      Sign In
-    </button>
-    <p style="text-align:center; margin-top:16px; font-size:12px; color:var(--muted);">Contact your J2 admin if you need access.</p>
+    <button class="btn btn-primary" onclick="doLogin()" id="btn-login">Sign In</button>
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted);">Contact your J2 admin if you need access.</p>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ APP ═══════════════════════════════ -->
 <div id="app">
   <div class="topbar">
-    <div class="topbar-brand">
-      <div class="dot"></div>
-      <span>J2 Group — SDR Portal</span>
-    </div>
+    <div class="topbar-brand"><div class="dot"></div><span>J2 Group — SDR Portal</span></div>
     <div class="topbar-right">
       <div class="user-chip" id="user-chip">—</div>
       <button class="logout-btn" onclick="doLogout()">Sign out</button>
     </div>
   </div>
-
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('clock')" id="tab-clock">🕐 Clock In / Out</div>
     <div class="nav-tab" onclick="switchTab('timesheet')" id="tab-timesheet">📋 My Timesheet</div>
     <div class="nav-tab" onclick="switchTab('pay')" id="tab-pay">💰 My Pay</div>
   </div>
-
   <div class="main">
 
-    <!-- ── CLOCK PAGE ── -->
     <div class="page active" id="page-clock">
-      <div class="page-header">
-        <h2>Clock In / Out</h2>
-        <p>One submission covers both clock in and clock out for the day.</p>
-      </div>
-
+      <div class="page-header"><h2>Clock In / Out</h2><p>One submission covers both clock in and clock out for the day.</p></div>
       <div id="clock-status-block" class="clock-status clocked-out">
-        <div class="status-dot"></div>
-        <span id="clock-status-text">You are currently clocked out.</span>
+        <div class="status-dot"></div><span id="clock-status-text">You are currently clocked out.</span>
       </div>
-
       <div id="alert-clock" class="alert"></div>
-
       <div class="card" id="clock-card-in">
         <div class="card-title"><div class="icon">▶</div> Clock In</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Starting your shift? This records your clock-in time right now.</p>
-        <div class="field-group">
-          <label>Today's Date</label>
-          <input type="date" id="clock-in-date" />
-        </div>
+        <div class="field-group"><label>Today's Date</label><input type="date" id="clock-in-date" /></div>
         <div style="margin-bottom:16px;">
           <div class="time-display" id="live-time">--:--:--</div>
           <div class="time-sub">Current time (AEST) — this will be recorded as your clock-in.</div>
         </div>
-        <button class="btn btn-primary" onclick="submitClockIn()" id="btn-clock-in">
-          Clock In Now
-        </button>
+        <button class="btn btn-primary" onclick="submitClockIn()" id="btn-clock-in">Clock In Now</button>
       </div>
-
       <div class="card" id="clock-card-out" style="display:none;">
         <div class="card-title"><div class="icon">⏹</div> Clock Out</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Ending your shift? This will close your open clock-in entry.</p>
@@ -665,92 +169,45 @@
           <div class="time-display" id="live-time-2">--:--:--</div>
           <div class="time-sub">Current time — this will be recorded as your clock-out.</div>
         </div>
-        <button class="btn btn-danger" onclick="submitClockOut()" id="btn-clock-out">
-          Clock Out Now
-        </button>
+        <button class="btn btn-danger" onclick="submitClockOut()" id="btn-clock-out">Clock Out Now</button>
       </div>
     </div>
 
-    <!-- ── TIMESHEET PAGE ── -->
     <div class="page" id="page-timesheet">
-      <div class="page-header">
-        <h2>My Timesheet</h2>
-        <p>Your clock records and actual times entered by your admin from JustCall.</p>
-      </div>
-
+      <div class="page-header"><h2>My Timesheet</h2><p>Your clock records and actual times entered by your admin from JustCall.</p></div>
       <div id="alert-timesheet" class="alert"></div>
-
       <div class="cutoff-selector">
         <button class="cutoff-btn active" onclick="selectCutoff('current')" id="co-current">Current Period</button>
         <button class="cutoff-btn" onclick="selectCutoff('prev')" id="co-prev">Previous Period</button>
         <button class="cutoff-btn" onclick="selectCutoff('all')" id="co-all">All Entries</button>
       </div>
-
       <div class="card" style="padding:0;overflow:hidden;">
         <div id="timesheet-loading" class="loading-block">Loading your records…</div>
-        <div id="timesheet-empty" class="empty-block" style="display:none;">
-          <div class="empty-icon">📭</div>
-          <p>No entries found for this period.</p>
-        </div>
+        <div id="timesheet-empty" class="empty-block" style="display:none;"><div class="empty-icon">📭</div><p>No entries found for this period.</p></div>
         <div class="table-wrap" id="timesheet-table-wrap" style="display:none;">
           <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Clock In</th>
-                <th>Clock Out</th>
-                <th>Actual Start</th>
-                <th>Actual End</th>
-                <th>Billable Hrs</th>
-                <th>Deduction</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
+            <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Actual Start</th><th>Actual End</th><th>Billable Hrs</th><th>Deduction</th><th>Status</th><th></th></tr></thead>
             <tbody id="timesheet-body"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- ── PAY PAGE ── -->
     <div class="page" id="page-pay">
-      <div class="page-header">
-        <h2>My Pay</h2>
-        <p>Pay computation based on billable hours for each cutoff period.</p>
-      </div>
-
+      <div class="page-header"><h2>My Pay</h2><p>Pay computation based on billable hours for each cutoff period.</p></div>
       <div class="cutoff-selector">
         <button class="cutoff-btn active" onclick="selectPayCutoff('current')" id="pco-current">Current Period</button>
         <button class="cutoff-btn" onclick="selectPayCutoff('prev')" id="pco-prev">Previous Period</button>
       </div>
-
       <div id="pay-loading" class="loading-block">Calculating your pay…</div>
       <div id="pay-content" style="display:none;">
         <div id="pay-period-label" style="font-size:13px;color:var(--muted);margin-bottom:16px;font-weight:600;"></div>
         <div class="pay-grid">
-          <div class="pay-stat">
-            <div class="label">Days Worked</div>
-            <div class="value" id="pay-days">—</div>
-            <div class="sub">entries this period</div>
-          </div>
-          <div class="pay-stat">
-            <div class="label">Billable Hours</div>
-            <div class="value cyan" id="pay-hours">—</div>
-            <div class="sub">after deductions</div>
-          </div>
-          <div class="pay-stat">
-            <div class="label">Deductions</div>
-            <div class="value red" id="pay-deductions">—</div>
-            <div class="sub">hours deducted</div>
-          </div>
-          <div class="pay-stat">
-            <div class="label">Estimated Pay</div>
-            <div class="value green" id="pay-total">—</div>
-            <div class="sub">AUD (before tax)</div>
-          </div>
+          <div class="pay-stat"><div class="label">Days Worked</div><div class="value" id="pay-days">—</div><div class="sub">entries this period</div></div>
+          <div class="pay-stat"><div class="label">Billable Hours</div><div class="value cyan" id="pay-hours">—</div><div class="sub">after deductions</div></div>
+          <div class="pay-stat"><div class="label">Deductions</div><div class="value red" id="pay-deductions">—</div><div class="sub">hours deducted</div></div>
+          <div class="pay-stat"><div class="label">Estimated Pay</div><div class="value green" id="pay-total">—</div><div class="sub">AUD (before tax)</div></div>
         </div>
-
         <div class="card" style="background:#f8fafc;border-style:dashed;">
           <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Pay Rate Reference</div>
           <div style="font-size:13px;color:var(--text);line-height:1.7;">
@@ -759,22 +216,11 @@
             <div>Working hours: 8hrs total (incl. 1hr unpaid lunch)</div>
           </div>
         </div>
-
         <div class="card" style="padding:0;overflow:hidden;">
-          <div style="padding:16px 18px;border-bottom:1.5px solid var(--border);">
-            <div class="card-title" style="margin-bottom:0;">Daily Breakdown</div>
-          </div>
+          <div style="padding:16px 18px;border-bottom:1.5px solid var(--border);"><div class="card-title" style="margin-bottom:0;">Daily Breakdown</div></div>
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Billable Hrs</th>
-                  <th>Deduction</th>
-                  <th>Daily Pay</th>
-                  <th>Dispute</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Date</th><th>Billable Hrs</th><th>Deduction</th><th>Daily Pay</th><th>Dispute</th></tr></thead>
               <tbody id="pay-body"></tbody>
             </table>
           </div>
@@ -782,19 +228,15 @@
       </div>
     </div>
 
-  </div><!-- /main -->
-</div><!-- /app -->
+  </div>
+</div>
 
-<!-- ── DISPUTE MODAL ── -->
 <div class="modal-overlay" id="dispute-modal">
   <div class="modal">
     <div class="modal-title">File a Dispute</div>
     <div class="modal-sub" id="dispute-item-info">Entry: —</div>
     <div id="alert-dispute" class="alert"></div>
-    <div class="field-group">
-      <label>Reason for Dispute</label>
-      <textarea id="dispute-text" rows="4" placeholder="Describe why you believe the actual time needs to be corrected…"></textarea>
-    </div>
+    <div class="field-group"><label>Reason for Dispute</label><textarea id="dispute-text" rows="4" placeholder="Describe why you believe the actual time needs to be corrected…"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="submitDispute()" id="btn-submit-dispute">Submit Dispute</button>
       <button class="btn btn-secondary" onclick="closeDisputeModal()">Cancel</button>
@@ -803,113 +245,90 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════════════════════════
-
 const BOARD_ID = "18417316029";
+const USERS_BOARD_ID = "18417319169";
 const MONDAY_API = "https://api.anthropic.com/v1/messages";
 
-// SDR credentials: { name, password, sdrId (used in items) }
-// Admin sets these. Password stored here in the HTML — for higher security, move to a backend.
-const SDR_ACCOUNTS = [
-  { name: "SDR Demo", password: "demo1234", email: "demo@j2group.com.au" },
-  // Add more SDRs here:
-  // { name: "Maria Santos", password: "maria2025", email: "maria@j2group.com.au" },
-];
-
-// Column IDs from the board we just created
-const COLS = {
-  sdrName:      "text_mm47956n",
-  sdrEmail:     "email_mm47jsp1",
-  workDate:     "date_mm47b6g4",
-  clockIn:      "hour_mm47a2f9",
-  clockOut:     "hour_mm47tny9",
-  actualStart:  "hour_mm47pke4",
-  actualEnd:    "hour_mm47992d",
-  billableHrs:  "numeric_mm47m56h",
-  deduction:    "numeric_mm47chva",
-  dailyPay:     "numeric_mm47pnk6",
-  cutoffPeriod: "color_mm47ec1",
-  disputeStatus:"color_mm473gak",
-  disputeNotes: "long_text_mm47bq1s",
-  adminNotes:   "long_text_mm47hm00",
-  sessionId:    "text_mm477f8d",
+const USER_COLS = {
+  email: "email_mm472mb0",
+  password: "text_mm47b0hy",
+  status: "color_mm47kkvv"
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════════
+const COLS = {
+  sdrName: "text_mm47956n", sdrEmail: "email_mm47jsp1", workDate: "date_mm47b6g4",
+  clockIn: "hour_mm47a2f9", clockOut: "hour_mm47tny9", actualStart: "hour_mm47pke4",
+  actualEnd: "hour_mm47992d", billableHrs: "numeric_mm47m56h", deduction: "numeric_mm47chva",
+  dailyPay: "numeric_mm47pnk6", cutoffPeriod: "color_mm47ec1", disputeStatus: "color_mm473gak",
+  disputeNotes: "long_text_mm47bq1s", adminNotes: "long_text_mm47hm00", sessionId: "text_mm477f8d"
+};
 
 let currentUser = null;
-let openClockInEntry = null; // { itemId, clockInTime }
+let openClockInEntry = null;
 let disputeItemId = null;
 let timesheetCutoff = 'current';
 let payCutoff = 'current';
 let allEntries = [];
 
-// ═══════════════════════════════════════════════════════════════════
-// MONDAY API VIA CLAUDE PROXY
-// ═══════════════════════════════════════════════════════════════════
-
 async function mondayQuery(gql, variables = {}) {
-  const prompt = `You are a Monday.com API proxy. Execute this GraphQL operation and return ONLY the raw JSON response from the Monday.com API, with no other text.
-
-GraphQL:
-${gql}
-
-Variables:
-${JSON.stringify(variables)}
-
-Instructions:
-1. Make a POST request to https://api.monday.com/v2 with the Authorization header using the Monday.com API token for the J2 Group account (j2group.monday.com).
-2. Return ONLY the JSON response body, nothing else.`;
-
+  const prompt = `You are a Monday.com API proxy for j2group.monday.com. Execute this GraphQL and return ONLY the raw JSON response, no markdown, no other text.\n\nGraphQL:\n${gql}\n\nVariables:\n${JSON.stringify(variables)}`;
   const response = await fetch(MONDAY_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }]
-    })
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] })
   });
-
   const data = await response.json();
   const text = data.content?.map(c => c.text || "").join("") || "";
-
-  try {
-    const clean = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(clean);
-  } catch(e) {
-    throw new Error("API parse error: " + text.substring(0, 200));
-  }
+  try { return JSON.parse(text.replace(/```json|```/g, "").trim()); }
+  catch(e) { throw new Error("API error: " + text.substring(0, 200)); }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════════════════════════════
-
-function doLogin() {
+async function doLogin() {
   const name = document.getElementById("login-name").value.trim();
   const pass = document.getElementById("login-password").value.trim();
   const err = document.getElementById("login-error");
+  const loadingMsg = document.getElementById("login-loading");
+  const btn = document.getElementById("btn-login");
 
-  const user = SDR_ACCOUNTS.find(u =>
-    u.name.toLowerCase() === name.toLowerCase() && u.password === pass
-  );
-
-  if (!user) {
-    err.style.display = "block";
-    return;
-  }
+  if (!name || !pass) { err.style.display = "block"; err.textContent = "Please enter your name and password."; return; }
 
   err.style.display = "none";
-  currentUser = user;
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("app").style.display = "block";
-  document.getElementById("user-chip").textContent = user.name;
-  initApp();
+  loadingMsg.style.display = "block";
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Signing in…';
+
+  try {
+    const gql = `query GetUsers($boardId: ID!) { boards(ids: [$boardId]) { items_page(limit: 100) { items { id name column_values { id text } } } } }`;
+    const result = await mondayQuery(gql, { boardId: USERS_BOARD_ID });
+    const items = result?.data?.boards?.[0]?.items_page?.items || [];
+
+    const user = items.find(item => {
+      const itemName = item.name.toLowerCase().trim();
+      const passwordCol = item.column_values.find(c => c.id === USER_COLS.password);
+      return itemName === name.toLowerCase().trim() && passwordCol?.text === pass;
+    });
+
+    if (!user) {
+      err.style.display = "block";
+      err.textContent = "Incorrect name or password. Please try again.";
+      loadingMsg.style.display = "none";
+      btn.disabled = false; btn.innerHTML = 'Sign In';
+      return;
+    }
+
+    const emailCol = user.column_values.find(c => c.id === USER_COLS.email);
+    currentUser = { name: user.name, email: emailCol?.text || "" };
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    document.getElementById("user-chip").textContent = currentUser.name;
+    loadingMsg.style.display = "none";
+    btn.disabled = false; btn.innerHTML = 'Sign In';
+    initApp();
+  } catch(e) {
+    err.style.display = "block";
+    err.textContent = "Could not connect. Please try again.";
+    loadingMsg.style.display = "none";
+    btn.disabled = false; btn.innerHTML = 'Sign In';
+  }
 }
 
 document.addEventListener("keydown", e => {
@@ -917,309 +336,126 @@ document.addEventListener("keydown", e => {
 });
 
 function doLogout() {
-  currentUser = null;
-  openClockInEntry = null;
-  allEntries = [];
+  currentUser = null; openClockInEntry = null; allEntries = [];
   document.getElementById("login-screen").style.display = "flex";
   document.getElementById("app").style.display = "none";
   document.getElementById("login-name").value = "";
   document.getElementById("login-password").value = "";
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════════
-
-function initApp() {
-  startLiveClock();
-  setTodayDate();
-  checkOpenClockIn();
-  loadTimesheet();
-}
+function initApp() { startLiveClock(); setTodayDate(); checkOpenClockIn(); loadTimesheet(); }
 
 function startLiveClock() {
   function update() {
     const t = new Date().toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour12: false });
-    const el1 = document.getElementById("live-time");
-    const el2 = document.getElementById("live-time-2");
-    if (el1) el1.textContent = t;
-    if (el2) el2.textContent = t;
+    const el1 = document.getElementById("live-time"); const el2 = document.getElementById("live-time-2");
+    if (el1) el1.textContent = t; if (el2) el2.textContent = t;
   }
-  update();
-  setInterval(update, 1000);
+  update(); setInterval(update, 1000);
 }
 
-function setTodayDate() {
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
-  document.getElementById("clock-in-date").value = today;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// CLOCK IN/OUT CHECK
-// ═══════════════════════════════════════════════════════════════════
+function setTodayDate() { document.getElementById("clock-in-date").value = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }); }
 
 async function checkOpenClockIn() {
-  // Find today's entry for this SDR with clock-in but no clock-out
   try {
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
     const entries = await fetchEntries(currentUser.name);
-
-    const open = entries.find(e => {
-      return e.workDate === today &&
-             e.clockIn && !e.clockOut;
-    });
-
-    if (open) {
-      openClockInEntry = { itemId: open.id, clockInTime: open.clockIn };
-      showClockedIn(open.clockIn);
-    } else {
-      showClockedOut();
-    }
-  } catch(e) {
-    showClockedOut();
-  }
+    const open = entries.find(e => e.workDate === today && e.clockIn && !e.clockOut);
+    if (open) { openClockInEntry = { itemId: open.id, clockInTime: open.clockIn }; showClockedIn(open.clockIn); }
+    else showClockedOut();
+  } catch(e) { showClockedOut(); }
 }
 
-function showClockedIn(clockInTime) {
-  const block = document.getElementById("clock-status-block");
-  block.className = "clock-status clocked-in";
-  document.getElementById("clock-status-text").textContent = `You clocked in at ${clockInTime}. Remember to clock out before you finish.`;
+function showClockedIn(t) {
+  document.getElementById("clock-status-block").className = "clock-status clocked-in";
+  document.getElementById("clock-status-text").textContent = `You clocked in at ${t}. Remember to clock out before you finish.`;
   document.getElementById("clock-card-in").style.display = "none";
   document.getElementById("clock-card-out").style.display = "block";
-  document.getElementById("clock-in-time-display").textContent = clockInTime;
+  document.getElementById("clock-in-time-display").textContent = t;
 }
 
 function showClockedOut() {
-  const block = document.getElementById("clock-status-block");
-  block.className = "clock-status clocked-out";
+  document.getElementById("clock-status-block").className = "clock-status clocked-out";
   document.getElementById("clock-status-text").textContent = "You are currently clocked out.";
   document.getElementById("clock-card-in").style.display = "block";
   document.getElementById("clock-card-out").style.display = "none";
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// CLOCK IN SUBMISSION
-// ═══════════════════════════════════════════════════════════════════
-
 async function submitClockIn() {
-  const btn = document.getElementById("btn-clock-in");
-  const alert = document.getElementById("alert-clock");
-  btn.innerHTML = '<span class="spinner"></span> Clocking in…';
-  btn.disabled = true;
-
+  const btn = document.getElementById("btn-clock-in"); const alert = document.getElementById("alert-clock");
+  btn.innerHTML = '<span class="spinner"></span> Clocking in…'; btn.disabled = true;
   try {
     const now = new Date();
     const aestTime = now.toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour12: false, hour: "2-digit", minute: "2-digit" });
     const date = document.getElementById("clock-in-date").value;
-    const sessionId = `${currentUser.name.replace(/\s+/g,'_')}_${date}`;
-    const cutoff = getCutoffLabel(date);
-
-    // Check not already clocked in today
     const entries = await fetchEntries(currentUser.name);
     const todayOpen = entries.find(e => e.workDate === date && e.clockIn && !e.clockOut);
-    if (todayOpen) {
-      showAlert(alert, "error", "You already have an open clock-in for today. Please clock out first.");
-      btn.innerHTML = 'Clock In Now'; btn.disabled = false;
-      return;
-    }
-
+    if (todayOpen) { showAlert(alert, "error", "You already have an open clock-in for today."); btn.innerHTML = 'Clock In Now'; btn.disabled = false; return; }
     const [h, m] = aestTime.split(":");
+    const cutoff = getCutoffLabel(date);
     const colVals = {
       [COLS.sdrName]: currentUser.name,
       [COLS.sdrEmail]: { email: currentUser.email, text: currentUser.name },
-      [COLS.workDate]: { date: date },
+      [COLS.workDate]: { date },
       [COLS.clockIn]: { hour: parseInt(h), minute: parseInt(m) },
       [COLS.cutoffPeriod]: { label: cutoff },
-      [COLS.sessionId]: sessionId,
-      [COLS.disputeStatus]: { label: "None" },
+      [COLS.sessionId]: `${currentUser.name.replace(/\s+/g,'_')}_${date}`,
+      [COLS.disputeStatus]: { label: "None" }
     };
-
-    const gql = `mutation CreateEntry($boardId: ID!, $name: String!, $cols: JSON!) {
-      create_item(board_id: $boardId, item_name: $name, column_values: $cols) {
-        id
-      }
-    }`;
-
-    const result = await mondayQuery(gql, {
-      boardId: BOARD_ID,
-      name: `${currentUser.name} – ${date}`,
-      cols: JSON.stringify(colVals)
-    });
-
+    const gql = `mutation CreateEntry($boardId: ID!, $name: String!, $cols: JSON!) { create_item(board_id: $boardId, item_name: $name, column_values: $cols) { id } }`;
+    const result = await mondayQuery(gql, { boardId: BOARD_ID, name: `${currentUser.name} – ${date}`, cols: JSON.stringify(colVals) });
     const itemId = result?.data?.create_item?.id;
     if (!itemId) throw new Error("No item ID returned");
-
     openClockInEntry = { itemId, clockInTime: aestTime };
-    showClockedIn(aestTime);
-    showAlert(alert, "success", `✓ Clocked in at ${aestTime}. See you at the end of your shift!`);
-    allEntries = []; // clear cache
-    loadTimesheet();
-  } catch (e) {
-    showAlert(alert, "error", "Could not save clock-in. Please try again. (" + e.message + ")");
-  }
-
-  btn.innerHTML = 'Clock In Now';
-  btn.disabled = false;
+    showClockedIn(aestTime); showAlert(alert, "success", `✓ Clocked in at ${aestTime}!`);
+    allEntries = []; loadTimesheet();
+  } catch(e) { showAlert(alert, "error", "Could not save. " + e.message); }
+  btn.innerHTML = 'Clock In Now'; btn.disabled = false;
 }
-
-// ═══════════════════════════════════════════════════════════════════
-// CLOCK OUT SUBMISSION
-// ═══════════════════════════════════════════════════════════════════
 
 async function submitClockOut() {
   if (!openClockInEntry) return;
-  const btn = document.getElementById("btn-clock-out");
-  const alert = document.getElementById("alert-clock");
-  btn.innerHTML = '<span class="spinner"></span> Clocking out…';
-  btn.disabled = true;
-
+  const btn = document.getElementById("btn-clock-out"); const alert = document.getElementById("alert-clock");
+  btn.innerHTML = '<span class="spinner"></span> Clocking out…'; btn.disabled = true;
   try {
-    const now = new Date();
-    const aestTime = now.toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour12: false, hour: "2-digit", minute: "2-digit" });
+    const aestTime = new Date().toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour12: false, hour: "2-digit", minute: "2-digit" });
     const [h, m] = aestTime.split(":");
-
-    const colVals = {
-      [COLS.clockOut]: { hour: parseInt(h), minute: parseInt(m) }
-    };
-
-    const gql = `mutation UpdateEntry($boardId: ID!, $itemId: ID!, $cols: JSON!) {
-      change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $cols) {
-        id
-      }
-    }`;
-
-    await mondayQuery(gql, {
-      boardId: BOARD_ID,
-      itemId: openClockInEntry.itemId,
-      cols: JSON.stringify(colVals)
-    });
-
-    openClockInEntry = null;
-    showClockedOut();
-    showAlert(alert, "success", `✓ Clocked out at ${aestTime}. Great work today!`);
-    allEntries = [];
-    loadTimesheet();
-  } catch(e) {
-    showAlert(alert, "error", "Could not save clock-out. Please try again. (" + e.message + ")");
-  }
-
-  btn.innerHTML = 'Clock Out Now';
-  btn.disabled = false;
+    const gql = `mutation Update($boardId: ID!, $itemId: ID!, $cols: JSON!) { change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $cols) { id } }`;
+    await mondayQuery(gql, { boardId: BOARD_ID, itemId: openClockInEntry.itemId, cols: JSON.stringify({ [COLS.clockOut]: { hour: parseInt(h), minute: parseInt(m) } }) });
+    openClockInEntry = null; showClockedOut(); showAlert(alert, "success", `✓ Clocked out at ${aestTime}. Great work!`);
+    allEntries = []; loadTimesheet();
+  } catch(e) { showAlert(alert, "error", "Could not save. " + e.message); }
+  btn.innerHTML = 'Clock Out Now'; btn.disabled = false;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// FETCH ENTRIES FROM MONDAY
-// ═══════════════════════════════════════════════════════════════════
-
 async function fetchEntries(sdrName) {
-  const gql = `query GetEntries($boardId: ID!) {
-    boards(ids: [$boardId]) {
-      items_page(limit: 200) {
-        items {
-          id
-          name
-          column_values {
-            id
-            text
-            value
-          }
-        }
-      }
-    }
-  }`;
-
+  const gql = `query GetEntries($boardId: ID!) { boards(ids: [$boardId]) { items_page(limit: 200) { items { id name column_values { id text value } } } } }`;
   const result = await mondayQuery(gql, { boardId: BOARD_ID });
   const items = result?.data?.boards?.[0]?.items_page?.items || [];
-
-  return items
-    .filter(item => {
-      const nameCol = item.column_values.find(c => c.id === COLS.sdrName);
-      return nameCol?.text?.toLowerCase() === sdrName.toLowerCase();
-    })
-    .map(item => parseEntry(item));
+  return items.filter(item => { const c = item.column_values.find(c => c.id === COLS.sdrName); return c?.text?.toLowerCase() === sdrName.toLowerCase(); }).map(parseEntry);
 }
 
 function parseEntry(item) {
-  const col = (id) => item.column_values.find(c => c.id === id);
-  const txt = (id) => col(id)?.text || "";
-
-  return {
-    id: item.id,
-    name: item.name,
-    sdrName: txt(COLS.sdrName),
-    workDate: txt(COLS.workDate),
-    clockIn: txt(COLS.clockIn),
-    clockOut: txt(COLS.clockOut),
-    actualStart: txt(COLS.actualStart),
-    actualEnd: txt(COLS.actualEnd),
-    billableHrs: parseFloat(txt(COLS.billableHrs)) || 0,
-    deduction: parseFloat(txt(COLS.deduction)) || 0,
-    dailyPay: parseFloat(txt(COLS.dailyPay)) || 0,
-    cutoffPeriod: txt(COLS.cutoffPeriod),
-    disputeStatus: txt(COLS.disputeStatus),
-    disputeNotes: txt(COLS.disputeNotes),
-    adminNotes: txt(COLS.adminNotes),
-  };
+  const txt = id => item.column_values.find(c => c.id === id)?.text || "";
+  return { id: item.id, name: item.name, sdrName: txt(COLS.sdrName), workDate: txt(COLS.workDate), clockIn: txt(COLS.clockIn), clockOut: txt(COLS.clockOut), actualStart: txt(COLS.actualStart), actualEnd: txt(COLS.actualEnd), billableHrs: parseFloat(txt(COLS.billableHrs)) || 0, deduction: parseFloat(txt(COLS.deduction)) || 0, dailyPay: parseFloat(txt(COLS.dailyPay)) || 0, cutoffPeriod: txt(COLS.cutoffPeriod), disputeStatus: txt(COLS.disputeStatus), disputeNotes: txt(COLS.disputeNotes), adminNotes: txt(COLS.adminNotes) };
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// TIMESHEET
-// ═══════════════════════════════════════════════════════════════════
-
 async function loadTimesheet() {
-  const loading = document.getElementById("timesheet-loading");
-  const empty = document.getElementById("timesheet-empty");
-  const wrap = document.getElementById("timesheet-table-wrap");
-  const body = document.getElementById("timesheet-body");
-
-  loading.style.display = "block";
-  empty.style.display = "none";
-  wrap.style.display = "none";
-
-  try {
-    allEntries = await fetchEntries(currentUser.name);
-    renderTimesheet();
-  } catch(e) {
-    loading.textContent = "Could not load entries. " + e.message;
-  }
+  document.getElementById("timesheet-loading").style.display = "block";
+  document.getElementById("timesheet-empty").style.display = "none";
+  document.getElementById("timesheet-table-wrap").style.display = "none";
+  try { allEntries = await fetchEntries(currentUser.name); renderTimesheet(); }
+  catch(e) { document.getElementById("timesheet-loading").textContent = "Could not load entries."; }
 }
 
 function renderTimesheet() {
-  const loading = document.getElementById("timesheet-loading");
-  const empty = document.getElementById("timesheet-empty");
-  const wrap = document.getElementById("timesheet-table-wrap");
-  const body = document.getElementById("timesheet-body");
-
-  const filtered = filterByCutoff(allEntries, timesheetCutoff);
-  loading.style.display = "none";
-
-  if (filtered.length === 0) {
-    empty.style.display = "block";
-    wrap.style.display = "none";
-    return;
-  }
-
-  empty.style.display = "none";
-  wrap.style.display = "block";
-
-  // Sort by date desc
-  filtered.sort((a,b) => b.workDate.localeCompare(a.workDate));
-
-  body.innerHTML = filtered.map(e => {
-    const disputeBadge = getDisputeBadge(e.disputeStatus);
+  document.getElementById("timesheet-loading").style.display = "none";
+  const filtered = filterByCutoff(allEntries, timesheetCutoff).sort((a,b) => b.workDate.localeCompare(a.workDate));
+  if (filtered.length === 0) { document.getElementById("timesheet-empty").style.display = "block"; return; }
+  document.getElementById("timesheet-table-wrap").style.display = "block";
+  document.getElementById("timesheet-body").innerHTML = filtered.map(e => {
     const canDispute = e.actualStart && !["Submitted","Under Review"].includes(e.disputeStatus);
-
-    return `<tr>
-      <td><strong>${formatDate(e.workDate)}</strong></td>
-      <td>${e.clockIn || '<span style="color:var(--muted)">—</span>'}</td>
-      <td>${e.clockOut || '<span style="color:var(--muted)">—</span>'}</td>
-      <td>${e.actualStart || '<span style="color:var(--muted)">Pending</span>'}</td>
-      <td>${e.actualEnd || '<span style="color:var(--muted)">Pending</span>'}</td>
-      <td>${e.billableHrs > 0 ? '<strong>' + e.billableHrs.toFixed(2) + '</strong>' : '<span style="color:var(--muted)">—</span>'}</td>
-      <td>${e.deduction > 0 ? '<span style="color:var(--red)">-' + e.deduction.toFixed(2) + '</span>' : '<span style="color:var(--muted)">—</span>'}</td>
-      <td>${disputeBadge}</td>
-      <td>${canDispute ? `<button class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Dispute</button>` : ''}</td>
-    </tr>`;
+    return `<tr><td><strong>${formatDate(e.workDate)}</strong></td><td>${e.clockIn||'—'}</td><td>${e.clockOut||'—'}</td><td>${e.actualStart||'<span style="color:var(--muted)">Pending</span>'}</td><td>${e.actualEnd||'—'}</td><td>${e.billableHrs>0?'<strong>'+e.billableHrs.toFixed(2)+'</strong>':'—'}</td><td>${e.deduction>0?'<span style="color:var(--red)">-'+e.deduction.toFixed(2)+'</span>':'—'}</td><td>${getDisputeBadge(e.disputeStatus)}</td><td>${canDispute?`<button class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Dispute</button>`:''}</td></tr>`;
   }).join("");
 }
 
@@ -1230,61 +466,32 @@ function selectCutoff(val) {
   renderTimesheet();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// PAY
-// ═══════════════════════════════════════════════════════════════════
-
 async function loadPay() {
-  const loading = document.getElementById("pay-loading");
-  const content = document.getElementById("pay-content");
-  loading.style.display = "block";
-  content.style.display = "none";
-
-  if (allEntries.length === 0) {
-    try { allEntries = await fetchEntries(currentUser.name); } catch(e) {}
-  }
+  document.getElementById("pay-loading").style.display = "block";
+  document.getElementById("pay-content").style.display = "none";
+  if (allEntries.length === 0) { try { allEntries = await fetchEntries(currentUser.name); } catch(e) {} }
   renderPay();
 }
 
 function renderPay() {
-  const loading = document.getElementById("pay-loading");
-  const content = document.getElementById("pay-content");
-
   const filtered = filterByCutoff(allEntries, payCutoff).filter(e => e.billableHrs > 0);
-  const label = getCutoffDisplayLabel(payCutoff);
-
-  document.getElementById("pay-period-label").textContent = "Period: " + label;
-
-  const totalHrs = filtered.reduce((s,e) => s + e.billableHrs, 0);
-  const totalDeduction = filtered.reduce((s,e) => s + e.deduction, 0);
-  const totalPay = filtered.reduce((s,e) => s + e.dailyPay, 0) ||
-                   totalHrs * (2000/7);
-
+  document.getElementById("pay-period-label").textContent = "Period: " + getCutoffDisplayLabel(payCutoff);
+  const totalHrs = filtered.reduce((s,e) => s+e.billableHrs, 0);
+  const totalDeduction = filtered.reduce((s,e) => s+e.deduction, 0);
+  const totalPay = filtered.reduce((s,e) => s+e.dailyPay, 0) || totalHrs*(2000/7);
   document.getElementById("pay-days").textContent = filtered.length;
   document.getElementById("pay-hours").textContent = totalHrs.toFixed(2);
   document.getElementById("pay-deductions").textContent = "-" + totalDeduction.toFixed(2);
   document.getElementById("pay-total").textContent = "AUD $" + totalPay.toFixed(2);
-
   const body = document.getElementById("pay-body");
-  if (filtered.length === 0) {
-    body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No payable entries for this period yet.</td></tr>`;
-  } else {
-    filtered.sort((a,b) => b.workDate.localeCompare(a.workDate));
-    body.innerHTML = filtered.map(e => {
-      const pay = e.dailyPay || (e.billableHrs * (2000/7));
-      const disputeBadge = getDisputeBadge(e.disputeStatus);
-      return `<tr>
-        <td>${formatDate(e.workDate)}</td>
-        <td>${e.billableHrs.toFixed(2)} hrs</td>
-        <td>${e.deduction > 0 ? '<span style="color:var(--red)">-' + e.deduction.toFixed(2) + '</span>' : '—'}</td>
-        <td><strong>$${pay.toFixed(2)}</strong></td>
-        <td>${disputeBadge}</td>
-      </tr>`;
-    }).join("");
-  }
-
-  loading.style.display = "none";
-  content.style.display = "block";
+  body.innerHTML = filtered.length === 0
+    ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No payable entries yet.</td></tr>`
+    : filtered.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e => {
+        const pay = e.dailyPay || (e.billableHrs*(2000/7));
+        return `<tr><td>${formatDate(e.workDate)}</td><td>${e.billableHrs.toFixed(2)} hrs</td><td>${e.deduction>0?'<span style="color:var(--red)">-'+e.deduction.toFixed(2)+'</span>':'—'}</td><td><strong>$${pay.toFixed(2)}</strong></td><td>${getDisputeBadge(e.disputeStatus)}</td></tr>`;
+      }).join("");
+  document.getElementById("pay-loading").style.display = "none";
+  document.getElementById("pay-content").style.display = "block";
 }
 
 function selectPayCutoff(val) {
@@ -1294,10 +501,6 @@ function selectPayCutoff(val) {
   renderPay();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// DISPUTE
-// ═══════════════════════════════════════════════════════════════════
-
 function openDisputeModal(itemId, date) {
   disputeItemId = itemId;
   document.getElementById("dispute-item-info").textContent = "Entry: " + formatDate(date);
@@ -1306,138 +509,55 @@ function openDisputeModal(itemId, date) {
   document.getElementById("dispute-modal").classList.add("open");
 }
 
-function closeDisputeModal() {
-  document.getElementById("dispute-modal").classList.remove("open");
-  disputeItemId = null;
-}
+function closeDisputeModal() { document.getElementById("dispute-modal").classList.remove("open"); disputeItemId = null; }
 
 async function submitDispute() {
   const notes = document.getElementById("dispute-text").value.trim();
-  const alert = document.getElementById("alert-dispute");
-  const btn = document.getElementById("btn-submit-dispute");
-
-  if (!notes) {
-    showAlert(alert, "error", "Please describe your reason for disputing.");
-    return;
-  }
-
-  btn.innerHTML = '<span class="spinner"></span> Submitting…';
-  btn.disabled = true;
-
+  const alert = document.getElementById("alert-dispute"); const btn = document.getElementById("btn-submit-dispute");
+  if (!notes) { showAlert(alert, "error", "Please describe your reason."); return; }
+  btn.innerHTML = '<span class="spinner"></span> Submitting…'; btn.disabled = true;
   try {
-    const colVals = {
-      [COLS.disputeStatus]: { label: "Submitted" },
-      [COLS.disputeNotes]: notes,
-    };
-
-    const gql = `mutation UpdateDispute($boardId: ID!, $itemId: ID!, $cols: JSON!) {
-      change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $cols) {
-        id
-      }
-    }`;
-
-    await mondayQuery(gql, {
-      boardId: BOARD_ID,
-      itemId: disputeItemId,
-      cols: JSON.stringify(colVals)
-    });
-
+    const gql = `mutation Update($boardId: ID!, $itemId: ID!, $cols: JSON!) { change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $cols) { id } }`;
+    await mondayQuery(gql, { boardId: BOARD_ID, itemId: disputeItemId, cols: JSON.stringify({ [COLS.disputeStatus]: { label: "Submitted" }, [COLS.disputeNotes]: notes }) });
     showAlert(alert, "success", "Dispute submitted. Your admin will review it shortly.");
-    allEntries = [];
-    setTimeout(() => {
-      closeDisputeModal();
-      loadTimesheet();
-    }, 1800);
-  } catch(e) {
-    showAlert(alert, "error", "Could not submit dispute. " + e.message);
-  }
-
-  btn.innerHTML = 'Submit Dispute';
-  btn.disabled = false;
+    allEntries = []; setTimeout(() => { closeDisputeModal(); loadTimesheet(); }, 1800);
+  } catch(e) { showAlert(alert, "error", "Could not submit. " + e.message); }
+  btn.innerHTML = 'Submit Dispute'; btn.disabled = false;
 }
-
-// ═══════════════════════════════════════════════════════════════════
-// TABS
-// ═══════════════════════════════════════════════════════════════════
 
 function switchTab(tab) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.getElementById("page-" + tab).classList.add("active");
   document.getElementById("tab-" + tab).classList.add("active");
-
   if (tab === "timesheet" && allEntries.length === 0) loadTimesheet();
   if (tab === "pay") loadPay();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════
-
 function filterByCutoff(entries, cutoff) {
-  const today = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }));
-  const day = today.getDate();
-  const month = today.getMonth();
-  const year = today.getFullYear();
-
-  let start, end;
   if (cutoff === 'all') return entries;
-
+  const today = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }));
+  const day = today.getDate(), month = today.getMonth(), year = today.getFullYear();
+  let start, end;
   if (cutoff === 'current') {
-    if (day >= 26) {
-      // 26th this month → 10th next month
-      start = new Date(year, month, 26);
-      end = new Date(month === 11 ? year+1 : year, (month+1)%12, 10);
-    } else if (day <= 10) {
-      // 26th prev month → 10th this month
-      start = new Date(month === 0 ? year-1 : year, (month-1+12)%12, 26);
-      end = new Date(year, month, 10);
-    } else {
-      // 11th → 25th this month
-      start = new Date(year, month, 11);
-      end = new Date(year, month, 25);
-    }
-  } else if (cutoff === 'prev') {
-    if (day >= 26) {
-      start = new Date(year, month, 11);
-      end = new Date(year, month, 25);
-    } else if (day <= 10) {
-      start = new Date(month === 0 ? year-1 : year, (month-1+12)%12, 11);
-      end = new Date(month === 0 ? year-1 : year, (month-1+12)%12, 25);
-    } else {
-      start = new Date(month === 0 ? year-1 : year, (month-1+12)%12, 26);
-      end = new Date(year, month, 10);
-    }
+    if (day >= 26) { start = new Date(year, month, 26); end = new Date(month===11?year+1:year, (month+1)%12, 10); }
+    else if (day <= 10) { start = new Date(month===0?year-1:year, (month-1+12)%12, 26); end = new Date(year, month, 10); }
+    else { start = new Date(year, month, 11); end = new Date(year, month, 25); }
+  } else {
+    if (day >= 26) { start = new Date(year, month, 11); end = new Date(year, month, 25); }
+    else if (day <= 10) { start = new Date(month===0?year-1:year, (month-1+12)%12, 11); end = new Date(month===0?year-1:year, (month-1+12)%12, 25); }
+    else { start = new Date(month===0?year-1:year, (month-1+12)%12, 26); end = new Date(year, month, 10); }
   }
-
-  return entries.filter(e => {
-    if (!e.workDate) return false;
-    const d = new Date(e.workDate);
-    return d >= start && d <= end;
-  });
+  return entries.filter(e => { if (!e.workDate) return false; const d = new Date(e.workDate + "T12:00:00"); return d >= start && d <= end; });
 }
 
-function getCutoffLabel(dateStr) {
-  const d = new Date(dateStr);
-  const day = d.getDate();
-  if (day >= 11 && day <= 25) return "11th–25th (Pay 30th)";
-  return "26th–10th (Pay 15th)";
-}
-
+function getCutoffLabel(dateStr) { const d = new Date(dateStr); return d.getDate() >= 11 && d.getDate() <= 25 ? "11th–25th (Pay 30th)" : "26th–10th (Pay 15th)"; }
 function getCutoffDisplayLabel(cutoff) {
   const today = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }));
-  const day = today.getDate();
-  const mo = today.toLocaleString("en-AU", { month: "long", timeZone: "Australia/Sydney" });
-  const yr = today.getFullYear();
-
-  if (cutoff === 'current') {
-    if (day >= 26) return `26 ${mo} – 10 next month`;
-    if (day <= 10) return `26 last month – 10 ${mo} ${yr}`;
-    return `11–25 ${mo} ${yr}`;
-  }
+  const day = today.getDate(), mo = today.toLocaleString("en-AU", { month: "long", timeZone: "Australia/Sydney" }), yr = today.getFullYear();
+  if (cutoff === 'current') { if (day >= 26) return `26 ${mo} – 10 next month`; if (day <= 10) return `26 last month – 10 ${mo} ${yr}`; return `11–25 ${mo} ${yr}`; }
   return "Previous cutoff period";
 }
-
 function getDisputeBadge(status) {
   if (!status || status === "None" || status === "") return '<span class="badge badge-gray">—</span>';
   if (status === "Submitted") return '<span class="badge badge-amber">⏳ Submitted</span>';
@@ -1446,28 +566,10 @@ function getDisputeBadge(status) {
   if (status === "Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
   return `<span class="badge badge-gray">${status}</span>`;
 }
-
-function formatDate(dateStr) {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr + "T12:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
-  } catch { return dateStr; }
-}
-
-function showAlert(el, type, msg) {
-  el.className = "alert show alert-" + type;
-  el.textContent = msg;
-}
-
-function hideAlert(el) {
-  el.className = "alert";
-  el.textContent = "";
-}
-
-// Close modal on overlay click
-document.getElementById("dispute-modal").addEventListener("click", function(e) {
-  if (e.target === this) closeDisputeModal();
-});
+function formatDate(dateStr) { if (!dateStr) return "—"; try { return new Date(dateStr + "T12:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }); } catch { return dateStr; } }
+function showAlert(el, type, msg) { el.className = "alert show alert-" + type; el.textContent = msg; }
+function hideAlert(el) { el.className = "alert"; el.textContent = ""; }
+document.getElementById("dispute-modal").addEventListener("click", function(e) { if (e.target === this) closeDisputeModal(); });
 </script>
 </body>
 </html>

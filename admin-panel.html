@@ -250,6 +250,7 @@
     <div class="nav-tab active" onclick="switchTab('entries')" id="tab-entries">📋 All Entries</div>
     <div class="nav-tab" onclick="switchTab('disputes')" id="tab-disputes">⚠️ Disputes <span class="badge-count" id="dispute-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('payroll')" id="tab-payroll">💰 Payroll Summary</div>
+    <div class="nav-tab" onclick="switchTab('users')" id="tab-users">👥 Users</div>
   </div>
 
   <div class="main">
@@ -355,6 +356,45 @@
 
   </div>
 </div>
+
+
+    <!-- ── USERS PAGE ── -->
+    <div class="page" id="page-users">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Manage Users</h2>
+          <p>Add, remove or update SDR portal accounts. Changes take effect immediately.</p>
+        </div>
+        <button class="btn btn-primary" onclick="loadUsers()">↻ Refresh</button>
+      </div>
+
+      <div id="alert-users" class="alert"></div>
+
+      <div class="card">
+        <div class="card-title">➕ Add New SDR</div>
+        <div class="two-col">
+          <div class="field-group"><label>Full Name</label><input type="text" id="new-user-name" placeholder="e.g. Maria Santos" /></div>
+          <div class="field-group"><label>Email</label><input type="email" id="new-user-email" placeholder="maria@j2group.com.au" /></div>
+        </div>
+        <div class="two-col">
+          <div class="field-group"><label>Password</label><input type="text" id="new-user-password" placeholder="Choose a password" /></div>
+          <div style="display:flex;align-items:flex-end;padding-bottom:1px;">
+            <button class="btn btn-primary" onclick="addUser()" id="btn-add-user" style="width:100%;">Add User</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="users-loading" class="loading-block">Loading users…</div>
+        <div id="users-empty" class="empty-block" style="display:none;"><div class="icon">👥</div><p>No users found.</p></div>
+        <div class="table-wrap" id="users-table-wrap" style="display:none;">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Password</th><th style="text-align:center">Actions</th></tr></thead>
+            <tbody id="users-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
 <!-- ── ENTRY EDIT MODAL ── -->
 <div class="modal-overlay" id="edit-modal">
@@ -476,7 +516,7 @@
 // ══════════════════════════════════════════════════
 // CONFIG — CHANGE ADMIN PASSWORD HERE
 // ══════════════════════════════════════════════════
-const ADMIN_PASSWORD = "j2admin2025";
+const ADMIN_PASSWORD = "J2Group@123";
 
 const BOARD_ID = "18417316029";
 const MONDAY_API = "https://api.anthropic.com/v1/messages";
@@ -1027,6 +1067,7 @@ function switchTab(tab) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.getElementById("page-" + tab).classList.add("active");
   document.getElementById("tab-" + tab).classList.add("active");
+  if (tab === "users") loadUsers();
 }
 
 // ══════════════════════════════════════════════════
@@ -1101,6 +1142,93 @@ function hideAlert(el) { el.className = "alert"; el.textContent = ""; }
 // Close modals on overlay click
 document.getElementById("edit-modal").addEventListener("click", e => { if (e.target === document.getElementById("edit-modal")) closeEditModal(); });
 document.getElementById("resolve-modal").addEventListener("click", e => { if (e.target === document.getElementById("resolve-modal")) closeResolveModal(); });
+
+// ══════════════════════════════════════════════════
+// USERS MANAGEMENT
+// ══════════════════════════════════════════════════
+const USERS_BOARD_ID = "18417319169";
+const USER_COLS = { email: "email_mm472mb0", password: "text_mm47b0hy", status: "color_mm47kkvv" };
+let allUsers = [];
+
+async function loadUsers() {
+  document.getElementById("users-loading").style.display = "block";
+  document.getElementById("users-empty").style.display = "none";
+  document.getElementById("users-table-wrap").style.display = "none";
+  try {
+    const gql = `query GetUsers($boardId: ID!) { boards(ids: [$boardId]) { items_page(limit: 100) { items { id name column_values { id text } } } } }`;
+    const result = await mondayQuery(gql, { boardId: USERS_BOARD_ID });
+    allUsers = result?.data?.boards?.[0]?.items_page?.items || [];
+    renderUsersTable();
+  } catch(e) {
+    document.getElementById("users-loading").textContent = "Could not load users: " + e.message;
+  }
+}
+
+function renderUsersTable() {
+  document.getElementById("users-loading").style.display = "none";
+  if (allUsers.length === 0) { document.getElementById("users-empty").style.display = "block"; return; }
+  document.getElementById("users-table-wrap").style.display = "block";
+  const body = document.getElementById("users-body");
+  body.innerHTML = allUsers.map(u => {
+    const emailCol = u.column_values.find(c => c.id === USER_COLS.email);
+    const passCol = u.column_values.find(c => c.id === USER_COLS.password);
+    return `<tr>
+      <td><strong>${u.name}</strong></td>
+      <td>${emailCol?.text || '—'}</td>
+      <td><code style="background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;">${passCol?.text || '—'}</code></td>
+      <td style="text-align:center">
+        <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${u.name.replace(/'/g,"\'")}')">Remove</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function addUser() {
+  const name = document.getElementById("new-user-name").value.trim();
+  const email = document.getElementById("new-user-email").value.trim();
+  const password = document.getElementById("new-user-password").value.trim();
+  const alert = document.getElementById("alert-users");
+  const btn = document.getElementById("btn-add-user");
+
+  if (!name || !password) { showAlert(alert, "error", "Name and password are required."); return; }
+
+  btn.innerHTML = '<span class="spinner"></span> Adding…'; btn.disabled = true;
+
+  try {
+    const colVals = {
+      [USER_COLS.password]: password,
+      [USER_COLS.status]: { label: "Done" }
+    };
+    if (email) colVals[USER_COLS.email] = { email, text: email };
+
+    const gql = `mutation CreateUser($boardId: ID!, $name: String!, $cols: JSON!) { create_item(board_id: $boardId, item_name: $name, column_values: $cols) { id name } }`;
+    const result = await mondayQuery(gql, { boardId: USERS_BOARD_ID, name, cols: JSON.stringify(colVals) });
+    if (!result?.data?.create_item?.id) throw new Error("No ID returned");
+
+    showAlert(alert, "success", `✓ ${name} added successfully. They can log in immediately.`);
+    document.getElementById("new-user-name").value = "";
+    document.getElementById("new-user-email").value = "";
+    document.getElementById("new-user-password").value = "";
+    loadUsers();
+  } catch(e) {
+    showAlert(alert, "error", "Could not add user: " + e.message);
+  }
+  btn.innerHTML = 'Add User'; btn.disabled = false;
+}
+
+async function deleteUser(itemId, name) {
+  if (!confirm(`Remove ${name} from the portal? They will no longer be able to log in.`)) return;
+  const alert = document.getElementById("alert-users");
+  try {
+    const gql = `mutation DeleteUser($itemId: ID!) { delete_item(item_id: $itemId) { id } }`;
+    await mondayQuery(gql, { itemId });
+    showAlert(alert, "success", `✓ ${name} removed.`);
+    loadUsers();
+  } catch(e) {
+    showAlert(alert, "error", "Could not remove user: " + e.message);
+  }
+}
+
 </script>
 </body>
 </html>
