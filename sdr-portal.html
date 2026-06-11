@@ -27,7 +27,7 @@
   .btn-primary { background: var(--cyan); color: white; width: 100%; }
   .btn-primary:hover { background: var(--cyan-dim); }
   .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-  .btn-secondary { background: var(--soft); color: var(--steel); }
+  .btn-secondary { background: var(--soft); color: var(--steel); border: 1.5px solid var(--border); }
   .btn-secondary:hover { background: var(--border); }
   .btn-danger { background: #fef2f2; color: var(--red); border: 1.5px solid #fecaca; }
   .btn-danger:hover { background: #fee2e2; }
@@ -64,7 +64,7 @@
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { background: #f8fafc; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1.5px solid var(--border); white-space: nowrap; }
-  td { padding: 12px 12px; border-bottom: 1px solid #f0f4f8; color: var(--text); vertical-align: top; }
+  td { padding: 12px; border-bottom: 1px solid #f0f4f8; color: var(--text); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: #fafcff; }
   .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
@@ -99,7 +99,7 @@
   .loading-block { text-align: center; padding: 32px; color: var(--muted); font-size: 14px; }
   .empty-block { text-align: center; padding: 40px; color: var(--muted); }
   .empty-block .empty-icon { font-size: 32px; margin-bottom: 10px; }
-  .time-display { font-size: 28px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+  .time-display { font-size: 28px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
   .time-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
   @media (max-width: 600px) { .topbar { padding: 0 16px; } .main { padding: 20px 16px; } .nav-tab { padding: 12px 14px; font-size: 12px; } .login-card { padding: 32px 24px; } }
 </style>
@@ -113,15 +113,9 @@
       <h1>SDR <span class="accent">Time Portal</span></h1>
     </div>
     <div id="login-loading" style="text-align:center;padding:12px;color:var(--muted);font-size:13px;display:none;">Checking credentials…</div>
-    <div class="login-error" id="login-error">Incorrect name or password. Please try again.</div>
-    <div class="field-group">
-      <label>Your Name</label>
-      <input type="text" id="login-name" placeholder="e.g. Richard Dreje" autocomplete="name" />
-    </div>
-    <div class="field-group">
-      <label>Password</label>
-      <input type="password" id="login-password" placeholder="Enter your password" />
-    </div>
+    <div class="login-error" id="login-error">Incorrect name or password.</div>
+    <div class="field-group"><label>Your Name</label><input type="text" id="login-name" placeholder="e.g. Richard Dreje" /></div>
+    <div class="field-group"><label>Password</label><input type="password" id="login-password" placeholder="Enter your password" /></div>
     <button class="btn btn-primary" onclick="doLogin()" id="btn-login">Sign In</button>
     <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted);">Contact your J2 admin if you need access.</p>
   </div>
@@ -186,7 +180,7 @@
         <div id="timesheet-empty" class="empty-block" style="display:none;"><div class="empty-icon">📭</div><p>No entries found for this period.</p></div>
         <div class="table-wrap" id="timesheet-table-wrap" style="display:none;">
           <table>
-            <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Actual Start</th><th>Actual End</th><th>Billable Hrs</th><th>Deduction</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Actual Start</th><th>Actual End</th><th>Billable Hrs</th><th>Deduction</th><th>Dispute</th><th></th></tr></thead>
             <tbody id="timesheet-body"></tbody>
           </table>
         </div>
@@ -245,21 +239,7 @@
 </div>
 
 <script>
-const BOARD_ID = "18417316029";
-const USERS_BOARD_ID = "18417319169";
-const USER_COLS = {
-  email: "email_mm472mb0",
-  password: "text_mm47b0hy",
-  status: "color_mm47kkvv"
-};
-
-const COLS = {
-  sdrName: "text_mm47956n", sdrEmail: "email_mm47jsp1", workDate: "date_mm47b6g4",
-  clockIn: "hour_mm47a2f9", clockOut: "hour_mm47tny9", actualStart: "hour_mm47pke4",
-  actualEnd: "hour_mm47992d", billableHrs: "numeric_mm47m56h", deduction: "numeric_mm47chva",
-  dailyPay: "numeric_mm47pnk6", cutoffPeriod: "color_mm47ec1", disputeStatus: "color_mm473gak",
-  disputeNotes: "long_text_mm47bq1s", adminNotes: "long_text_mm47hm00", sessionId: "text_mm477f8d"
-};
+const API = "https://script.google.com/macros/s/AKfycby13I-n4tJRPaT47HIORmK7UvchKXfgQv0A4HlyXIatny-ucFnKdD5Kr9iXBQPIACYOJg/exec";
 
 let currentUser = null;
 let openClockInEntry = null;
@@ -268,304 +248,248 @@ let timesheetCutoff = 'current';
 let payCutoff = 'current';
 let allEntries = [];
 
-async function mondayQuery(gql, variables = {}) {
-  const response = await fetch("https://api.monday.com/v2", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY2OTY2Mzc4OSwiYWFpIjoxMSwidWlkIjoxMTQ5MTY1OSwiaWFkIjoiMjAyNi0wNi0xMVQwNToxMjozNy4yNDNaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6Mzc0NjUwMywicmduIjoidXNlMSJ9.O8kKJDQ_Hb2sXg5vOpSplclTs4OHLCLjsfr1GYlx-Tk", "API-Version": "2024-01" },
-    body: JSON.stringify({ query: gql, variables })
+async function api(payload) {
+  const res = await fetch(API, {
+    method: "POST", mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload)
   });
-  if (!response.ok) throw new Error("HTTP " + response.status);
-  return await response.json();
+  // no-cors returns opaque response; use GET workaround for reads
+  return {};
+}
+
+async function apiGet(payload) {
+  const url = API + "?data=" + encodeURIComponent(JSON.stringify(payload));
+  const res = await fetch(url);
+  return await res.json();
+}
+
+async function apiPost(payload) {
+  const res = await fetch(API, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  });
+  return await res.json();
 }
 
 async function doLogin() {
   const name = document.getElementById("login-name").value.trim();
   const pass = document.getElementById("login-password").value.trim();
   const err = document.getElementById("login-error");
-  const loadingMsg = document.getElementById("login-loading");
+  const loading = document.getElementById("login-loading");
   const btn = document.getElementById("btn-login");
-
-  if (!name || !pass) { err.style.display = "block"; err.textContent = "Please enter your name and password."; return; }
-
-  err.style.display = "none";
-  loadingMsg.style.display = "block";
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Signing in…';
-
+  if (!name || !pass) { err.style.display="block"; err.textContent="Please enter your name and password."; return; }
+  err.style.display="none"; loading.style.display="block"; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Signing in…';
   try {
-    const gql = `query GetUsers($boardId: ID!) { boards(ids: [$boardId]) { items_page(limit: 100) { items { id name column_values { id text } } } } }`;
-    const result = await mondayQuery(gql, { boardId: USERS_BOARD_ID });
-    const items = result?.data?.boards?.[0]?.items_page?.items || [];
-
-    const user = items.find(item => {
-      const itemName = item.name.toLowerCase().trim();
-      const passwordCol = item.column_values.find(c => c.id === USER_COLS.password);
-      return itemName === name.toLowerCase().trim() && passwordCol?.text === pass;
-    });
-
-    if (!user) {
-      err.style.display = "block";
-      err.textContent = "Incorrect name or password. Please try again.";
-      loadingMsg.style.display = "none";
-      btn.disabled = false; btn.innerHTML = 'Sign In';
-      return;
-    }
-
-    const emailCol = user.column_values.find(c => c.id === USER_COLS.email);
-    currentUser = { name: user.name, email: emailCol?.text || "" };
-    document.getElementById("login-screen").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    document.getElementById("user-chip").textContent = currentUser.name;
-    loadingMsg.style.display = "none";
-    btn.disabled = false; btn.innerHTML = 'Sign In';
+    const result = await apiPost({ action: "getUsers" });
+    const users = result.users || [];
+    const user = users.find(u => u.name.toLowerCase().trim() === name.toLowerCase().trim() && u.password === pass);
+    if (!user) { err.style.display="block"; err.textContent="Incorrect name or password."; loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In"; return; }
+    currentUser = { id: user.id, name: user.name, email: user.email || "" };
+    document.getElementById("login-screen").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("user-chip").textContent=currentUser.name;
+    loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In";
     initApp();
   } catch(e) {
-    err.style.display = "block";
-    err.textContent = "Could not connect. Please try again.";
-    loadingMsg.style.display = "none";
-    btn.disabled = false; btn.innerHTML = 'Sign In';
+    err.style.display="block"; err.textContent="Could not connect. Please try again.";
+    loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In";
   }
 }
 
-document.addEventListener("keydown", e => {
-  if (e.key === "Enter" && document.getElementById("login-screen").style.display !== "none") doLogin();
-});
+document.addEventListener("keydown", e => { if (e.key==="Enter" && document.getElementById("login-screen").style.display!=="none") doLogin(); });
 
 function doLogout() {
-  currentUser = null; openClockInEntry = null; allEntries = [];
-  document.getElementById("login-screen").style.display = "flex";
-  document.getElementById("app").style.display = "none";
-  document.getElementById("login-name").value = "";
-  document.getElementById("login-password").value = "";
+  currentUser=null; openClockInEntry=null; allEntries=[];
+  document.getElementById("login-screen").style.display="flex";
+  document.getElementById("app").style.display="none";
+  document.getElementById("login-name").value="";
+  document.getElementById("login-password").value="";
 }
 
 function initApp() { startLiveClock(); setTodayDate(); checkOpenClockIn(); loadTimesheet(); }
 
 function startLiveClock() {
   function update() {
-    const t = new Date().toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour12: false });
-    const el1 = document.getElementById("live-time"); const el2 = document.getElementById("live-time-2");
-    if (el1) el1.textContent = t; if (el2) el2.textContent = t;
+    const t = new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false});
+    const e1=document.getElementById("live-time"); const e2=document.getElementById("live-time-2");
+    if(e1) e1.textContent=t; if(e2) e2.textContent=t;
   }
-  update(); setInterval(update, 1000);
+  update(); setInterval(update,1000);
 }
 
-function setTodayDate() { document.getElementById("clock-in-date").value = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }); }
+function setTodayDate() { document.getElementById("clock-in-date").value=new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}); }
 
 async function checkOpenClockIn() {
   try {
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
-    const entries = await fetchEntries(currentUser.name);
-    const open = entries.find(e => e.workDate === today && e.clockIn && !e.clockOut);
-    if (open) { openClockInEntry = { itemId: open.id, clockInTime: open.clockIn }; showClockedIn(open.clockIn); }
+    const today = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+    const entries = await fetchEntries();
+    const open = entries.find(e => e.workDate===today && e.clockIn && !e.clockOut);
+    if (open) { openClockInEntry={itemId:open.id,clockInTime:open.clockIn}; showClockedIn(open.clockIn); }
     else showClockedOut();
   } catch(e) { showClockedOut(); }
 }
 
 function showClockedIn(t) {
-  document.getElementById("clock-status-block").className = "clock-status clocked-in";
-  document.getElementById("clock-status-text").textContent = `You clocked in at ${t}. Remember to clock out before you finish.`;
-  document.getElementById("clock-card-in").style.display = "none";
-  document.getElementById("clock-card-out").style.display = "block";
-  document.getElementById("clock-in-time-display").textContent = t;
+  document.getElementById("clock-status-block").className="clock-status clocked-in";
+  document.getElementById("clock-status-text").textContent=`You clocked in at ${t}. Remember to clock out before you finish.`;
+  document.getElementById("clock-card-in").style.display="none";
+  document.getElementById("clock-card-out").style.display="block";
+  document.getElementById("clock-in-time-display").textContent=t;
 }
 
 function showClockedOut() {
-  document.getElementById("clock-status-block").className = "clock-status clocked-out";
-  document.getElementById("clock-status-text").textContent = "You are currently clocked out.";
-  document.getElementById("clock-card-in").style.display = "block";
-  document.getElementById("clock-card-out").style.display = "none";
+  document.getElementById("clock-status-block").className="clock-status clocked-out";
+  document.getElementById("clock-status-text").textContent="You are currently clocked out.";
+  document.getElementById("clock-card-in").style.display="block";
+  document.getElementById("clock-card-out").style.display="none";
 }
 
 async function submitClockIn() {
-  const btn = document.getElementById("btn-clock-in"); const alert = document.getElementById("alert-clock");
-  btn.innerHTML = '<span class="spinner"></span> Clocking in…'; btn.disabled = true;
+  const btn=document.getElementById("btn-clock-in"); const alert=document.getElementById("alert-clock");
+  btn.innerHTML='<span class="spinner"></span> Clocking in…'; btn.disabled=true;
   try {
-    const now = new Date();
-    const aestTime = now.toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour12: false, hour: "2-digit", minute: "2-digit" });
-    const date = document.getElementById("clock-in-date").value;
-    const entries = await fetchEntries(currentUser.name);
-    const todayOpen = entries.find(e => e.workDate === date && e.clockIn && !e.clockOut);
-    if (todayOpen) { showAlert(alert, "error", "You already have an open clock-in for today."); btn.innerHTML = 'Clock In Now'; btn.disabled = false; return; }
-    const [h, m] = aestTime.split(":");
-    const cutoff = getCutoffLabel(date);
-    const colVals = {
-      [COLS.sdrName]: currentUser.name,
-      [COLS.sdrEmail]: { email: currentUser.email, text: currentUser.name },
-      [COLS.workDate]: { date },
-      [COLS.clockIn]: { hour: parseInt(h), minute: parseInt(m) },
-      [COLS.cutoffPeriod]: { label: cutoff },
-      [COLS.sessionId]: `${currentUser.name.replace(/\s+/g,'_')}_${date}`,
-      [COLS.disputeStatus]: { label: "None" }
-    };
-    const gql = `mutation CreateEntry($boardId: ID!, $name: String!, $cols: JSON!) { create_item(board_id: $boardId, item_name: $name, column_values: $cols) { id } }`;
-    const result = await mondayQuery(gql, { boardId: BOARD_ID, name: `${currentUser.name} – ${date}`, cols: JSON.stringify(colVals) });
-    const itemId = result?.data?.create_item?.id;
-    if (!itemId) throw new Error("No item ID returned");
-    openClockInEntry = { itemId, clockInTime: aestTime };
-    showClockedIn(aestTime); showAlert(alert, "success", `✓ Clocked in at ${aestTime}!`);
-    allEntries = []; loadTimesheet();
-  } catch(e) { showAlert(alert, "error", "Could not save. " + e.message); }
-  btn.innerHTML = 'Clock In Now'; btn.disabled = false;
+    const aestTime=new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"});
+    const date=document.getElementById("clock-in-date").value;
+    const entries=await fetchEntries();
+    const todayOpen=entries.find(e=>e.workDate===date&&e.clockIn&&!e.clockOut);
+    if(todayOpen){showAlert(alert,"error","You already have an open clock-in for today.");btn.innerHTML="Clock In Now";btn.disabled=false;return;}
+    const result=await apiPost({action:"addEntry",sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:aestTime,cutoffPeriod:getCutoffLabel(date)});
+    if(!result.success) throw new Error("Failed to save");
+    openClockInEntry={itemId:result.id,clockInTime:aestTime};
+    showClockedIn(aestTime); showAlert(alert,"success",`✓ Clocked in at ${aestTime}!`);
+    allEntries=[]; loadTimesheet();
+  } catch(e){showAlert(alert,"error","Could not save. "+e.message);}
+  btn.innerHTML="Clock In Now"; btn.disabled=false;
 }
 
 async function submitClockOut() {
-  if (!openClockInEntry) return;
-  const btn = document.getElementById("btn-clock-out"); const alert = document.getElementById("alert-clock");
-  btn.innerHTML = '<span class="spinner"></span> Clocking out…'; btn.disabled = true;
+  if(!openClockInEntry) return;
+  const btn=document.getElementById("btn-clock-out"); const alert=document.getElementById("alert-clock");
+  btn.innerHTML='<span class="spinner"></span> Clocking out…'; btn.disabled=true;
   try {
-    const aestTime = new Date().toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour12: false, hour: "2-digit", minute: "2-digit" });
-    const [h, m] = aestTime.split(":");
-    const gql = `mutation Update($boardId: ID!, $itemId: ID!, $cols: JSON!) { change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $cols) { id } }`;
-    await mondayQuery(gql, { boardId: BOARD_ID, itemId: openClockInEntry.itemId, cols: JSON.stringify({ [COLS.clockOut]: { hour: parseInt(h), minute: parseInt(m) } }) });
-    openClockInEntry = null; showClockedOut(); showAlert(alert, "success", `✓ Clocked out at ${aestTime}. Great work!`);
-    allEntries = []; loadTimesheet();
-  } catch(e) { showAlert(alert, "error", "Could not save. " + e.message); }
-  btn.innerHTML = 'Clock Out Now'; btn.disabled = false;
+    const aestTime=new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"});
+    await apiPost({action:"updateEntry",id:openClockInEntry.itemId,clockOut:aestTime});
+    openClockInEntry=null; showClockedOut(); showAlert(alert,"success",`✓ Clocked out at ${aestTime}. Great work!`);
+    allEntries=[]; loadTimesheet();
+  } catch(e){showAlert(alert,"error","Could not save. "+e.message);}
+  btn.innerHTML="Clock Out Now"; btn.disabled=false;
 }
 
-async function fetchEntries(sdrName) {
-  const gql = `query GetEntries($boardId: ID!) { boards(ids: [$boardId]) { items_page(limit: 200) { items { id name column_values { id text value } } } } }`;
-  const result = await mondayQuery(gql, { boardId: BOARD_ID });
-  const items = result?.data?.boards?.[0]?.items_page?.items || [];
-  return items.filter(item => { const c = item.column_values.find(c => c.id === COLS.sdrName); return c?.text?.toLowerCase() === sdrName.toLowerCase(); }).map(parseEntry);
-}
-
-function parseEntry(item) {
-  const txt = id => item.column_values.find(c => c.id === id)?.text || "";
-  return { id: item.id, name: item.name, sdrName: txt(COLS.sdrName), workDate: txt(COLS.workDate), clockIn: txt(COLS.clockIn), clockOut: txt(COLS.clockOut), actualStart: txt(COLS.actualStart), actualEnd: txt(COLS.actualEnd), billableHrs: parseFloat(txt(COLS.billableHrs)) || 0, deduction: parseFloat(txt(COLS.deduction)) || 0, dailyPay: parseFloat(txt(COLS.dailyPay)) || 0, cutoffPeriod: txt(COLS.cutoffPeriod), disputeStatus: txt(COLS.disputeStatus), disputeNotes: txt(COLS.disputeNotes), adminNotes: txt(COLS.adminNotes) };
+async function fetchEntries() {
+  const result=await apiPost({action:"getEntries"});
+  const entries=result.entries||[];
+  return entries.filter(e=>e.sdrName&&e.sdrName.toLowerCase()===currentUser.name.toLowerCase());
 }
 
 async function loadTimesheet() {
-  document.getElementById("timesheet-loading").style.display = "block";
-  document.getElementById("timesheet-empty").style.display = "none";
-  document.getElementById("timesheet-table-wrap").style.display = "none";
-  try { allEntries = await fetchEntries(currentUser.name); renderTimesheet(); }
-  catch(e) { document.getElementById("timesheet-loading").textContent = "Could not load entries."; }
+  document.getElementById("timesheet-loading").style.display="block";
+  document.getElementById("timesheet-empty").style.display="none";
+  document.getElementById("timesheet-table-wrap").style.display="none";
+  try { allEntries=await fetchEntries(); renderTimesheet(); }
+  catch(e){document.getElementById("timesheet-loading").textContent="Could not load entries.";}
 }
 
 function renderTimesheet() {
-  document.getElementById("timesheet-loading").style.display = "none";
-  const filtered = filterByCutoff(allEntries, timesheetCutoff).sort((a,b) => b.workDate.localeCompare(a.workDate));
-  if (filtered.length === 0) { document.getElementById("timesheet-empty").style.display = "block"; return; }
-  document.getElementById("timesheet-table-wrap").style.display = "block";
-  document.getElementById("timesheet-body").innerHTML = filtered.map(e => {
-    const canDispute = e.actualStart && !["Submitted","Under Review"].includes(e.disputeStatus);
-    return `<tr><td><strong>${formatDate(e.workDate)}</strong></td><td>${e.clockIn||'—'}</td><td>${e.clockOut||'—'}</td><td>${e.actualStart||'<span style="color:var(--muted)">Pending</span>'}</td><td>${e.actualEnd||'—'}</td><td>${e.billableHrs>0?'<strong>'+e.billableHrs.toFixed(2)+'</strong>':'—'}</td><td>${e.deduction>0?'<span style="color:var(--red)">-'+e.deduction.toFixed(2)+'</span>':'—'}</td><td>${getDisputeBadge(e.disputeStatus)}</td><td>${canDispute?`<button class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Dispute</button>`:''}</td></tr>`;
+  document.getElementById("timesheet-loading").style.display="none";
+  const filtered=filterByCutoff(allEntries,timesheetCutoff).sort((a,b)=>b.workDate.localeCompare(a.workDate));
+  if(filtered.length===0){document.getElementById("timesheet-empty").style.display="block";return;}
+  document.getElementById("timesheet-table-wrap").style.display="block";
+  document.getElementById("timesheet-body").innerHTML=filtered.map(e=>{
+    const canDispute=e.actualStart&&!["Submitted","Under Review"].includes(e.disputeStatus);
+    return `<tr><td><strong>${formatDate(e.workDate)}</strong></td><td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td><td>${e.actualStart||'<span style="color:var(--muted)">Pending</span>'}</td><td>${e.actualEnd||"—"}</td><td>${e.billableHrs>0?"<strong>"+parseFloat(e.billableHrs).toFixed(2)+"</strong>":"—"}</td><td>${e.deduction>0?'<span style="color:var(--red)">-'+parseFloat(e.deduction).toFixed(2)+"</span>":"—"}</td><td>${getDisputeBadge(e.disputeStatus)}</td><td>${canDispute?`<button class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Dispute</button>`:""}</td></tr>`;
   }).join("");
 }
 
-function selectCutoff(val) {
-  timesheetCutoff = val;
-  document.querySelectorAll("#page-timesheet .cutoff-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById("co-" + val).classList.add("active");
-  renderTimesheet();
-}
+function selectCutoff(val){timesheetCutoff=val;document.querySelectorAll("#page-timesheet .cutoff-btn").forEach(b=>b.classList.remove("active"));document.getElementById("co-"+val).classList.add("active");renderTimesheet();}
 
 async function loadPay() {
-  document.getElementById("pay-loading").style.display = "block";
-  document.getElementById("pay-content").style.display = "none";
-  if (allEntries.length === 0) { try { allEntries = await fetchEntries(currentUser.name); } catch(e) {} }
+  document.getElementById("pay-loading").style.display="block";
+  document.getElementById("pay-content").style.display="none";
+  if(allEntries.length===0){try{allEntries=await fetchEntries();}catch(e){}}
   renderPay();
 }
 
 function renderPay() {
-  const filtered = filterByCutoff(allEntries, payCutoff).filter(e => e.billableHrs > 0);
-  document.getElementById("pay-period-label").textContent = "Period: " + getCutoffDisplayLabel(payCutoff);
-  const totalHrs = filtered.reduce((s,e) => s+e.billableHrs, 0);
-  const totalDeduction = filtered.reduce((s,e) => s+e.deduction, 0);
-  const totalPay = filtered.reduce((s,e) => s+e.dailyPay, 0) || totalHrs*(2000/7);
-  document.getElementById("pay-days").textContent = filtered.length;
-  document.getElementById("pay-hours").textContent = totalHrs.toFixed(2);
-  document.getElementById("pay-deductions").textContent = "-" + totalDeduction.toFixed(2);
-  document.getElementById("pay-total").textContent = "AUD $" + totalPay.toFixed(2);
-  const body = document.getElementById("pay-body");
-  body.innerHTML = filtered.length === 0
-    ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No payable entries yet.</td></tr>`
-    : filtered.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e => {
-        const pay = e.dailyPay || (e.billableHrs*(2000/7));
-        return `<tr><td>${formatDate(e.workDate)}</td><td>${e.billableHrs.toFixed(2)} hrs</td><td>${e.deduction>0?'<span style="color:var(--red)">-'+e.deduction.toFixed(2)+'</span>':'—'}</td><td><strong>$${pay.toFixed(2)}</strong></td><td>${getDisputeBadge(e.disputeStatus)}</td></tr>`;
-      }).join("");
-  document.getElementById("pay-loading").style.display = "none";
-  document.getElementById("pay-content").style.display = "block";
+  const filtered=filterByCutoff(allEntries,payCutoff).filter(e=>parseFloat(e.billableHrs)>0);
+  document.getElementById("pay-period-label").textContent="Period: "+getCutoffDisplayLabel(payCutoff);
+  const totalHrs=filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
+  const totalDed=filtered.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
+  const totalPay=filtered.reduce((s,e)=>s+parseFloat(e.dailyPay||0),0)||totalHrs*(2000/7);
+  document.getElementById("pay-days").textContent=filtered.length;
+  document.getElementById("pay-hours").textContent=totalHrs.toFixed(2);
+  document.getElementById("pay-deductions").textContent="-"+totalDed.toFixed(2);
+  document.getElementById("pay-total").textContent="AUD $"+totalPay.toFixed(2);
+  const body=document.getElementById("pay-body");
+  body.innerHTML=filtered.length===0?`<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No payable entries yet.</td></tr>`:filtered.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{const pay=parseFloat(e.dailyPay)||(parseFloat(e.billableHrs)*(2000/7));return`<tr><td>${formatDate(e.workDate)}</td><td>${parseFloat(e.billableHrs).toFixed(2)} hrs</td><td>${e.deduction>0?'<span style="color:var(--red)">-'+parseFloat(e.deduction).toFixed(2)+"</span>":"—"}</td><td><strong>$${pay.toFixed(2)}</strong></td><td>${getDisputeBadge(e.disputeStatus)}</td></tr>`;}).join("");
+  document.getElementById("pay-loading").style.display="none";
+  document.getElementById("pay-content").style.display="block";
 }
 
-function selectPayCutoff(val) {
-  payCutoff = val;
-  document.querySelectorAll("#page-pay .cutoff-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById("pco-" + val).classList.add("active");
-  renderPay();
-}
+function selectPayCutoff(val){payCutoff=val;document.querySelectorAll("#page-pay .cutoff-btn").forEach(b=>b.classList.remove("active"));document.getElementById("pco-"+val).classList.add("active");renderPay();}
 
-function openDisputeModal(itemId, date) {
-  disputeItemId = itemId;
-  document.getElementById("dispute-item-info").textContent = "Entry: " + formatDate(date);
-  document.getElementById("dispute-text").value = "";
-  hideAlert(document.getElementById("alert-dispute"));
-  document.getElementById("dispute-modal").classList.add("open");
-}
-
-function closeDisputeModal() { document.getElementById("dispute-modal").classList.remove("open"); disputeItemId = null; }
+function openDisputeModal(itemId,date){disputeItemId=itemId;document.getElementById("dispute-item-info").textContent="Entry: "+formatDate(date);document.getElementById("dispute-text").value="";hideAlert(document.getElementById("alert-dispute"));document.getElementById("dispute-modal").classList.add("open");}
+function closeDisputeModal(){document.getElementById("dispute-modal").classList.remove("open");disputeItemId=null;}
 
 async function submitDispute() {
-  const notes = document.getElementById("dispute-text").value.trim();
-  const alert = document.getElementById("alert-dispute"); const btn = document.getElementById("btn-submit-dispute");
-  if (!notes) { showAlert(alert, "error", "Please describe your reason."); return; }
-  btn.innerHTML = '<span class="spinner"></span> Submitting…'; btn.disabled = true;
+  const notes=document.getElementById("dispute-text").value.trim();
+  const alert=document.getElementById("alert-dispute"); const btn=document.getElementById("btn-submit-dispute");
+  if(!notes){showAlert(alert,"error","Please describe your reason.");return;}
+  btn.innerHTML='<span class="spinner"></span> Submitting…'; btn.disabled=true;
   try {
-    const gql = `mutation Update($boardId: ID!, $itemId: ID!, $cols: JSON!) { change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $cols) { id } }`;
-    await mondayQuery(gql, { boardId: BOARD_ID, itemId: disputeItemId, cols: JSON.stringify({ [COLS.disputeStatus]: { label: "Submitted" }, [COLS.disputeNotes]: notes }) });
-    showAlert(alert, "success", "Dispute submitted. Your admin will review it shortly.");
-    allEntries = []; setTimeout(() => { closeDisputeModal(); loadTimesheet(); }, 1800);
-  } catch(e) { showAlert(alert, "error", "Could not submit. " + e.message); }
-  btn.innerHTML = 'Submit Dispute'; btn.disabled = false;
+    await apiPost({action:"updateEntry",id:disputeItemId,disputeStatus:"Submitted",disputeNotes:notes});
+    showAlert(alert,"success","Dispute submitted. Your admin will review it shortly.");
+    allEntries=[]; setTimeout(()=>{closeDisputeModal();loadTimesheet();},1800);
+  } catch(e){showAlert(alert,"error","Could not submit. "+e.message);}
+  btn.innerHTML="Submit Dispute"; btn.disabled=false;
 }
 
-function switchTab(tab) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
-  document.getElementById("page-" + tab).classList.add("active");
-  document.getElementById("tab-" + tab).classList.add("active");
-  if (tab === "timesheet" && allEntries.length === 0) loadTimesheet();
-  if (tab === "pay") loadPay();
+function switchTab(tab){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("page-"+tab).classList.add("active");
+  document.getElementById("tab-"+tab).classList.add("active");
+  if(tab==="timesheet"&&allEntries.length===0) loadTimesheet();
+  if(tab==="pay") loadPay();
 }
 
-function filterByCutoff(entries, cutoff) {
-  if (cutoff === 'all') return entries;
-  const today = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }));
-  const day = today.getDate(), month = today.getMonth(), year = today.getFullYear();
-  let start, end;
-  if (cutoff === 'current') {
-    if (day >= 26) { start = new Date(year, month, 26); end = new Date(month===11?year+1:year, (month+1)%12, 10); }
-    else if (day <= 10) { start = new Date(month===0?year-1:year, (month-1+12)%12, 26); end = new Date(year, month, 10); }
-    else { start = new Date(year, month, 11); end = new Date(year, month, 25); }
+function filterByCutoff(entries,cutoff) {
+  if(cutoff==="all") return entries;
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
+  let start,end;
+  if(cutoff==="current"){
+    if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+    else{start=new Date(year,month,11);end=new Date(year,month,25);}
   } else {
-    if (day >= 26) { start = new Date(year, month, 11); end = new Date(year, month, 25); }
-    else if (day <= 10) { start = new Date(month===0?year-1:year, (month-1+12)%12, 11); end = new Date(month===0?year-1:year, (month-1+12)%12, 25); }
-    else { start = new Date(month===0?year-1:year, (month-1+12)%12, 26); end = new Date(year, month, 10); }
+    if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
+    else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
   }
-  return entries.filter(e => { if (!e.workDate) return false; const d = new Date(e.workDate + "T12:00:00"); return d >= start && d <= end; });
+  return entries.filter(e=>{if(!e.workDate)return false;const d=new Date(e.workDate+"T12:00:00");return d>=start&&d<=end;});
 }
 
-function getCutoffLabel(dateStr) { const d = new Date(dateStr); return d.getDate() >= 11 && d.getDate() <= 25 ? "11th–25th (Pay 30th)" : "26th–10th (Pay 15th)"; }
-function getCutoffDisplayLabel(cutoff) {
-  const today = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" }));
-  const day = today.getDate(), mo = today.toLocaleString("en-AU", { month: "long", timeZone: "Australia/Sydney" }), yr = today.getFullYear();
-  if (cutoff === 'current') { if (day >= 26) return `26 ${mo} – 10 next month`; if (day <= 10) return `26 last month – 10 ${mo} ${yr}`; return `11–25 ${mo} ${yr}`; }
+function getCutoffLabel(dateStr){const d=new Date(dateStr);return d.getDate()>=11&&d.getDate()<=25?"11th–25th (Pay 30th)":"26th–10th (Pay 15th)";}
+function getCutoffDisplayLabel(cutoff){
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),mo=today.toLocaleString("en-AU",{month:"long",timeZone:"Australia/Sydney"}),yr=today.getFullYear();
+  if(cutoff==="current"){if(day>=26)return`26 ${mo} – 10 next month`;if(day<=10)return`26 last month – 10 ${mo} ${yr}`;return`11–25 ${mo} ${yr}`;}
   return "Previous cutoff period";
 }
-function getDisputeBadge(status) {
-  if (!status || status === "None" || status === "") return '<span class="badge badge-gray">—</span>';
-  if (status === "Submitted") return '<span class="badge badge-amber">⏳ Submitted</span>';
-  if (status === "Under Review") return '<span class="badge badge-blue">🔍 Under Review</span>';
-  if (status === "Resolved") return '<span class="badge badge-green">✓ Resolved</span>';
-  if (status === "Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
-  return `<span class="badge badge-gray">${status}</span>`;
+function getDisputeBadge(s){
+  if(!s||s==="None"||s==="")return'<span class="badge badge-gray">—</span>';
+  if(s==="Submitted")return'<span class="badge badge-amber">⏳ Submitted</span>';
+  if(s==="Under Review")return'<span class="badge badge-blue">🔍 Under Review</span>';
+  if(s==="Resolved")return'<span class="badge badge-green">✓ Resolved</span>';
+  if(s==="Rejected")return'<span class="badge badge-red">✗ Rejected</span>';
+  return`<span class="badge badge-gray">${s}</span>`;
 }
-function formatDate(dateStr) { if (!dateStr) return "—"; try { return new Date(dateStr + "T12:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }); } catch { return dateStr; } }
-function showAlert(el, type, msg) { el.className = "alert show alert-" + type; el.textContent = msg; }
-function hideAlert(el) { el.className = "alert"; el.textContent = ""; }
-document.getElementById("dispute-modal").addEventListener("click", function(e) { if (e.target === this) closeDisputeModal(); });
+function formatDate(d){if(!d)return"—";try{return new Date(d+"T12:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});}catch{return d;}}
+function showAlert(el,type,msg){el.className="alert show alert-"+type;el.textContent=msg;}
+function hideAlert(el){el.className="alert";el.textContent="";}
+document.getElementById("dispute-modal").addEventListener("click",function(e){if(e.target===this)closeDisputeModal();});
 </script>
 </body>
 </html>
