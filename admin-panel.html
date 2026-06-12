@@ -412,7 +412,7 @@ tr:hover td { background: #faf8f4; }
         <div id="entries-empty" class="empty-block" style="display:none;"><div class="icon">📭</div><p>No entries match your filters.</p></div>
         <div class="table-wrap" id="entries-table-wrap" style="display:none;">
           <table>
-            <thead><tr><th>Employee</th><th>Date</th><th>Clock In/Out</th><th>Actual (JustCall)</th><th>Lunch</th><th>Billable</th><th>Ded.</th><th>Pay</th><th>Status</th></tr></thead>
+            <thead><tr style="background:linear-gradient(135deg,#EEF4FF,#E4EEFF);"><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Employee</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Date</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Clock In/Out</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Actual (JustCall)</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Lunch</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Billable</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Ded.</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Pay</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Status</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Actions</th></tr></thead>
             <tbody id="entries-body"></tbody>
           </table>
         </div>
@@ -1599,6 +1599,46 @@ function updateIncentiveTotal(tsId) {
   const grandEl = document.getElementById("grand-total-"+tsId);
   if(grandEl) grandEl.textContent = "AUD $"+(basePay+total).toFixed(2);
 }
+
+async function deleteEntry(id, name, date) {
+  if (!confirm('Delete entry for ' + name + ' on ' + date + '?\nThis cannot be undone.')) return;
+  try {
+    await apiPost({ action: "deleteEntry", id });
+    const alert = document.getElementById("alert-entries");
+    if(alert) showAlert(alert, "success", "Entry deleted.");
+    loadAllEntries();
+  } catch(e) { alert("Failed: " + e.message); }
+}
+
+async function deleteTimesheet(id, name) {
+  if (!confirm('Delete timesheet for ' + name + '?\nThis cannot be undone.')) return;
+  try {
+    await apiPost({ action: "deleteTimesheet", id });
+    const alert = document.getElementById("alert-timesheets");
+    if(alert) showAlert(alert, "success", "Timesheet deleted.");
+    loadTimesheets();
+  } catch(e) { alert("Failed: " + e.message); }
+}
+
+async function reopenTimesheet(id, name) {
+  if (!confirm('Reopen timesheet for ' + name + '?\nSets it back to Pending so they can resubmit.')) return;
+  try {
+    await apiPost({ action: "updateTimesheet", id, status: "Pending", adminNote: "Reopened by admin — please review and resubmit.", disputeNotes: "", incentives: "[]", totalIncentive: "0", grandTotal: "" });
+    const alert = document.getElementById("alert-timesheets");
+    if(alert) showAlert(alert, "success", "Timesheet reopened for " + name + ".");
+    loadTimesheets();
+  } catch(e) { alert("Failed: " + e.message); }
+}
+
+function initApp() { loadAllEntries(); }
+
+window.addEventListener("DOMContentLoaded", function() {
+  if (localStorage.getItem("j2hub_admin_session") === "true") {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    loadAllEntries();
+  }
+});
 </script>
 
 <!-- MEETING EDIT MODAL -->
