@@ -412,7 +412,7 @@ tr:hover td { background: #faf8f4; }
         <div id="entries-empty" class="empty-block" style="display:none;"><div class="icon">📭</div><p>No entries match your filters.</p></div>
         <div class="table-wrap" id="entries-table-wrap" style="display:none;">
           <table>
-            <thead><tr style="background:linear-gradient(135deg,#EEF4FF,#E4EEFF);"><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Employee</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Date</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Clock In/Out</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Actual (JustCall)</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Lunch</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Billable</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Ded.</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Pay</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Status</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Actions</th></tr></thead>
+            <thead><tr style="background:linear-gradient(135deg,#EEF4FF,#E4EEFF);"><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Actions</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Status</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Employee</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Date</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Clock In/Out</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Actual (Time)</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Lunch</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Billable</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Ded.</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Pay</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Delete</th></tr></thead>
             <tbody id="entries-body"></tbody>
           </table>
         </div>
@@ -681,20 +681,19 @@ function renderEntriesTable() {
       ? `<span style="font-size:11px;color:#0A8050;font-weight:700;">🍽️ ${e.lunchStart||""}–${e.lunchEnd||""}</span>`
       : '<span style="color:var(--muted);font-size:11px;">None</span>';
     // Main work row
+    const entryStatusLabel = e.actualStart ? (e.disputeStatus==="Resolved"?'<span class="badge badge-green" style="font-size:10px;">✓ Resolved</span>':'<span class="badge badge-green" style="font-size:10px;">✓ Approved</span>') : '<span class="badge badge-amber" style="font-size:10px;">Pending</span>';
     rows.push(`<tr>
+      <td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openEditModal('${e.id}')">${isPending?"Enter":"Edit"}</button></td>
+      <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
       <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong></td>
       <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
       <td style="font-size:12px;white-space:nowrap">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
-      <td style="font-size:12px;white-space:nowrap">${e.actualStart?e.actualStart+(e.actualEnd?" → "+e.actualEnd:""):'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
+      <td style="font-size:12px;white-space:nowrap">${e.actualStart?e.actualStart+(e.actualEnd?" → "+e.actualEnd:""):'<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
       <td style="font-size:11px;">${lunchStr}</td>
       <td style="font-size:12px;">${e.billableHrs>0?`<strong>${parseFloat(e.billableHrs).toFixed(1)}h</strong>`:"—"}</td>
       <td style="font-size:12px;">${e.deduction>0?`<span style="color:var(--red)">-${parseFloat(e.deduction).toFixed(1)}</span>`:"—"}</td>
       <td style="font-size:12px;">${e.dailyPay>0?`<strong>$${parseFloat(e.dailyPay).toFixed(0)}</strong>`:"—"}</td>
-      <td style="white-space:nowrap;display:flex;gap:4px;align-items:center;">
-        ${getDisputeBadge(e.disputeStatus)}
-        <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openEditModal('${e.id}')">${isPending?"Enter":"Edit"}</button>
-        <button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button>
-      </td>
+      <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
     </tr>`);
     // Meeting sub-rows for this employee+date
     // Track shown meetings per employee+date to avoid duplicates
@@ -705,17 +704,17 @@ function renderEntriesTable() {
       const dur = calcDuration(m.startTime, m.endTime);
       const mHrs = calcMins(m.startTime, m.endTime)/60;
       rows.push(`<tr style="background:rgba(0,150,255,0.04);">
+        <td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openMeetingEditModal('${m.id}')">✏️</button></td>
+        <td><span class="badge badge-green" style="font-size:10px;">✓ Approved</span></td>
         <td style="padding-left:24px;font-size:12px;color:var(--muted);">↳ ${m.sdrName}</td>
         <td style="font-size:12px;color:var(--muted);">${formatDate(m.date)}</td>
         <td><span class="badge badge-gold" style="font-size:10px;">Meeting</span></td>
         <td style="font-size:12px;">${m.startTime||"—"} → ${m.endTime||"—"}</td>
         <td style="font-size:12px;color:var(--muted);">${m.meetingType} (${dur})</td>
-        <td>—</td>
         <td><span style="font-size:12px;color:#0077CC;font-weight:700;">+${mHrs.toFixed(2)} hrs</span></td>
         <td>—</td>
         <td>—</td>
-        <td><span class="badge badge-green" style="font-size:10px;">✓ Approved</span></td>
-        <td style="white-space:nowrap"><button class="btn btn-secondary btn-sm" onclick="openMeetingEditModal('${m.id}')">✏️</button></td>
+        <td>—</td>
       </tr>`);
     });
   });
