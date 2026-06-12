@@ -307,6 +307,21 @@ tr:hover td { background: #faf8f4; }
   #login-screen .field-group label { color: #1A3A6A !important; }
   #login-screen .login-error { color: #CC1A35 !important; }
   #login-screen p { color: #5A7BAA !important; }
+
+.btn-refresh {
+  background: linear-gradient(135deg, #2E86FF 0%, #1A6FE0 100%);
+  color: white; border: none; border-radius: 12px;
+  padding: 10px 22px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(46,134,255,0.35);
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-refresh:hover {
+  background: linear-gradient(135deg, #4A9AFF 0%, #2E86FF 100%);
+  box-shadow: 0 6px 20px rgba(46,134,255,0.45);
+  transform: translateY(-1px);
+}
 </style>
 </head>
 <body>
@@ -487,7 +502,7 @@ tr:hover td { background: #faf8f4; }
     <div class="page" id="page-meetings">
       <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
         <div><h2>Meetings</h2><p>Log meeting time for approval. Approved meetings add to your billable hours in My Timesheet.</p></div>
-        <button class="btn btn-secondary btn-sm" onclick="allMeetings=[];loadMeetings();">↻ Refresh</button>
+        <button class="btn-refresh" onclick="allMeetings=[];loadMeetings();">↻ Refresh</button>
       </div>
       <div id="alert-meetings" class="alert"></div>
       <div class="card">
@@ -1222,6 +1237,21 @@ function downloadPayslipPdf(tsId, label) {
   #login-screen .field-group label { color: #1A3A6A !important; }
   #login-screen .login-error { color: #CC1A35 !important; }
   #login-screen p { color: #5A7BAA !important; }
+
+.btn-refresh {
+  background: linear-gradient(135deg, #2E86FF 0%, #1A6FE0 100%);
+  color: white; border: none; border-radius: 12px;
+  padding: 10px 22px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(46,134,255,0.35);
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-refresh:hover {
+  background: linear-gradient(135deg, #4A9AFF 0%, #2E86FF 100%);
+  box-shadow: 0 6px 20px rgba(46,134,255,0.45);
+  transform: translateY(-1px);
+}
 </style>
   </head><body>${el.innerHTML.replace(/<button[^>]*>.*?<\/button>/gs,'')}</body></html>`);
   printWindow.document.close();
