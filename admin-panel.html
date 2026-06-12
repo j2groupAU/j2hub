@@ -752,6 +752,8 @@ async function saveEntry() {
     const deduction=parseFloat(document.getElementById("em-deduction").value)||0;
     const pay=parseFloat(document.getElementById("em-daily-pay").value)||0;
     const notes=document.getElementById("em-admin-notes").value;
+    const lunchStart=document.getElementById("em-lunch-start")?.value||"";
+    const lunchEnd=document.getElementById("em-lunch-end")?.value||"";
     await apiPost({action:"updateEntry",id:editItemId,actualStart:start,actualEnd:end,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart||undefined,lunchEnd:lunchEnd||undefined,lunchTaken:lunchStart?"TRUE":undefined});
     const idx=allEntries.findIndex(x=>x.id==editItemId);
     if(idx!==-1) allEntries[idx]={...allEntries[idx],actualStart:start,actualEnd:end,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes};
