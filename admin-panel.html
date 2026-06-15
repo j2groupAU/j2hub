@@ -668,7 +668,6 @@ function renderEntriesTable() {
   document.getElementById("entries-table-wrap").style.display="block";
   // Group entries by date+employee to attach meeting sub-rows
   const rows = [];
-  const shownAdminMeetings = new Set();
   filteredEntries.forEach(e => {
     const isPending = e.clockIn && !e.actualStart;
     const submitted = (e.clockIn||"—") + " → " + (e.clockOut||"—");
@@ -703,12 +702,6 @@ function renderEntriesTable() {
       <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
       <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
     </tr>`);
-    // Meeting sub-rows for this employee+date
-    // Track shown meetings per employee+date to avoid duplicates
-    const meetKey = e.sdrName+"_"+e.workDate;
-    const dayMeetings = shownAdminMeetings.has(meetKey) ? [] : allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate);
-
-
   });
   document.getElementById("entries-body").innerHTML = rows.join("");
 }

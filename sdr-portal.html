@@ -1007,20 +1007,20 @@ function renderTimesheetGrouped() {
               :'<span style="color:var(--muted);font-size:11px;">None</span>';
             // Get meetings for this specific date
             const dayMeetings=cutoffMeetings.filter(m=>m.date===e.workDate);
-            // Work Hours = phone hours + meeting hours + 1hr lunch (capped at 8h)
-            const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-            const lunchAdd=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")?1:0;
-            const totalWorkHrs=workHrsVal!==null?Math.min(8,calcWorkHours(workHrsVal,meetHrsTotal)):null;
-            const billableDisplay = totalWorkHrs!==null
-              ? `<strong>${totalWorkHrs.toFixed(2)} hrs</strong>`
-              : (e.clockIn&&e.clockOut?"<span style='color:var(--muted)'>Pending</span>":"—");
+            // Compute work hours live from actual times (full span, no subtraction)
             const workHrsVal=(()=>{if(!e.actualStart||!e.actualEnd)return null;const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);return Math.max(0,((eh*60+em)-(sh*60+sm))/60);})();
             const workHoursStr=workHrsVal!==null
               ?`${workHrsVal.toFixed(2)} hrs`
               :'<span style="color:var(--muted)">Pending</span>';
-            // Meeting column: list approved meetings for this date inline
-            const meetingCell=dayMeetings.length>0
-              ?dayMeetings.map(m=>`<span style="font-size:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:2px 5px;display:inline-block;margin:1px;color:#1d4ed8;">${m.meetingType} (${calcDuration(m.startTime,m.endTime)})</span>`).join(" ")
+            const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+            const totalWorkHrs=workHrsVal!==null?Math.min(8,calcWorkHours(workHrsVal,meetHrsTotal)):null;
+            const billableDisplay = totalWorkHrs!==null
+              ? `<strong>${totalWorkHrs.toFixed(2)} hrs</strong>`
+              : (e.clockIn&&e.clockOut?"<span style='color:var(--muted)'>Pending</span>":"—");
+            // Meeting column: total hours only
+            const totalMeetCellHrs=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+            const meetingCell=totalMeetCellHrs>0
+              ?`<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${totalMeetCellHrs.toFixed(1)}h</span>`
               :'<span style="color:var(--muted);font-size:11px;">—</span>';
             // Time Off column: check approved leave for this date
             const leaveOnDay=allLeaves.find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
