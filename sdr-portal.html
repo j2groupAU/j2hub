@@ -948,12 +948,15 @@ async function loadTimesheet() {
     allEntries = await fetchEntries();
     allTimesheets = [];
     allMeetings = [];
-    const [tr, mr] = await Promise.all([
+    allLeaves = [];
+    const [tr, mr, lr] = await Promise.all([
       apiPost({action:"getTimesheets"}),
-      apiPost({action:"getMeetings"})
+      apiPost({action:"getMeetings"}),
+      apiPost({action:"getLeaves"})
     ]);
     allTimesheets = (tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
     allMeetings = (mr.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    allLeaves = (lr.leaves||[]).filter(l=>l.sdrName===currentUser.name);
     renderTimesheetGrouped();
   } catch(e){ document.getElementById("timesheet-loading").textContent="Could not load entries."; }
 }
@@ -992,7 +995,7 @@ function renderTimesheetGrouped() {
       </div>
       <div class="cutoff-group-body">
         <div class="table-wrap"><table>
-          <thead><tr><th>Date</th><th>Type</th><th>Clock In</th><th>Clock Out</th><th>Actual / Time</th><th>Lunch</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
+          <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
           <tbody>${(()=>{const shownMeetingDates=new Set();return entries.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
             const actualStr=e.actualStart?(e.actualStart+(e.actualEnd?" → "+e.actualEnd:"")):'<span style="color:var(--muted)">Pending</span>';
             const canEntryDispute=!["Under Review","Approved"].includes(tsStatus)&&e.actualStart&&!["Under Review","Under Review"].includes(e.disputeStatus);
@@ -1004,39 +1007,38 @@ function renderTimesheetGrouped() {
               :'<span style="color:var(--muted);font-size:11px;">None</span>';
             // Get meetings for this specific date
             const dayMeetings=cutoffMeetings.filter(m=>m.date===e.workDate);
-            const lunchAdd = (e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true") ? 1 : 0;
+            // Work Hours = phone hours + meeting hours + 1hr lunch (capped at 8h)
+            const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+            const lunchAdd=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")?1:0;
             const displayBillable = parseFloat(e.billableHrs||0);
             const billableDisplay = displayBillable>0
               ? `<strong>${displayBillable.toFixed(2)} hrs</strong>${lunchAdd>0?'<span style="font-size:10px;color:#0A8050;margin-left:4px;">+1h lunch</span>':""}`
               : (e.clockIn&&e.clockOut?"<span style='color:var(--muted)'>Pending</span>":"—");
-            const mainRow=`<tr style="border-bottom:${dayMeetings.length>0?'none':'1px solid #f0ece4'};">
+            const workHrsVal=e.actualStart?Math.min(8,parseFloat(e.billableHrs||0)+meetHrsTotal+lunchAdd):null;
+            const workHoursStr=workHrsVal!==null
+              ?`<strong>${workHrsVal.toFixed(2)} hrs</strong>`
+              :'<span style="color:var(--muted)">Pending</span>';
+            // Meeting column: list approved meetings for this date inline
+            const meetingCell=dayMeetings.length>0
+              ?dayMeetings.map(m=>`<span style="font-size:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:2px 5px;display:inline-block;margin:1px;color:#1d4ed8;">${m.meetingType} (${calcDuration(m.startTime,m.endTime)})</span>`).join(" ")
+              :'<span style="color:var(--muted);font-size:11px;">—</span>';
+            // Time Off column: check approved leave for this date
+            const leaveOnDay=allLeaves.find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
+            const timeOffCell=leaveOnDay
+              ?`<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>`
+              :'<span style="color:var(--muted);font-size:11px;">—</span>';
+            const mainRow=`<tr style="border-bottom:1px solid #f0ece4;">
               <td><strong>${formatDate(e.workDate)}</strong></td>
-              <td><span class="badge badge-blue" style="font-size:10px;">Work</span></td>
               <td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td>
-              <td style="font-size:12px;">${actualStr}</td>
+              <td style="font-size:12px;">${workHoursStr}</td>
               <td>${lunchStr}</td>
+              <td style="font-size:11px;">${meetingCell}</td>
+              <td style="font-size:11px;">${timeOffCell}</td>
               <td>${billableDisplay}</td>
               <td>${e.deduction>0?'<span style="color:var(--red)">-'+parseFloat(e.deduction).toFixed(2)+'h</span>':"—"}</td>
               <td style="white-space:nowrap;">${disputeCell}</td>
             </tr>`;
-            const meetingRows=dayMeetings.map((m,mi)=>{
-              const dur=calcDuration(m.startTime,m.endTime);
-              const mHrs=calcMins(m.startTime,m.endTime)/60;
-              return`<tr style="background:rgba(0,194,255,0.04);border-bottom:${mi===dayMeetings.length-1?'1px solid #f0ece4':'none'};">
-                <td style="padding-left:24px;font-size:12px;color:var(--muted);">↳ ${formatDate(m.date)}</td>
-                <td><span class="badge badge-gold" style="font-size:10px;">Meeting</span></td>
-                <td style="font-size:12px;">${m.startTime||"—"}</td>
-                <td style="font-size:12px;">${m.endTime||"—"}</td>
-                <td style="font-size:12px;color:var(--muted);">${m.meetingType}</td>
-                <td>—</td>
-                <td><span style="font-size:12px;color:#0077CC;font-weight:700;">+${mHrs.toFixed(2)} hrs</span></td>
-                <td>—</td>
-                <td><span class="badge badge-green" style="font-size:10px;">✓ Approved</span></td>
-              </tr>`;
-            }).join("");
-            const result=mainRow+(shownMeetingDates.has(e.workDate)?"":meetingRows);
-            if(dayMeetings.length>0) shownMeetingDates.add(e.workDate);
-            return result;
+            return mainRow;
           });})().join("")}</tbody>
         </table></div>`;
     // Cutoff-level dispute (after timesheet submitted)
