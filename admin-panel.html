@@ -398,14 +398,14 @@ tr:hover td { background: #faf8f4; }
     <!-- ENTRIES -->
     <div class="page active" id="page-entries" style="width:100%;">
       <div class="page-header">
-        <div class="page-header-left"><h2>All Time Entries</h2><p>Enter JustCall actual times and compute billable hours and pay per entry.</p></div>
+        <div class="page-header-left"><h2>All Time Entries</h2><p>Enter work hours and compute billable hours and pay per entry.</p></div>
         <button class="btn-refresh" onclick="loadAllEntries()">↻ Refresh</button>
       </div>
       <div id="alert-entries" class="alert"></div>
       <div class="filter-bar">
         <div class="field-group"><label>Filter by Employee</label><select id="filter-sdr" onchange="applyFilters()"><option value="">All Employees</option></select></div>
         <div class="field-group"><label>Cutoff Period</label><select id="filter-cutoff" onchange="applyFilters()"><option value="">All Periods</option><option value="current">Current Period</option><option value="prev">Previous Period</option></select></div>
-        <div class="field-group"><label>Status</label><select id="filter-status" onchange="applyFilters()"><option value="">All</option><option value="pending">Pending JustCall entry</option><option value="complete">Complete</option></select></div>
+        <div class="field-group"><label>Status</label><select id="filter-status" onchange="applyFilters()"><option value="">All</option><option value="pending">Pending entry</option><option value="complete">Complete</option></select></div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
         <div id="entries-loading" class="loading-block">Loading entries…</div>
@@ -535,19 +535,13 @@ tr:hover td { background: #faf8f4; }
     <div class="info-row"><span class="key">Clock In (Submitted)</span><span class="val" id="em-clock-in">—</span></div>
     <div class="info-row"><span class="key">Clock Out (Submitted)</span><span class="val" id="em-clock-out">—</span></div>
     <hr class="modal-divider">
-    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">JustCall Actual Times</div>
-    <div class="two-col">
-      <div class="field-group"><label>Actual Start (HH:MM)</label><input type="time" id="em-actual-start" /></div>
-      <div class="field-group"><label>Actual End (HH:MM)</label><input type="time" id="em-actual-end" /></div>
-    </div>
     <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
-      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Auto-Computed (editable)</div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Work Hours</div>
       <div class="three-col">
-        <div class="field-group" style="margin-bottom:0;"><label>Billable Hrs</label><input type="number" id="em-billable" step="0.01" min="0" max="7" placeholder="0.00" /></div>
-        <div class="field-group" style="margin-bottom:0;"><label>Deduction (hrs)</label><input type="number" id="em-deduction" step="0.01" min="0" placeholder="0.00" /></div>
+        <div class="field-group" style="margin-bottom:0;"><label>Work Hours (hrs)</label><input type="number" id="em-billable" step="0.01" min="0" max="24" placeholder="0.00" oninput="autoComputeFromWorkHours()" /></div>
+        <div class="field-group" style="margin-bottom:0;"><label>Deduction (hrs)</label><input type="number" id="em-deduction" step="0.01" min="0" placeholder="0.00" readonly style="background:#f0f4ff;" /></div>
         <div class="field-group" style="margin-bottom:0;"><label>Daily Pay (AUD)</label><input type="number" id="em-daily-pay" step="0.01" min="0" placeholder="0.00" /></div>
       </div>
-      <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="autoCompute()">⚡ Auto-compute from times</button>
     </div>
     <hr class="modal-divider">
     <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">🍽️ Lunch (admin edit)</div>
@@ -686,8 +680,9 @@ function renderEntriesTable() {
     const entryStatusLabel = e.actualStart ? (e.disputeStatus==="Resolved"?'<span class="badge badge-green" style="font-size:10px;">✓ Resolved</span>':'<span class="badge badge-green" style="font-size:10px;">✓ Approved</span>') : '<span class="badge badge-amber" style="font-size:10px;">Pending</span>';
     // Compute meeting summary for this employee+date
     const entryMeetings=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate);
-    const meetingCell=entryMeetings.length>0
-      ? entryMeetings.map(m=>`<span style="font-size:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:2px 5px;display:inline-block;margin:1px;color:#1d4ed8;">${m.meetingType} (${calcDuration(m.startTime,m.endTime)})</span>`).join(" ")
+    const totalMeetHrs=entryMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+    const meetingCell=totalMeetHrs>0
+      ? `<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${totalMeetHrs.toFixed(1)}h</span>`
       : '—';
     // Time Off: check if employee has approved leave on this date
     const leaveOnDay=allLeaves.find(l=>l.sdrName===e.sdrName&&l.leaveDate===e.workDate&&l.status==="Approved");
@@ -712,25 +707,8 @@ function renderEntriesTable() {
     // Track shown meetings per employee+date to avoid duplicates
     const meetKey = e.sdrName+"_"+e.workDate;
     const dayMeetings = shownAdminMeetings.has(meetKey) ? [] : allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate);
-    if(dayMeetings.length>0) shownAdminMeetings.add(meetKey);
-    dayMeetings.forEach(m => {
-      const dur = calcDuration(m.startTime, m.endTime);
-      const mHrs = calcMins(m.startTime, m.endTime)/60;
-      rows.push(`<tr style="background:rgba(0,150,255,0.04);">
-        <td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openMeetingEditModal('${m.id}')">✏️</button></td>
-        <td style="font-size:12px;color:var(--muted);">${formatDate(m.date)}</td>
-        <td style="padding-left:24px;font-size:12px;color:var(--muted);">↳ ${m.sdrName}</td>
-        <td><span class="badge badge-gold" style="font-size:10px;">Meeting</span></td>
-        <td><span style="font-size:12px;color:#0077CC;font-weight:700;">+${mHrs.toFixed(2)} hrs</span></td>
-        <td style="font-size:12px;color:var(--muted);">${m.startTime||"—"} → ${m.endTime||"—"}</td>
-        <td style="font-size:12px;color:var(--muted);">${m.meetingType} (${dur})</td>
-        <td>—</td>
-        <td>—</td>
-        <td>—</td>
-        <td><span class="badge badge-green" style="font-size:10px;">✓ Approved</span></td>
-        <td>—</td>
-      </tr>`);
-    });
+
+
   });
   document.getElementById("entries-body").innerHTML = rows.join("");
 }
@@ -744,11 +722,10 @@ function openEditModal(id) {
   document.getElementById("em-clock-out").textContent = e.clockOut||"—";
   document.getElementById("em-actual-start").value = e.actualStart ? toTimeInput(e.actualStart) : "";
   document.getElementById("em-actual-end").value = e.actualEnd ? toTimeInput(e.actualEnd) : "";
-  // Compute billable from actual times (full span) rather than stored value
+  // Work Hours: compute from actual times if available, else use stored billableHrs
   if(e.actualStart&&e.actualEnd){
     const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);
-    const computed=Math.max(0,((eh*60+em)-(sh*60+sm))/60);
-    document.getElementById("em-billable").value=computed.toFixed(2);
+    document.getElementById("em-billable").value=Math.max(0,((eh*60+em)-(sh*60+sm))/60).toFixed(2);
   } else {
     document.getElementById("em-billable").value=e.billableHrs||"";
   }
@@ -820,15 +797,13 @@ async function saveEntry() {
   const btn=document.getElementById("btn-save-entry"); const alert=document.getElementById("alert-edit");
   btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
   try {
-    const start=document.getElementById("em-actual-start").value;
-    const end=document.getElementById("em-actual-end").value;
     const billable=parseFloat(document.getElementById("em-billable").value)||0;
     const deduction=parseFloat(document.getElementById("em-deduction").value)||0;
     const pay=parseFloat(document.getElementById("em-daily-pay").value)||0;
     const notes=document.getElementById("em-admin-notes").value;
     const lunchStart=document.getElementById("em-lunch-start")?.value||"";
     const lunchEnd=document.getElementById("em-lunch-end")?.value||"";
-    await apiPost({action:"updateEntry",id:editItemId,actualStart:start,actualEnd:end,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart||undefined,lunchEnd:lunchEnd||undefined,lunchTaken:lunchStart?"TRUE":undefined});
+    await apiPost({action:"updateEntry",id:editItemId,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart||undefined,lunchEnd:lunchEnd||undefined,lunchTaken:lunchStart?"TRUE":undefined});
     const idx=allEntries.findIndex(x=>x.id==editItemId);
     if(idx!==-1) allEntries[idx]={...allEntries[idx],actualStart:start,actualEnd:end,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes};
     showAlert(alert,"success","✓ Entry saved.");

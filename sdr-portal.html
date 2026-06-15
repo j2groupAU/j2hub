@@ -1010,11 +1010,11 @@ function renderTimesheetGrouped() {
             // Work Hours = phone hours + meeting hours + 1hr lunch (capped at 8h)
             const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
             const lunchAdd=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")?1:0;
-            const totalWorkHrs=e.actualStart?Math.min(8,calcWorkHours(e.billableHrs,meetHrsTotal)):null;
+            const totalWorkHrs=workHrsVal!==null?Math.min(8,calcWorkHours(workHrsVal,meetHrsTotal)):null;
             const billableDisplay = totalWorkHrs!==null
               ? `<strong>${totalWorkHrs.toFixed(2)} hrs</strong>`
               : (e.clockIn&&e.clockOut?"<span style='color:var(--muted)'>Pending</span>":"—");
-            const workHrsVal=e.actualStart?(parseFloat(e.billableHrs||0)):null;
+            const workHrsVal=(()=>{if(!e.actualStart||!e.actualEnd)return null;const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);return Math.max(0,((eh*60+em)-(sh*60+sm))/60);})();
             const workHoursStr=workHrsVal!==null
               ?`${workHrsVal.toFixed(2)} hrs`
               :'<span style="color:var(--muted)">Pending</span>';
@@ -1035,7 +1035,7 @@ function renderTimesheetGrouped() {
               <td style="font-size:11px;">${meetingCell}</td>
               <td style="font-size:11px;">${timeOffCell}</td>
               <td>${billableDisplay}</td>
-              <td>${(()=>{const ded=e.actualStart?calcDeduction(e.billableHrs,meetHrsTotal):0;return ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+'h</span>':"—";})()}</td>
+              <td>${(()=>{const ded=workHrsVal!==null?calcDeduction(workHrsVal,meetHrsTotal):0;return ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+'h</span>':"—";})()}</td>
               <td style="white-space:nowrap;">${disputeCell}</td>
             </tr>`;
             return mainRow;
