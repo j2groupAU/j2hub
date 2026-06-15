@@ -704,7 +704,7 @@ function renderEntriesTable() {
       <td style="font-size:11px;">${meetingCell}</td>
       <td style="font-size:11px;">${timeOffCell}</td>
       <td style="font-size:12px;">${e.billableHrs>0?`<strong>${parseFloat(e.billableHrs).toFixed(1)}h</strong>`:"—"}</td>
-      <td style="font-size:12px;">${e.deduction>0?`<span style="color:var(--red)">-${parseFloat(e.deduction).toFixed(1)}</span>`:"—"}</td>
+      <td style="font-size:12px;">${(()=>{const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=e.actualStart?calcDeduction(e.billableHrs,e.lunchTaken,mH):0;return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
       <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
       <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
     </tr>`);
@@ -758,13 +758,13 @@ function closeEditModal(){document.getElementById("edit-modal").classList.remove
 function autoCompute(){
   const s=document.getElementById("em-actual-start").value; const e=document.getElementById("em-actual-end").value;
   if(!s||!e) return;
-  const {billable,deduction}=computePay(s,e);
+  const {billable}=computePay(s,e);
   document.getElementById("em-billable").value=billable.toFixed(2);
-  document.getElementById("em-deduction").value=deduction.toFixed(2);
   // Compute daily pay: phone hours + approved meetings + 1hr lunch
   const entry=allEntries.find(x=>x.id==editItemId)||{};
   const lunchTaken=document.getElementById("em-lunch-start")?.value ? "TRUE" : (entry.lunchTaken||"");
   const meetingHrs=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===entry.sdrName&&m.date===entry.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+  document.getElementById("em-deduction").value=calcDeduction(billable, lunchTaken, meetingHrs).toFixed(2);
   const user=allUsers?.find(u=>u.name===entry.sdrName)||{rate:0};
   const monthlyRate=parseFloat(user.rate||0);
   const wDays=getWorkingDaysInCutoff(entry.cutoffPeriod||"current");
@@ -776,12 +776,12 @@ function autoCompute(){
 function autoComputeResolve(){
   const s=document.getElementById("rm-new-start").value; const e=document.getElementById("rm-new-end").value;
   if(!s||!e) return;
-  const {billable,deduction}=computePay(s,e);
+  const {billable}=computePay(s,e);
   document.getElementById("rm-billable").value=billable.toFixed(2);
-  document.getElementById("rm-deduction").value=deduction.toFixed(2);
   const entry=allEntries.find(x=>x.id==resolveItemId)||{};
   const lunchTaken=entry.lunchStart ? "TRUE" : (entry.lunchTaken||"");
   const meetingHrs=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===entry.sdrName&&m.date===entry.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+  document.getElementById("rm-deduction").value=calcDeduction(billable, lunchTaken, meetingHrs).toFixed(2);
   const user=allUsers?.find(u=>u.name===entry.sdrName)||{rate:0};
   const monthlyRate=parseFloat(user.rate||0);
   const wDays=getWorkingDaysInCutoff(entry.cutoffPeriod||"current");
@@ -791,15 +791,17 @@ function autoComputeResolve(){
 }
 
 function computePay(s,e){
-  // s/e = JustCall actual start/end (HH:MM)
-  // Returns phone hours only (span minus 1hr lunch, capped at 7)
-  // Full work hours = phoneHrs + meetingHrs + 1hr lunch (paid)
-  // Pay computed later using dailyRate per employee
+  // Returns phone hours only (JustCall span minus 1hr lunch, capped at 7)
   const [sh,sm]=s.split(":").map(Number); const [eh,em]=e.split(":").map(Number);
   const totalHrs=Math.max(0,((eh*60+em)-(sh*60+sm))/60);
-  const billable=Math.min(Math.max(0,totalHrs-1),7); // phone hours = span - 1hr lunch, max 7h
-  const deduction=Math.max(0,7-billable);
-  return {billable,deduction};
+  const billable=Math.min(Math.max(0,totalHrs-1),7);
+  return {billable};
+}
+function calcDeduction(billableHrs, lunchTaken, meetingHrs){
+  // Deduction = hours short of a full 8h day (after accounting for phone time, meetings, lunch)
+  const lunch=(lunchTaken===true||lunchTaken==="TRUE"||lunchTaken==="true")?1:0;
+  const workHrs=Math.min(8, parseFloat(billableHrs||0)+parseFloat(meetingHrs||0)+lunch);
+  return Math.max(0, 8-workHrs);
 }
 function calcDailyPay(billableHrs, lunchTaken, meetingHrs, dailyRate){
   // workHrs = phone hours + meetings + 1hr paid lunch (if taken)
