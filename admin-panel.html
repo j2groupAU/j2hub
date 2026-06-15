@@ -699,12 +699,12 @@ function renderEntriesTable() {
       <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
       <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong></td>
       <td style="font-size:12px;white-space:nowrap">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
-      <td style="font-size:12px;white-space:nowrap">${e.actualStart?(e.billableHrs>0?`${parseFloat(e.billableHrs).toFixed(1)}h`:"0h"):'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
+      <td style="font-size:12px;white-space:nowrap">${(()=>{if(!e.actualStart||!e.actualEnd)return'<span class="badge badge-amber" style="font-size:10px;">Pending</span>';const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);const wh=Math.max(0,((eh*60+em)-(sh*60+sm))/60);return`${wh.toFixed(1)}h`;})()}</td>
       <td style="font-size:11px;">${lunchStr}</td>
       <td style="font-size:11px;">${meetingCell}</td>
       <td style="font-size:11px;">${timeOffCell}</td>
-      <td style="font-size:12px;">${(()=>{if(!e.actualStart)return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(e.billableHrs,mH));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
-      <td style="font-size:12px;">${(()=>{const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=e.actualStart?calcDeduction(e.billableHrs,mH):0;return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
+      <td style="font-size:12px;">${(()=>{if(!e.actualStart||!e.actualEnd)return"—";const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);const phoneHrs=Math.max(0,((eh*60+em)-(sh*60+sm))/60);const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(phoneHrs,mH));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
+      <td style="font-size:12px;">${(()=>{if(!e.actualStart||!e.actualEnd)return"—";const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);const phoneHrs=Math.max(0,((eh*60+em)-(sh*60+sm))/60);const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(phoneHrs,mH);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
       <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
       <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
     </tr>`);
@@ -744,7 +744,14 @@ function openEditModal(id) {
   document.getElementById("em-clock-out").textContent = e.clockOut||"—";
   document.getElementById("em-actual-start").value = e.actualStart ? toTimeInput(e.actualStart) : "";
   document.getElementById("em-actual-end").value = e.actualEnd ? toTimeInput(e.actualEnd) : "";
-  document.getElementById("em-billable").value = e.billableHrs||"";
+  // Compute billable from actual times (full span) rather than stored value
+  if(e.actualStart&&e.actualEnd){
+    const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);
+    const computed=Math.max(0,((eh*60+em)-(sh*60+sm))/60);
+    document.getElementById("em-billable").value=computed.toFixed(2);
+  } else {
+    document.getElementById("em-billable").value=e.billableHrs||"";
+  }
   document.getElementById("em-deduction").value = e.deduction||"";
   document.getElementById("em-daily-pay").value = e.dailyPay||"";
   document.getElementById("em-admin-notes").value = e.adminNotes||"";
