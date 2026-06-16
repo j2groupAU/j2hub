@@ -553,9 +553,10 @@ tr:hover td { background: #faf8f4; }
       <div class="field-group"><label>Lunch End (auto from employee punch)</label><input type="time" id="em-lunch-end" style="background:#f8fafc;" /></div>
     </div>
     <div class="field-group"><label>Admin Notes</label><textarea id="em-admin-notes" rows="2" placeholder="Optional notes…"></textarea></div>
+    <div id="alert-edit-bottom" class="alert" style="margin-bottom:10px;"></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveEntry()" id="btn-save-entry">Save Entry</button>
-      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-secondary" onclick="closeEditModal()">Close</button>
     </div>
   </div>
 </div>
@@ -792,12 +793,14 @@ async function saveEntry() {
     const notes=document.getElementById("em-admin-notes").value;
     const lunchStart=document.getElementById("em-lunch-start")?.value||"";
     const lunchEnd=document.getElementById("em-lunch-end")?.value||"";
-    await apiPost({action:"updateEntry",id:editItemId,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart||undefined,lunchEnd:lunchEnd||undefined,lunchTaken:lunchStart?"TRUE":undefined});
+    await apiPost({action:"updateEntry",id:editItemId,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,
+      lunchStart:lunchStart||"",lunchEnd:lunchEnd||"",lunchTaken:lunchStart?"TRUE":"FALSE"});
     const idx=allEntries.findIndex(x=>x.id==editItemId);
-    if(idx!==-1) allEntries[idx]={...allEntries[idx],billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart||allEntries[idx].lunchStart,lunchEnd:lunchEnd||allEntries[idx].lunchEnd};
-    showAlert(alert,"success","✓ Entry saved.");
+    if(idx!==-1) allEntries[idx]={...allEntries[idx],billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart,lunchEnd:lunchEnd,lunchTaken:lunchStart?"TRUE":"FALSE"};
+    showAlert(alert,"success","✓ Entry saved. Review below or close when done.");
+    const alertBottom=document.getElementById("alert-edit-bottom");
+    if(alertBottom) showAlert(alertBottom,"success","✓ Saved — you can make further edits or close.");
     applyFilters(); renderPayroll();
-    setTimeout(closeEditModal,1200);
   } catch(e){showAlert(alert,"error","Save failed: "+e.message);}
   btn.innerHTML="Save Entry"; btn.disabled=false;
 }
