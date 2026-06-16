@@ -788,10 +788,10 @@ function calcWorkHours(billableHrs, meetingHrs, lunchTaken){
 function calcDeduction(billableHrs, meetingHrs, lunchTaken){
   return Math.max(0, 8 - Math.min(8, calcWorkHours(billableHrs, meetingHrs, lunchTaken)));
 }
-function calcDailyPay(billableHrs, meetingHrs, dailyRate){
-  // Work Hours = phone hours + 1hr lunch (always) + meeting hours
-  const workHrs = Math.min(8, calcWorkHours(billableHrs, meetingHrs));
-  return (workHrs / 8) * dailyRate;
+function calcDailyPay(billableHrs, meetingHrs, lunchTaken, dailyRate){
+  // Billable = phone hours + 1hr lunch (if punched) + meeting hours
+  const workHrs = Math.min(8, calcWorkHours(billableHrs, meetingHrs, lunchTaken));
+  return (workHrs / 8) * parseFloat(dailyRate||0);
 }
 
 async function saveEntry() {

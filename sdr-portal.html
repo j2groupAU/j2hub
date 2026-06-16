@@ -1385,8 +1385,14 @@ function renderSubmitPage(){
   const existing=allTimesheets.find(t=>t.cutoffKey===cutoffKey);
   const monthlyRate=currentUser.rate||0,cutoffRate=monthlyRate/2;
   const wDays=getWorkingDaysInCutoff(submitCutoffVal),dailyRate=cutoffRate/wDays;
-  const totalHrs=filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
-  const totalDed=filtered.reduce((s,e)=>s+parseFloat(e.deduction||0),0);
+  const totalHrs=filtered.reduce((s,e)=>{
+    const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+    return s+(parseFloat(e.billableHrs||0)>0?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0);
+  },0);
+  const totalDed=filtered.reduce((s,e)=>{
+    const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+    return s+(parseFloat(e.billableHrs||0)>0?calcDeduction(parseFloat(e.billableHrs||0),mH,e.lunchTaken):0);
+  },0);
   let totalPay=filtered.reduce((s,e)=>s+calcEntryPay(e,dailyRate).pay,0);
   totalPay=Math.min(totalPay,cutoffRate);
   let statusHtml="";
