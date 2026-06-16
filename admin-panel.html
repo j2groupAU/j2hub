@@ -667,8 +667,8 @@ function applyFilters() {
   filteredEntries = allEntries.filter(e => {
     if(sdr && e.sdrName !== sdr) return false;
     if(cutoff && filterByCutoff([e],cutoff).length===0) return false;
-    if(status==="pending" && (parseFloat(e.billableHrs||0) || !e.clockIn)) return false;
-    if(status==="complete" && !parseFloat(e.billableHrs||0)) return false;
+    if(status==="pending" && ((e.billableHrs!=null&&e.billableHrs!=="") || !e.clockIn)) return false;
+    if(status==="complete" && !(e.billableHrs!=null&&e.billableHrs!=="")) return false;
     return true;
   });
   renderEntriesTable();
@@ -682,14 +682,14 @@ function renderEntriesTable() {
   // Group entries by date+employee to attach meeting sub-rows
   const rows = [];
   filteredEntries.forEach(e => {
-    const isPending = e.clockIn && !parseFloat(e.billableHrs||0);
+    const isPending = e.clockIn && !(e.billableHrs!=null&&e.billableHrs!=="");
     const submitted = (e.clockIn||"—") + " → " + (e.clockOut||"—");
     const actual = e.actualStart ? ("<strong>"+e.actualStart+"</strong>" + (e.actualEnd?" → "+e.actualEnd:"")) : '<span class="badge badge-amber">Pending</span>';
     const lunchStr = (e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")
       ? `<span style="font-size:11px;color:#0A8050;font-weight:700;">🍽️ ${e.lunchStart||""}–${e.lunchEnd||""}</span>`
       : '<span style="color:var(--muted);font-size:11px;">None</span>';
     // Main work row
-    const entryStatusLabel = parseFloat(e.billableHrs||0) ? (e.disputeStatus==="Resolved"?'<span class="badge badge-green" style="font-size:10px;">✓ Resolved</span>':'<span class="badge badge-green" style="font-size:10px;">✓ Approved</span>') : '<span class="badge badge-amber" style="font-size:10px;">Pending</span>';
+    const entryStatusLabel = (e.billableHrs!=null&&e.billableHrs!=="") ? (e.disputeStatus==="Resolved"?'<span class="badge badge-green" style="font-size:10px;">✓ Resolved</span>':'<span class="badge badge-green" style="font-size:10px;">✓ Approved</span>') : '<span class="badge badge-amber" style="font-size:10px;">Pending</span>';
     // Compute meeting summary for this employee+date
     const entryMeetings=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate);
     const totalMeetHrs=entryMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
@@ -706,12 +706,12 @@ function renderEntriesTable() {
       <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
       <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong></td>
       <td style="font-size:12px;white-space:nowrap">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
-      <td style="font-size:12px;white-space:nowrap">${parseFloat(e.billableHrs||0)>0?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
+      <td style="font-size:12px;white-space:nowrap">${(e.billableHrs!=null&&e.billableHrs!=="")?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
       <td style="font-size:11px;">${lunchStr}</td>
       <td style="font-size:11px;">${meetingCell}</td>
       <td style="font-size:11px;">${timeOffCell}</td>
-      <td style="font-size:12px;">${(()=>{if(!parseFloat(e.billableHrs||0))return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(e.billableHrs,mH,e.lunchTaken));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
-      <td style="font-size:12px;">${(()=>{if(!parseFloat(e.billableHrs||0))return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(e.billableHrs,mH,e.lunchTaken);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
+      <td style="font-size:12px;">${(()=>{if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(e.billableHrs,mH,e.lunchTaken));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
+      <td style="font-size:12px;">${(()=>{if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(e.billableHrs,mH,e.lunchTaken);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
       <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
       <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
     </tr>`);
@@ -726,13 +726,8 @@ function openEditModal(id) {
   document.getElementById("edit-modal-sub").textContent = `Cutoff: ${e.cutoffPeriod||"Not set"}`;
   document.getElementById("em-clock-in").textContent = e.clockIn||"—";
   document.getElementById("em-clock-out").textContent = e.clockOut||"—";
-  // Work Hours: compute from actual times if available, else use stored billableHrs
-  if(e.actualStart&&e.actualEnd){
-    const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);
-    document.getElementById("em-billable").value=Math.max(0,((eh*60+em)-(sh*60+sm))/60).toFixed(2);
-  } else {
-    document.getElementById("em-billable").value=e.billableHrs||"";
-  }
+  // Work Hours: show stored billableHrs (even if 0)
+  document.getElementById("em-billable").value=(e.billableHrs!=null&&e.billableHrs!=="")?parseFloat(e.billableHrs).toFixed(2):"";
   document.getElementById("em-deduction").value = e.deduction||"";
   document.getElementById("em-daily-pay").value = e.dailyPay||"";
   document.getElementById("em-admin-notes").value = e.adminNotes||"";
