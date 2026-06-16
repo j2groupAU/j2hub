@@ -657,8 +657,8 @@ function applyFilters() {
   filteredEntries = allEntries.filter(e => {
     if(sdr && e.sdrName !== sdr) return false;
     if(cutoff && filterByCutoff([e],cutoff).length===0) return false;
-    if(status==="pending" && (e.actualStart || !e.clockIn)) return false;
-    if(status==="complete" && (!e.actualStart || !e.billableHrs)) return false;
+    if(status==="pending" && (parseFloat(e.billableHrs||0) || !e.clockIn)) return false;
+    if(status==="complete" && !parseFloat(e.billableHrs||0)) return false;
     return true;
   });
   renderEntriesTable();
@@ -672,14 +672,14 @@ function renderEntriesTable() {
   // Group entries by date+employee to attach meeting sub-rows
   const rows = [];
   filteredEntries.forEach(e => {
-    const isPending = e.clockIn && !e.actualStart;
+    const isPending = e.clockIn && !parseFloat(e.billableHrs||0);
     const submitted = (e.clockIn||"—") + " → " + (e.clockOut||"—");
     const actual = e.actualStart ? ("<strong>"+e.actualStart+"</strong>" + (e.actualEnd?" → "+e.actualEnd:"")) : '<span class="badge badge-amber">Pending</span>';
     const lunchStr = (e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")
       ? `<span style="font-size:11px;color:#0A8050;font-weight:700;">🍽️ ${e.lunchStart||""}–${e.lunchEnd||""}</span>`
       : '<span style="color:var(--muted);font-size:11px;">None</span>';
     // Main work row
-    const entryStatusLabel = e.actualStart ? (e.disputeStatus==="Resolved"?'<span class="badge badge-green" style="font-size:10px;">✓ Resolved</span>':'<span class="badge badge-green" style="font-size:10px;">✓ Approved</span>') : '<span class="badge badge-amber" style="font-size:10px;">Pending</span>';
+    const entryStatusLabel = parseFloat(e.billableHrs||0) ? (e.disputeStatus==="Resolved"?'<span class="badge badge-green" style="font-size:10px;">✓ Resolved</span>':'<span class="badge badge-green" style="font-size:10px;">✓ Approved</span>') : '<span class="badge badge-amber" style="font-size:10px;">Pending</span>';
     // Compute meeting summary for this employee+date
     const entryMeetings=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate);
     const totalMeetHrs=entryMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
@@ -696,12 +696,12 @@ function renderEntriesTable() {
       <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
       <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong></td>
       <td style="font-size:12px;white-space:nowrap">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
-      <td style="font-size:12px;white-space:nowrap">${(()=>{if(!e.actualStart||!e.actualEnd)return'<span class="badge badge-amber" style="font-size:10px;">Pending</span>';const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);const wh=Math.max(0,((eh*60+em)-(sh*60+sm))/60);return`${wh.toFixed(1)}h`;})()}</td>
+      <td style="font-size:12px;white-space:nowrap">${parseFloat(e.billableHrs||0)>0?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
       <td style="font-size:11px;">${lunchStr}</td>
       <td style="font-size:11px;">${meetingCell}</td>
       <td style="font-size:11px;">${timeOffCell}</td>
-      <td style="font-size:12px;">${(()=>{if(!e.actualStart||!e.actualEnd)return"—";const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);const phoneHrs=Math.max(0,((eh*60+em)-(sh*60+sm))/60);const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(phoneHrs,mH));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
-      <td style="font-size:12px;">${(()=>{if(!e.actualStart||!e.actualEnd)return"—";const[sh,sm]=e.actualStart.split(":").map(Number);const[eh,em]=e.actualEnd.split(":").map(Number);const phoneHrs=Math.max(0,((eh*60+em)-(sh*60+sm))/60);const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(phoneHrs,mH);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
+      <td style="font-size:12px;">${(()=>{if(!parseFloat(e.billableHrs||0))return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(e.billableHrs,mH));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
+      <td style="font-size:12px;">${(()=>{if(!parseFloat(e.billableHrs||0))return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(e.billableHrs,mH);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
       <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
       <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
     </tr>`);
