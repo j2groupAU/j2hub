@@ -634,9 +634,18 @@ async function loadAllEntries() {
     const result = await apiPost({ action: "getEntries" });
     allEntries = (result.entries || []).sort((a,b) => b.workDate.localeCompare(a.workDate));
     try{ const ur=await apiPost({action:"getUsers"}); allUsers=ur.users||[]; }catch(e){}
-    populateSdrFilter(); applyFilters(); renderDisputes(); await renderPayroll(); updateDisputeCount(); try{ const mr=await apiPost({action:"getMeetings"}); allMeetings=mr.meetings||[]; updateMeetingCount(); }catch(e){}
-    try{ const tr=await apiPost({action:"getTimesheets"}); allTimesheets=tr.timesheets||[]; updateTsCount(); }catch(e){}
-    try{ const lr=await apiPost({action:"getLeaves"}); allLeaves=lr.leaves||[]; updateLeaveCount(); }catch(e){}
+    // Load all supporting data in parallel before rendering
+    try{
+      const [mr,tr,lr] = await Promise.all([
+        apiPost({action:"getMeetings"}),
+        apiPost({action:"getTimesheets"}),
+        apiPost({action:"getLeaves"})
+      ]);
+      allMeetings=mr.meetings||[]; updateMeetingCount();
+      allTimesheets=tr.timesheets||[]; updateTsCount();
+      allLeaves=lr.leaves||[]; updateLeaveCount();
+    }catch(e){}
+    populateSdrFilter(); applyFilters(); renderDisputes(); await renderPayroll(); updateDisputeCount();
   } catch(e) {
     showAlert(document.getElementById("alert-entries"), "error", "Failed to load: " + e.message);
     setLoading("entries",false); setLoading("disputes",false); setLoading("payroll",false);
@@ -927,7 +936,7 @@ async function renderPayroll(){
     userRates[u.name]=parseFloat(u.rate)||0;
     userRates[(u.name||"").toLowerCase().trim()]=parseFloat(u.rate)||0;
   });
-  const getRate=(name)=>getRate(name)||userRates[(name||"").toLowerCase().trim()]||0;
+  const getRate=(name)=>userRates[name]||userRates[(name||"").toLowerCase().trim()]||0;
 
   // Only SDRs with approved timesheets for this cutoff
   // Filter approved timesheets for this specific cutoff period
