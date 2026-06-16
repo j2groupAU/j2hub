@@ -641,7 +641,7 @@ async function doLogin() {
     document.getElementById("app").style.display="block";
     document.getElementById("user-chip").textContent = currentUser.name;
     loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In to J2 Hub";
-    localStorage.setItem("j2hub_user", JSON.stringify(currentUser));
+    localStorage.setItem("j2hub_user", JSON.stringify({...currentUser, loginTime: Date.now()}));
     initApp();
   } catch(e) {
     err.style.display="block"; err.textContent="Could not connect. Please try again.";
@@ -1434,8 +1434,8 @@ function renderSubmitPage(){
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:12px 16px;border-bottom:1.5px solid var(--border);"><div class="card-title" style="margin-bottom:0;">Entries</div></div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Status</th></tr></thead>
-        <tbody>${filtered.length===0?'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">No entries for this period.</td></tr>':filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
+        <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Status</th></tr></thead>
+        <tbody>${filtered.length===0?'<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">No entries for this period.</td></tr>':filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
           const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
           const totalBil=parseFloat(e.billableHrs||0)>0?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0;
           const ded2=parseFloat(e.billableHrs||0)>0?calcDeduction(parseFloat(e.billableHrs||0),mH,e.lunchTaken):0;
@@ -1444,7 +1444,7 @@ function renderSubmitPage(){
           const leaveOnDay=(allLeaves||[]).find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
           const timeOffCell=leaveOnDay?('<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">'+(leaveOnDay.leaveType||'Leave')+'</span>'):'—';
           const entryStatus=parseFloat(e.billableHrs||0)>0?'<span style="color:#15803d;font-weight:700;">✓ Complete</span>':'<span style="color:#92400e;">Pending</span>';
-          return('<tr><td>'+formatDate(e.workDate)+'</td><td>'+(e.clockIn||'-')+'</td><td>'+(e.clockOut||'-')+'</td><td>'+lunchCell+'</td><td>'+meetCell+'</td><td>'+timeOffCell+'</td><td>'+(totalBil>0?totalBil.toFixed(2)+' hrs':'-')+'</td><td>'+(ded2>0?'<span style="color:#dc2626">-'+ded2.toFixed(2)+'h</span>':'-')+'</td><td>'+entryStatus+'</td></tr>');
+          return('<tr><td>'+formatDate(e.workDate)+'</td><td>'+(e.clockIn||'-')+'</td><td>'+(e.clockOut||'-')+'</td><td>'+(parseFloat(e.billableHrs||0)>0?parseFloat(e.billableHrs).toFixed(2)+' hrs':'<span style="color:var(--muted);font-size:11px;">Pending</span>')+'</td><td>'+lunchCell+'</td><td>'+meetCell+'</td><td>'+timeOffCell+'</td><td>'+(totalBil>0?totalBil.toFixed(2)+' hrs':'-')+'</td><td>'+(ded2>0?'<span style="color:#dc2626">-'+ded2.toFixed(2)+'h</span>':'-')+'</td><td>'+entryStatus+'</td></tr>');
         }).join("")}</tbody>
       </table></div>
     </div>`;
@@ -1636,9 +1636,15 @@ function calcEntryPay(e, dailyRate) {
 // ── AUTO-LOGIN from saved session ──
 window.addEventListener("DOMContentLoaded", async function() {
   const saved = localStorage.getItem("j2hub_user");
+  const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 hours
   if (saved) {
     try {
       const user = JSON.parse(saved);
+      // Check session age — expire after 8 hours
+      if (user.loginTime && (Date.now() - user.loginTime) >= SESSION_TTL) {
+        localStorage.removeItem("j2hub_user");
+        return;
+      }
       // Re-verify user still exists
       const result = await apiPost({ action: "getUsers" });
       const users = result.users || [];

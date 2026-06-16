@@ -611,7 +611,7 @@ function doLogin() {
   document.getElementById("login-error").style.display="none";
   document.getElementById("login-screen").style.display="none";
   document.getElementById("app").style.display="block";
-  localStorage.setItem("j2hub_admin_session", "true");
+  localStorage.setItem("j2hub_admin_session", Date.now().toString());
   loadAllEntries();
 }
 document.addEventListener("keydown", e => { if(e.key==="Enter"&&document.getElementById("login-screen").style.display!=="none") doLogin(); });
@@ -1715,10 +1715,14 @@ async function reopenTimesheet(id, name) {
 function initApp() { loadAllEntries(); }
 
 window.addEventListener("DOMContentLoaded", function() {
-  if (localStorage.getItem("j2hub_admin_session") === "true") {
+  const session = localStorage.getItem("j2hub_admin_session");
+  const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 hours
+  if (session && (Date.now() - parseInt(session)) < SESSION_TTL) {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
     loadAllEntries();
+  } else {
+    localStorage.removeItem("j2hub_admin_session");
   }
 });
 </script>
