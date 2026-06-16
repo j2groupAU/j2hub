@@ -1016,6 +1016,7 @@ function renderTimesheetGrouped() {
             const dayMeetings=cutoffMeetings.filter(m=>m.date===e.workDate);
             // Compute work hours live from actual times (full span, no subtraction)
             const workHrsVal=parseFloat(e.billableHrs||0)>0 ? parseFloat(e.billableHrs) : null;
+            const isAutoOut=e.clockOut&&parseFloat(e.billableHrs||0)===0&&workHrsVal===null;
             const workHoursStr=workHrsVal!==null
               ?`${workHrsVal.toFixed(2)} hrs`
               :isAutoOut
@@ -1023,7 +1024,6 @@ function renderTimesheetGrouped() {
                 :'<span style="color:var(--muted)">Pending</span>';
             const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
             const totalWorkHrs=workHrsVal!==null?Math.min(8,calcWorkHours(workHrsVal,meetHrsTotal,e.lunchTaken)):null;
-            const isAutoOut=e.clockOut&&parseFloat(e.billableHrs||0)===0&&workHrsVal===null;
             const billableDisplay = totalWorkHrs!==null
               ? `<strong>${totalWorkHrs.toFixed(2)} hrs</strong>`
               : isAutoOut
