@@ -141,7 +141,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(1
 .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
 /* ── MAIN ── */
-.main { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
+.main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
 .page { display: none; }
 .page.active { display: block; }
 
@@ -193,10 +193,10 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(1
 .mini-card .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
 
 /* ── TABLE ── */
-.table-wrap { overflow-x: auto; border-radius: 8px; }
-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 13px; table-layout: auto; }
-th { background: linear-gradient(135deg, #EEF4FF 0%, #E4EEFF 100%); padding: 9px 14px; text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); border-bottom: 1px solid rgba(77,159,255,0.15); white-space: nowrap; }
-td { padding: 11px 14px; border-bottom: 1px solid #f0ece4; color: var(--text); vertical-align: middle; white-space: nowrap; }
+.table-wrap { overflow-x: auto; border-radius: 8px; width: 100%; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+th { background: linear-gradient(135deg, #EEF4FF 0%, #E4EEFF 100%); padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid rgba(77,159,255,0.15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+td { padding: 10px 10px; border-bottom: 1px solid #f0ece4; color: var(--text); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: rgba(100,160,255,0.04); }
 
@@ -995,6 +995,12 @@ function renderTimesheetGrouped() {
       </div>
       <div class="cutoff-group-body">
         <div class="table-wrap"><table>
+          <colgroup>
+            <col style="width:110px"><col style="width:80px"><col style="width:85px">
+            <col style="width:95px"><col style="width:130px"><col style="width:75px">
+            <col style="width:90px"><col style="width:90px"><col style="width:90px">
+            <col style="width:auto">
+          </colgroup>
           <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
           <tbody>${(()=>{const shownMeetingDates=new Set();return entries.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
             const actualStr=e.actualStart?(e.actualStart+(e.actualEnd?" → "+e.actualEnd:"")):'<span style="color:var(--muted)">Pending</span>';

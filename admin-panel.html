@@ -544,10 +544,13 @@ tr:hover td { background: #faf8f4; }
       </div>
     </div>
     <hr class="modal-divider">
-    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">🍽️ Lunch (admin edit)</div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🍽️ Lunch</div>
+    <div style="background:#f0fff4;border:1.5px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#166534;">
+      ✓ 1 hour lunch is always included in the pay calculation automatically.
+    </div>
     <div class="two-col">
-      <div class="field-group"><label>Lunch Start</label><input type="time" id="em-lunch-start" /></div>
-      <div class="field-group"><label>Lunch End</label><input type="time" id="em-lunch-end" /></div>
+      <div class="field-group"><label>Lunch Start (auto from employee punch)</label><input type="time" id="em-lunch-start" style="background:#f8fafc;" /></div>
+      <div class="field-group"><label>Lunch End (auto from employee punch)</label><input type="time" id="em-lunch-end" style="background:#f8fafc;" /></div>
     </div>
     <div class="field-group"><label>Admin Notes</label><textarea id="em-admin-notes" rows="2" placeholder="Optional notes…"></textarea></div>
     <div class="modal-actions">
