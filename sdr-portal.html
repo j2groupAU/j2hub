@@ -1436,9 +1436,15 @@ function renderSubmitPage(){
       <div class="table-wrap"><table>
         <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Billable</th><th>Deduction</th><th>Status</th></tr></thead>
         <tbody>${filtered.length===0?'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No entries for this period.</td></tr>':filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
-          const h=parseFloat(e.billableHrs||0),ded=parseFloat(e.deduction||0);
+          const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+          const totalBil=parseFloat(e.billableHrs||0)>0?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0;
+          const ded2=parseFloat(e.billableHrs||0)>0?calcDeduction(parseFloat(e.billableHrs||0),mH,e.lunchTaken):0;
+          const lunchCell=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")?('<span style="color:#0A8050;font-weight:600;font-size:11px;">🍽 '+(e.lunchStart||'')+(e.lunchEnd?'–'+e.lunchEnd:'')+'</span>'):'<span style="color:var(--muted);font-size:11px;">None</span>';
+          const meetCell=mH>0?('<span style="font-size:12px;font-weight:600;color:#1d4ed8;">'+mH.toFixed(1)+'h</span>'):'—';
+          const leaveOnDay=(allLeaves||[]).find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
+          const timeOffCell=leaveOnDay?('<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">'+(leaveOnDay.leaveType||'Leave')+'</span>'):'—';
           const entryStatus=parseFloat(e.billableHrs||0)>0?'<span style="color:#15803d;font-weight:700;">✓ Complete</span>':'<span style="color:#92400e;">Pending</span>';
-          return`<tr><td>${formatDate(e.workDate)}</td><td>${e.clockIn||'-'}</td><td>${e.clockOut||'-'}</td><td>${h>0?h.toFixed(2)+' hrs':'-'}</td><td>${ded>0?'<span style="color:#dc2626">-'+ded.toFixed(2)+'h</span>':'-'}</td><td>${entryStatus}</td></tr>`;
+          return('<tr><td>'+formatDate(e.workDate)+'</td><td>'+(e.clockIn||'-')+'</td><td>'+(e.clockOut||'-')+'</td><td>'+lunchCell+'</td><td>'+meetCell+'</td><td>'+timeOffCell+'</td><td>'+(totalBil>0?totalBil.toFixed(2)+' hrs':'-')+'</td><td>'+(ded2>0?'<span style="color:#dc2626">-'+ded2.toFixed(2)+'h</span>':'-')+'</td><td>'+entryStatus+'</td></tr>');
         }).join("")}</tbody>
       </table></div>
     </div>`;
