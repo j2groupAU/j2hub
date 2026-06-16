@@ -909,7 +909,11 @@ async function renderPayroll(){
 
   // Use allUsers already loaded at startup
   const userRates={};
-  (allUsers||[]).forEach(u=>{userRates[u.name]=parseFloat(u.rate)||0;});
+  (allUsers||[]).forEach(u=>{
+    userRates[u.name]=parseFloat(u.rate)||0;
+    userRates[(u.name||"").toLowerCase().trim()]=parseFloat(u.rate)||0;
+  });
+  const getRate=(name)=>getRate(name)||userRates[(name||"").toLowerCase().trim()]||0;
 
   // Only SDRs with approved timesheets for this cutoff
   // Filter approved timesheets matching the same date range as entries
@@ -932,16 +936,16 @@ async function renderPayroll(){
   // Compute total payroll
   let totalPayroll=0;
   Object.entries(bySdr).forEach(([name,entries])=>{
-    const cutoffRate=(userRates[name]||0)/2;
+    const cutoffRate=(getRate(name))/2;
     const dailyRate=cutoffRate/Math.max(wDays,1);
-    const pay=Math.min(cutoffRate, entries.reduce((s,e)=>{
+    const payRaw=entries.reduce((s,e)=>{
       const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
       return s+calcDailyPay(e.billableHrs,mH,e.lunchTaken,dailyRate);
-    },0));
-    // Add incentives from approved timesheet
+    },0);
+    const pay=isNaN(payRaw)||cutoffRate===0?payRaw:Math.min(cutoffRate, payRaw);
     const ts=approvedTs.find(t=>t.sdrName===name);
     const incentive=parseFloat(ts?.totalIncentive||0);
-    totalPayroll+=pay+incentive;
+    if(!isNaN(pay)) totalPayroll+=pay+incentive;
   });
 
   // ── Header stats ──
@@ -961,6 +965,7 @@ async function renderPayroll(){
       <thead><tr style="background:linear-gradient(135deg,#EEF4FF,#E4EEFF);">
         <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);">Employee</th>
         <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);">Total Billable Hrs</th>
+        <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);">Billable Amount</th>
         <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);">Additional Pay</th>
         <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);">Total Deduction</th>
         <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);">Total Amount</th>
@@ -972,7 +977,7 @@ async function renderPayroll(){
     html+=`<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted);">No payable entries found.</td></tr>`;
   } else {
     Object.entries(bySdr).sort().forEach(([name,entries])=>{
-      const cutoffRate=(userRates[name]||0)/2;
+      const cutoffRate=(getRate(name))/2;
       const dailyRate=cutoffRate/Math.max(wDays,1);
       // Total billable hours (phone + lunch + meetings per entry)
       const totalBillable=entries.reduce((s,e)=>{
@@ -985,10 +990,11 @@ async function renderPayroll(){
         return s+calcDeduction(e.billableHrs,mH,e.lunchTaken);
       },0);
       // Base pay
-      const basePay=Math.min(cutoffRate, entries.reduce((s,e)=>{
+      const basePayRaw=entries.reduce((s,e)=>{
         const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
         return s+calcDailyPay(e.billableHrs,mH,e.lunchTaken,dailyRate);
-      },0));
+      },0);
+      const basePay=isNaN(basePayRaw)||cutoffRate===0?basePayRaw:Math.min(cutoffRate, basePayRaw);
       // Incentives from approved timesheet
       const ts=approvedTs.find(t=>t.sdrName===name);
       const incentive=parseFloat(ts?.totalIncentive||0);
@@ -998,9 +1004,13 @@ async function renderPayroll(){
       html+=`<tr style="border-bottom:1px solid var(--border-light);">
         <td style="padding:14px 16px;"><strong style="font-size:14px;">${name}</strong><div style="font-size:11px;color:var(--muted);margin-top:2px;">$${cutoffRate.toFixed(0)} cutoff rate · $${dailyRate.toFixed(2)}/day</div></td>
         <td style="padding:14px 16px;text-align:center;"><strong style="font-size:15px;color:var(--accent);">${totalBillable.toFixed(1)}h</strong></td>
+        <td style="padding:14px 16px;text-align:center;"><strong style="font-size:15px;color:#1d4ed8;">$${isNaN(basePay)?"—":basePay.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">base pay</div></td>
         <td style="padding:14px 16px;text-align:center;">${incentive>0?`<strong style="color:#15803d;">+$${incentive.toFixed(2)}</strong>`:'<span style="color:var(--muted)">—</span>'}</td>
         <td style="padding:14px 16px;text-align:center;">${totalDed>0?`<span style="color:var(--red);font-weight:600;">-${totalDed.toFixed(1)}h</span>`:'<span style="color:var(--muted)">—</span>'}</td>
-        <td style="padding:14px 16px;text-align:center;"><strong style="font-size:16px;color:#15803d;">$${totalAmount.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">AUD</div></td>
+        <td style="padding:14px 16px;text-align:center;">
+          <strong style="font-size:16px;color:#15803d;">$${isNaN(totalAmount)?basePay.toFixed(2):totalAmount.toFixed(2)}</strong>
+          <div style="font-size:10px;color:var(--muted);">AUD${incentive>0?` (incl. $${incentive.toFixed(2)} incentive)`:""}</div>
+        </td>
         <td style="padding:14px 16px;text-align:center;">
           ${isProcessed
             ? `<span class="badge badge-green" style="font-size:12px;">✓ Processed</span>`
