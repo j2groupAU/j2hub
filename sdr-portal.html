@@ -1181,13 +1181,15 @@ function renderPayslips(timesheets) {
           
         </tr></thead>
         <tbody>${entries.length===0?'<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--muted);">No entries</td></tr>':entries.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
-          const h=parseFloat(e.billableHrs||0),ded=parseFloat(e.deduction||0);
-          const pay=h>0?Math.min(dailyRate,h/7*dailyRate):0;
+          const phoneH=parseFloat(e.billableHrs||0);
+          const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+          const totalH=phoneH>0?Math.min(8,calcWorkHours(phoneH,mH,e.lunchTaken)):0;
+          const ded=phoneH>0?calcDeduction(phoneH,mH,e.lunchTaken):0;
           return`<tr style="border-bottom:1px solid var(--border);">
             <td style="padding:9px 12px;">${formatDate(e.workDate)}</td>
-            <td style="padding:9px 12px;">${h.toFixed(2)} hrs</td>
+            <td style="padding:9px 12px;">${phoneH>0?totalH.toFixed(2)+' hrs':'<span style="color:var(--muted)">Pending</span>'}</td>
             <td style="padding:9px 12px;">${ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+'h</span>':"—"}</td>
-            <td style="padding:9px 12px;text-align:right;"><strong>$${pay.toFixed(2)}</strong></td>
+            <td style="padding:9px 12px;text-align:right;"></td>
           </tr>`;
         }).join("")}</tbody>
       </table>
@@ -1429,7 +1431,7 @@ function renderSubmitPage(){
         <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Billable</th><th>Deduction</th><th>Status</th></tr></thead>
         <tbody>${filtered.length===0?'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No entries for this period.</td></tr>':filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
           const h=parseFloat(e.billableHrs||0),ded=parseFloat(e.deduction||0);
-          const entryStatus=e.actualStart?'<span style="color:#15803d;font-weight:700;">✓ Complete</span>':'<span style="color:#92400e;">Pending</span>';
+          const entryStatus=parseFloat(e.billableHrs||0)>0?'<span style="color:#15803d;font-weight:700;">✓ Complete</span>':'<span style="color:#92400e;">Pending</span>';
           return`<tr><td>${formatDate(e.workDate)}</td><td>${e.clockIn||'-'}</td><td>${e.clockOut||'-'}</td><td>${h>0?h.toFixed(2)+' hrs':'-'}</td><td>${ded>0?'<span style="color:#dc2626">-'+ded.toFixed(2)+'h</span>':'-'}</td><td>${entryStatus}</td></tr>`;
         }).join("")}</tbody>
       </table></div>
