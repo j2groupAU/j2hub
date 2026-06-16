@@ -1003,8 +1003,8 @@ function renderTimesheetGrouped() {
           </colgroup>
           <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
           <tbody>${(()=>{const shownMeetingDates=new Set();return entries.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
-            const actualStr=e.actualStart?(e.actualStart+(e.actualEnd?" → "+e.actualEnd:"")):'<span style="color:var(--muted)">Pending</span>';
-            const canEntryDispute=!["Under Review","Approved"].includes(tsStatus)&&e.actualStart&&!["Under Review","Under Review"].includes(e.disputeStatus);
+            const actualStr=parseFloat(e.billableHrs||0)>0?'Entered':'<span style="color:var(--muted)">Pending</span>';
+            const canEntryDispute=!["Under Review","Approved"].includes(tsStatus)&&parseFloat(e.billableHrs||0)>0&&!["Under Review","Under Review"].includes(e.disputeStatus);
             const disputeCell=canEntryDispute
               ?`${getDisputeBadge(e.disputeStatus)} <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Request Review</button>`
               :getDisputeBadge(e.disputeStatus);
