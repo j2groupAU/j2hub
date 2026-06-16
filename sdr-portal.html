@@ -726,7 +726,7 @@ async function checkAutoClockOut() {
     // Auto clock out with 0 billable hours
     try {
       const aestTime = aest.getHours().toString().padStart(2,"0")+":"+aest.getMinutes().toString().padStart(2,"0");
-      await apiPost({action:"updateEntry", id:openClockInEntry.itemId, clockOut:aestTime, billableHrs:0, deduction:7, dailyPay:0});
+      await apiPost({action:"updateEntry", id:openClockInEntry.itemId, clockOut:aestTime, billableHrs:0, deduction:8, dailyPay:0});
       openClockInEntry = null;
       showClockedOut();
       showAlert(document.getElementById("alert-clock"), "warning", "⚠️ You were automatically clocked out after 10 hours. Billable hours set to 0 for that entry.");
@@ -1004,7 +1004,8 @@ function renderTimesheetGrouped() {
           <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
           <tbody>${(()=>{const shownMeetingDates=new Set();return entries.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
             const actualStr=parseFloat(e.billableHrs||0)>0?'Entered':'<span style="color:var(--muted)">Pending</span>';
-            const canEntryDispute=!["Under Review","Approved"].includes(tsStatus)&&parseFloat(e.billableHrs||0)>0&&!["Under Review","Under Review"].includes(e.disputeStatus);
+            const isAutoClockOut=e.clockOut&&parseFloat(e.billableHrs||0)===0;
+            const canEntryDispute=!["Under Review","Approved"].includes(tsStatus)&&(parseFloat(e.billableHrs||0)>0||isAutoClockOut)&&!["Under Review","Resolved"].includes(e.disputeStatus);
             const disputeCell=canEntryDispute
               ?`${getDisputeBadge(e.disputeStatus)} <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Request Review</button>`
               :getDisputeBadge(e.disputeStatus);
@@ -1017,12 +1018,17 @@ function renderTimesheetGrouped() {
             const workHrsVal=parseFloat(e.billableHrs||0)>0 ? parseFloat(e.billableHrs) : null;
             const workHoursStr=workHrsVal!==null
               ?`${workHrsVal.toFixed(2)} hrs`
-              :'<span style="color:var(--muted)">Pending</span>';
+              :isAutoOut
+                ?'<span style="color:var(--red)">0.00 hrs</span>'
+                :'<span style="color:var(--muted)">Pending</span>';
             const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
             const totalWorkHrs=workHrsVal!==null?Math.min(8,calcWorkHours(workHrsVal,meetHrsTotal,e.lunchTaken)):null;
+            const isAutoOut=e.clockOut&&parseFloat(e.billableHrs||0)===0&&workHrsVal===null;
             const billableDisplay = totalWorkHrs!==null
               ? `<strong>${totalWorkHrs.toFixed(2)} hrs</strong>`
-              : (e.clockIn&&e.clockOut?"<span style='color:var(--muted)'>Pending</span>":"—");
+              : isAutoOut
+                ? `<span style="color:var(--red);font-weight:600;">0.00 hrs</span> <span style="font-size:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:1px 5px;color:#dc2626;">Auto clocked out</span>`
+                : (e.clockIn&&e.clockOut?"<span style='color:var(--muted)'>Pending</span>":"—");
             // Meeting column: total hours only
             const totalMeetCellHrs=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
             const meetingCell=totalMeetCellHrs>0
