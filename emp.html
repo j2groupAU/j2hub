@@ -436,7 +436,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
 
         <!-- INLINE NOTIFICATIONS - right side -->
         <div id="inline-notif-wrap" style="display:none;">
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px;">Notifications</div>
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;">Notifications <span id="notif-count-badge" style="background:#E53935;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:900;letter-spacing:0;"></span></div>
           <div id="inline-notif-inner" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
       </div>
@@ -741,32 +741,79 @@ async function checkAutoClockOut() {
 async function loadNotifications() {
   const notifs = [];
   try {
-    const [tsRes, leaveRes, meetRes] = await Promise.all([
+    const [tsRes, leaveRes, meetRes, entRes] = await Promise.all([
       apiPost({action:"getTimesheets"}),
       apiPost({action:"getLeaves"}),
-      apiPost({action:"getMeetings"})
+      apiPost({action:"getMeetings"}),
+      apiPost({action:"getEntries"})
     ]);
     allTimesheets = (tsRes.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
     allLeaves = (leaveRes.leaves||[]).filter(l=>l.sdrName===currentUser.name);
     allMeetings = (meetRes.meetings||[]).filter(m=>m.sdrName===currentUser.name);
+    const myEntries = (entRes.entries||[]).filter(e=>e.sdrName&&e.sdrName.toLowerCase()===currentUser.name.toLowerCase());
 
-    // Timesheet notifications
+    // ── TIMESHEET notifications ──
     allTimesheets.forEach(t => {
-      if (t.status==="Approved") notifs.push({type:"success", text:"✓ Timesheet approved: "+t.cutoffLabel, id:t.id});
-      if (t.status==="Rejected") notifs.push({type:"red", text:"✗ Timesheet rejected: "+t.cutoffLabel+(t.adminNote?" — "+t.adminNote:""), id:t.id});
-      if (t.status==="Disputed") notifs.push({type:"warning", text:"⚠️ Request Review under review: "+t.cutoffLabel, id:t.id});
+      const period = t.cutoffLabel||t.cutoffKey||"period";
+      if (t.status==="Approved")
+        notifs.push({type:"success", text:"✓ Timesheet approved: "+period});
+      if (t.status==="Rejected")
+        notifs.push({type:"red", text:"✗ Timesheet rejected: "+period+(t.adminNote?" — "+t.adminNote:"")});
+      if (t.status==="Disputed")
+        notifs.push({type:"warning", text:"⚠️ Timesheet under review: "+period});
+      if (t.status==="Processed")
+        notifs.push({type:"info", text:"💳 Timesheet processed (paid): "+period});
+      // Deleted timesheet — adminNote contains "[Deleted]" or similar
+      if ((t.adminNote||"").toLowerCase().includes("deleted") || (t.status||"").toLowerCase().includes("deleted"))
+        notifs.push({type:"red", text:"🗑️ Timesheet deleted: "+period+(t.adminNote?" — "+t.adminNote:"")});
     });
-    // Leave notifications
+
+    // ── ENTRY-LEVEL notifications ──
+    myEntries.forEach(e => {
+      const dateLabel = e.workDate ? formatDate(e.workDate) : "entry";
+      // Entry dispute approved/resolved
+      if (e.disputeStatus==="Resolved" && e.adminNotes)
+        notifs.push({type:"success", text:"✓ Request Review resolved ("+dateLabel+")"+(e.adminNotes?" — "+e.adminNotes:"")});
+      // Entry dispute rejected
+      if (e.disputeStatus==="Rejected")
+        notifs.push({type:"red", text:"✗ Request Review rejected ("+dateLabel+")"+(e.adminNotes?" — "+e.adminNotes:"")});
+      // Entry dispute under review
+      if (e.disputeStatus==="Under Review")
+        notifs.push({type:"warning", text:"⏳ Request Review pending admin ("+dateLabel+")"});
+      // Manual timesheet request submitted
+      if (e.disputeStatus==="Manual Request")
+        notifs.push({type:"info", text:"📋 Manual timesheet request submitted ("+dateLabel+")"});
+      // Entry approved (billable hours entered by admin)
+      if ((e.billableHrs!=null && e.billableHrs!=="" && e.disputeStatus!=="Under Review" && e.disputeStatus!=="Manual Request") && !e._notifSuppressed)
+        notifs.push({type:"success", text:"✓ Work hours approved: "+dateLabel+" — "+parseFloat(e.billableHrs||0).toFixed(1)+"h billable"});
+      // Deleted entry — adminNotes contains "[Deleted]"
+      if ((e.adminNotes||"").toLowerCase().includes("[deleted]") || (e.adminNotes||"").toLowerCase().includes("deleted"))
+        notifs.push({type:"red", text:"🗑️ Entry deleted by admin ("+dateLabel+")"+(e.adminNotes?" — "+e.adminNotes:"")});
+    });
+
+    // ── LEAVE notifications ──
     allLeaves.forEach(l => {
-      if (l.status==="Approved") notifs.push({type:"success", text:"✓ Leave approved ("+l.payType+"): "+formatDate(l.leaveDate)});
-      if (l.status==="Rejected") notifs.push({type:"red", text:"✗ Leave rejected: "+formatDate(l.leaveDate)+(l.adminNote?" — "+l.adminNote:"")});
+      const dateLabel = l.leaveDate ? formatDate(l.leaveDate) : "leave";
+      if (l.status==="Pending")
+        notifs.push({type:"info", text:"📨 Leave request pending: "+dateLabel+" ("+( l.leaveType||"")+")"});
+      if (l.status==="Approved")
+        notifs.push({type:"success", text:"✓ Leave approved ("+l.payType+"): "+dateLabel});
+      if (l.status==="Rejected")
+        notifs.push({type:"red", text:"✗ Leave rejected: "+dateLabel+(l.adminNote?" — "+l.adminNote:"")});
     });
-    // Meeting notifications
+
+    // ── MEETING notifications ──
     allMeetings.forEach(m => {
-      if (m.status==="Approved") notifs.push({type:"success", text:"✓ Meeting approved: "+m.meetingType+" on "+formatDate(m.date)});
-      if (m.status==="Rejected") notifs.push({type:"red", text:"✗ Meeting rejected: "+m.meetingType+" on "+formatDate(m.date)});
+      const label = (m.meetingType||"Meeting")+" on "+formatDate(m.date);
+      if (m.status==="Pending")
+        notifs.push({type:"info", text:"📨 Meeting request pending: "+label});
+      if (m.status==="Approved")
+        notifs.push({type:"success", text:"✓ Meeting approved: "+label});
+      if (m.status==="Rejected")
+        notifs.push({type:"red", text:"✗ Meeting rejected: "+label});
     });
-  } catch(e) {}
+
+  } catch(e) { console.warn("loadNotifications error:", e); }
 
   renderNotifications(notifs);
   loadTimeSummary();
@@ -775,9 +822,14 @@ async function loadNotifications() {
 function renderNotifications(notifs) {
   const wrap = document.getElementById("inline-notif-wrap");
   const inner = document.getElementById("inline-notif-inner");
+  const badge = document.getElementById("notif-count-badge");
   if(!wrap||!inner) return;
-  if (notifs.length === 0) { wrap.style.display="none"; return; }
+  if (notifs.length === 0) { wrap.style.display="none"; if(badge) badge.textContent=""; return; }
   wrap.style.display="block";
+  // Sort: red first, then warning, then info, then success
+  const order = {red:0, warning:1, info:2, success:3};
+  notifs.sort((a,b)=>(order[a.type]??4)-(order[b.type]??4));
+  if(badge) badge.textContent = notifs.length;
   inner.innerHTML = notifs.map((n,i) => {
     const colors = {
       success: 'background:linear-gradient(135deg,#E8FFF5,#D0F5E8);border-left:3px solid #00D68F;color:#0A8050;',
@@ -797,6 +849,8 @@ function dismissNotif(i) {
   const el = document.getElementById("notif-"+i);
   if(el) el.remove();
   const remaining = document.querySelectorAll("[id^='notif-']").length;
+  const badge = document.getElementById("notif-count-badge");
+  if(badge) badge.textContent = remaining > 0 ? remaining : "";
   if(remaining === 0) { const w=document.getElementById("inline-notif-wrap"); if(w) w.style.display="none"; }
 }
 
