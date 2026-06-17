@@ -497,40 +497,49 @@ tr:hover td { background: rgba(100,160,255,0.04); }
         </div>
       </div>
 
-      <!-- Quick Meeting Log (only when clocked in) -->
-      <div class="card" id="quick-meeting-card">
-        <div class="card-title"><div class="card-icon">📅</div> Log Meeting</div>
-        <div class="two-col">
-          <div class="field-group">
-            <label>Start Time</label><input type="time" id="qm-start" />
-          </div>
-          <div class="field-group">
-            <label>End Time</label><input type="time" id="qm-end" />
-          </div>
-        </div>
-        <div class="field-group">
-          <label>Meeting Type</label>
-          <select id="qm-type">
-            <option value="">— Select type —</option>
-            <option value="Coaching">Coaching</option>
-            <option value="Team Huddle">Team Huddle</option>
-          </select>
-        </div>
-        <button class="btn btn-secondary" onclick="submitQuickMeeting()" id="btn-qm">Submit for Approval</button>
-      </div>
+      <!-- Quick Meeting Log + Cutoff Summary — side by side -->
+      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-top:18px;">
 
-      <!-- Current Cutoff Timesheet Summary -->
-      <div class="card">
-        <div class="card-title"><div class="card-icon">📊</div> Current Cutoff Summary</div>
-        <div id="ts-summary-loading" style="color:var(--muted);font-size:13px;">Loading…</div>
-        <div id="ts-summary-content" style="display:none;">
-          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:12px;" id="ts-summary-period"></div>
-          <div class="mini-grid">
-            <div class="mini-card"><div class="lbl">Days</div><div class="val" id="tss-days">—</div></div>
-            <div class="mini-card"><div class="lbl">Billable Hrs</div><div class="val gold" id="tss-hrs">—</div></div>
-            <div class="mini-card"><div class="lbl">Timesheet</div><div class="val" id="tss-status">—</div></div>
+        <!-- Log Meeting — 480px (~5 inches), same as clock card -->
+        <div style="width:480px;max-width:100%;flex-shrink:0;">
+          <div class="card" id="quick-meeting-card">
+            <div class="card-title"><div class="card-icon">📅</div> Log Meeting</div>
+            <div class="two-col">
+              <div class="field-group">
+                <label>Start Time</label><input type="time" id="qm-start" />
+              </div>
+              <div class="field-group">
+                <label>End Time</label><input type="time" id="qm-end" />
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Meeting Type</label>
+              <select id="qm-type">
+                <option value="">— Select type —</option>
+                <option value="Coaching">Coaching</option>
+                <option value="Team Huddle">Team Huddle</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" onclick="submitQuickMeeting()" id="btn-qm">Submit for Approval</button>
           </div>
         </div>
+
+        <!-- Current Cutoff Summary — ~960px (~10 inches) -->
+        <div style="flex:1;min-width:400px;">
+          <div class="card">
+            <div class="card-title"><div class="card-icon">📊</div> Current Cutoff Summary</div>
+            <div id="ts-summary-loading" style="color:var(--muted);font-size:13px;">Loading…</div>
+            <div id="ts-summary-content" style="display:none;">
+              <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:12px;" id="ts-summary-period"></div>
+              <div class="mini-grid">
+                <div class="mini-card"><div class="lbl">Days</div><div class="val" id="tss-days">—</div></div>
+                <div class="mini-card"><div class="lbl">Billable Hrs</div><div class="val gold" id="tss-hrs">—</div></div>
+                <div class="mini-card"><div class="lbl">Timesheet</div><div class="val" id="tss-status">—</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
