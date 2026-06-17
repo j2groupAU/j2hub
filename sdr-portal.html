@@ -1024,7 +1024,7 @@ function renderTimesheetGrouped() {
     html+=`<div class="cutoff-group">
       <div class="cutoff-group-header">
         <div><div class="title">${cutoffLabel}</div><div class="meta">${entries.length} entries &nbsp;·&nbsp; ${grandTotalHrs.toFixed(1)} billable hrs (incl. ${totalMeetingHrs.toFixed(1)}h meetings)</div></div>
-        <div style="display:flex;align-items:center;gap:10px;">${tsStatusBadge} <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;border-radius:8px;margin-left:6px;" onclick="openManualTimesheetModal('${cutoffLabel}')">+ Enter Timesheet</button></div>
+        <div style="display:flex;align-items:center;gap:10px;">${tsStatusBadge} <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;border-radius:8px;margin-left:6px;" onclick="openManualTimesheetModal(this.dataset.cl)" data-cl="${cutoffLabel}">+ Enter Timesheet</button></div>
       </div>
       <div class="cutoff-group-body">
         <div class="table-wrap"><table>
