@@ -1706,6 +1706,53 @@ async function resubmitTimesheet(tsId) {
   } catch(e) { showAlert(alert, "error", "Could not resubmit: " + e.message); }
   if(btn){ btn.innerHTML="📤 Resubmit Timesheet"; btn.disabled=false; }
 }
+// ── MANUAL TIMESHEET ──
+let manualTsCutoffLabel = '';
+
+function openManualTimesheetModal(cutoffLabel) {
+  manualTsCutoffLabel = cutoffLabel || '';
+  const modal = document.getElementById('manual-ts-modal');
+  modal.style.display = 'flex';
+  document.getElementById('manual-ts-period').textContent = cutoffLabel ? 'Cutoff: ' + cutoffLabel : '';
+  document.getElementById('mts-date').value = '';
+  document.getElementById('mts-start').value = '';
+  document.getElementById('mts-end').value = '';
+  document.getElementById('mts-reason').value = '';
+  const al = document.getElementById('mts-alert');
+  al.className = 'alert'; al.textContent = '';
+}
+
+function closeManualTimesheetModal() {
+  document.getElementById('manual-ts-modal').style.display = 'none';
+}
+
+async function submitManualTimesheet() {
+  const date = document.getElementById('mts-date').value;
+  const start = document.getElementById('mts-start').value;
+  const end = document.getElementById('mts-end').value;
+  const reason = document.getElementById('mts-reason').value.trim();
+  const al = document.getElementById('mts-alert');
+  const btn = document.getElementById('mts-submit-btn');
+  if (!date) { al.className='alert show alert-error'; al.textContent='Please select a date.'; return; }
+  if (!start || !end) { al.className='alert show alert-error'; al.textContent='Please enter start and end times.'; return; }
+  if (!reason) { al.className='alert show alert-error'; al.textContent='Please provide a reason.'; return; }
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    const cutoffPeriod = manualTsCutoffLabel || getCutoffDisplayLabel('current');
+    const result = await apiPost({action:'addEntry', sdrName:currentUser.name, email:currentUser.email, workDate:date, clockIn:start, cutoffPeriod:cutoffPeriod});
+    if (result.id) {
+      await apiPost({action:'updateEntry', id:result.id, clockOut:end, billableHrs:'', deduction:'', dailyPay:'', adminNotes:'[Manual Entry] '+reason, disputeStatus:'Manual Request', disputeNotes:reason});
+      closeManualTimesheetModal();
+      await loadTimesheet();
+    }
+  } catch(e) {
+    al.className='alert show alert-error'; al.textContent='Submit failed: '+e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit for Review';
+  }
+}
+
+
 </script>
 </body>
 </html>
