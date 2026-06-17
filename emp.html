@@ -398,19 +398,19 @@ tr:hover td { background: rgba(100,160,255,0.04); }
 
 
       <!-- Clock In/Out + Log Meeting — side by side row -->
-      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:0;">
+      <div style="display:flex;gap:18px;align-items:stretch;flex-wrap:wrap;margin-bottom:0;">
         <!-- Clock In/Out Card — ~5 inches wide -->
-        <div style="width:480px;max-width:100%;flex-shrink:0;">
-        <div class="card" id="clock-card-in">
+        <div style="width:480px;max-width:100%;flex-shrink:0;display:flex;flex-direction:column;">
+        <div class="card" id="clock-card-in" style="flex:1;display:flex;flex-direction:column;">
           <div class="card-title"><div class="card-icon">▶</div> Clock In</div>
           <div class="field-group"><label>Date</label><input type="date" id="clock-in-date" /></div>
           <div style="margin-bottom:16px;">
             <div class="time-display" id="live-time">--:--:--</div>
             <div class="time-sub">Current AEST time — recorded on clock in</div>
           </div>
-          <button class="btn btn-primary btn-full" onclick="submitClockIn()" id="btn-clock-in">Clock In Now</button>
+          <button class="btn btn-primary btn-full" onclick="submitClockIn()" id="btn-clock-in" style="margin-top:auto;">Clock In Now</button>
         </div>
-        <div class="card" id="clock-card-out" style="display:none;">
+        <div class="card" id="clock-card-out" style="display:none;flex:1;flex-direction:column;">
           <div class="card-title"><div class="card-icon">⏹</div> Clock Out</div>
           <div style="margin-bottom:12px;">
             <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Clocked in at</div>
@@ -446,14 +446,14 @@ tr:hover td { background: rgba(100,160,255,0.04); }
               </div>
             </div>
           </div>
-          <button class="btn btn-danger btn-full" onclick="submitClockOut()" id="btn-clock-out">Clock Out Now</button>
+          <button class="btn btn-danger btn-full" onclick="submitClockOut()" id="btn-clock-out" style="margin-top:auto;">Clock Out Now</button>
         </div>
 
         </div><!-- end clock card width wrapper -->
 
         <!-- Log Meeting — 480px (~5 inches), same as clock card -->
-        <div style="width:480px;max-width:100%;flex-shrink:0;">
-          <div class="card" id="quick-meeting-card">
+        <div style="width:480px;max-width:100%;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="card" id="quick-meeting-card" style="flex:1;display:flex;flex-direction:column;">
             <div class="card-title"><div class="card-icon">📅</div> Log Meeting</div>
             <div class="two-col">
               <div class="field-group">
@@ -471,7 +471,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
                 <option value="Team Huddle">Team Huddle</option>
               </select>
             </div>
-            <button class="btn btn-secondary" onclick="submitQuickMeeting()" id="btn-qm">Submit for Approval</button>
+            <button class="btn btn-secondary" onclick="submitQuickMeeting()" id="btn-qm" style="margin-top:auto;">Submit for Approval</button>
           </div>
         </div>
 
@@ -986,9 +986,9 @@ function showClockedIn(t, lunchData) {
   document.getElementById("clock-status-block").className="clock-status clocked-in";
   document.getElementById("clock-status-text").textContent="Clocked in at "+t+" — remember to clock out before finishing.";
   document.getElementById("clock-card-in").style.display="none";
-  document.getElementById("clock-card-out").style.display="block";
+  document.getElementById("clock-card-out").style.display="flex";
   document.getElementById("clock-in-time-display").textContent=t;
-  document.getElementById("quick-meeting-card").style.display="block";
+  document.getElementById("quick-meeting-card").style.display="flex";
   // Restore lunch state if already taken today
   if(lunchData && (lunchData.lunchTaken==="TRUE"||lunchData.lunchTaken===true||lunchData.lunchTaken==="true")) {
     lunchTaken=true;
@@ -1002,9 +1002,9 @@ function showClockedIn(t, lunchData) {
 function showClockedOut() {
   document.getElementById("clock-status-block").className="clock-status clocked-out";
   document.getElementById("clock-status-text").textContent="You are currently clocked out.";
-  document.getElementById("clock-card-in").style.display="block";
+  document.getElementById("clock-card-in").style.display="flex";
   document.getElementById("clock-card-out").style.display="none";
-  document.getElementById("quick-meeting-card").style.display="block";
+  document.getElementById("quick-meeting-card").style.display="flex";
 }
 
 async function submitClockIn() {
