@@ -1724,8 +1724,7 @@ async function mtsSubmit() {
   if(!date||!start||!end||!reason){errEl.textContent='Please fill in all fields.';errEl.style.display='block';return;}
   errEl.style.display='none'; btn.disabled=true; btn.textContent='Submitting...';
   try {
-    var cp=_mtsCutoff||getCutoffDisplayLabel('current');
-    var r1=await apiPost({action:'addEntry',sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:start,cutoffPeriod:cp});
+    var r1=await apiPost({action:'addEntry',sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:start,cutoffPeriod:getCutoffLabel(date)});
     if(r1&&r1.id){
       await apiPost({action:'updateEntry',id:r1.id,clockOut:end,billableHrs:'',deduction:'',dailyPay:'',adminNotes:'[Manual Entry] '+reason,disputeStatus:'Manual Request',disputeNotes:reason});
       mtsClose(); await loadTimesheet();
