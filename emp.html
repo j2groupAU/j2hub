@@ -1166,12 +1166,11 @@ function renderTimesheetGrouped() {
           <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
           <tbody>${(()=>{
             // Merge work entries + leave rows, sort all by date descending
-            const cutoffLeaves = allLeaves.filter(l => cutoffDates.has(l.leaveDate));
-            const workDates = new Set(entries.map(e=>e.workDate));
-            const leaveOnlyRows = cutoffLeaves.filter(l => !workDates.has(l.leaveDate));
+            const cutoffLeaves = allLeaves.filter(l => getCutoffLabel(l.leaveDate) === cutoffLabel);
+            // Always create a leave row, even if there's also a clock entry that day
             const combined = [
               ...entries.map(e=>({type:'work', date:e.workDate, data:e})),
-              ...leaveOnlyRows.map(l=>({type:'leave', date:l.leaveDate, data:l}))
+              ...cutoffLeaves.map(l=>({type:'leave', date:l.leaveDate, data:l}))
             ].sort((a,b)=>b.date.localeCompare(a.date));
             return combined.map(item=>{
               if(item.type==='leave'){

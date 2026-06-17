@@ -729,8 +729,7 @@ function renderEntriesTable() {
       const paidHrsCell = l.status==="Approved"
         ?(l.payType==="Paid"?`<strong style="color:#0A8050;">${hrs}h</strong>`:`<span style="color:var(--muted);text-decoration:line-through;">${hrs}h</span>`)
         :`<span style="color:var(--muted);">${hrs}h</span>`;
-      // Only show as standalone row if there's no clock entry for this employee+date
-      if(workKeys.has(l.sdrName+'|'+l.leaveDate)) return null;
+      // Always show a leave row regardless of whether there's a clock entry
       return {
         _date: l.leaveDate, _name: l.sdrName,
         _html: `<tr style="background:#fffbeb;border-bottom:1px solid #fde68a;">
