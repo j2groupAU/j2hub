@@ -1060,7 +1060,11 @@ async function renderPayroll(){
       const cutoffRate=(getRate(name))/2;
       const dailyRate=cutoffRate/Math.max(wDays,1);
       // Paid leave billable hours for this employee in this cutoff
-      const empLeaveBillable=allLeaves.filter(l=>l.sdrName===name&&l.status==="Approved"&&l.payType==="Paid"&&getCutoffPeriodKey(l.leaveDate)===currentCutoffKey).reduce((s,l)=>s+getLeaveHours(l.leaveType),0);
+      // Use filterByCutoff date-range logic for leave matching
+      const empLeaveBillable=(()=>{
+        const fakeEntries=allLeaves.filter(l=>l.sdrName===name&&l.status==="Approved"&&l.payType==="Paid").map(l=>({...l,workDate:l.leaveDate}));
+        return filterByCutoff(fakeEntries,payrollCutoff).reduce((s,l)=>s+getLeaveHours(l.leaveType),0);
+      })();
       // Total billable hours (phone + lunch + meetings per entry + paid leave)
       const totalBillable=entries.reduce((s,e)=>{
         const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
