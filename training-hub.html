@@ -12,8 +12,6 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:Arial,sans-serif;background:var(--light);color:var(--text);min-height:100vh;}
-
-  /* LOGIN */
   #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#2a5298 100%);padding:24px;}
   .login-card{background:var(--white);border-radius:14px;padding:48px 44px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.25);}
   .login-logo{display:flex;align-items:center;gap:14px;margin-bottom:32px;}
@@ -31,8 +29,6 @@
   .login-btn:disabled{opacity:.5;cursor:not-allowed;}
   .login-error{margin-top:14px;padding:10px 14px;background:#FEE;border:1px solid #F5C6C6;border-radius:6px;font-size:13px;color:var(--red);display:none;}
   .login-loading{margin-top:14px;font-size:13px;color:var(--muted);text-align:center;display:none;}
-
-  /* APP */
   #app{display:none;}
   header{background:var(--navy);color:var(--white);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:64px;box-shadow:0 2px 8px rgba(0,0,0,0.18);}
   .logo{display:flex;align-items:center;gap:12px;}
@@ -97,6 +93,9 @@
   .done-icon{width:72px;height:72px;background:#E6F7EF;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
   .done-screen h2{font-size:24px;color:var(--navy);margin-bottom:10px;}
   .done-screen p{font-size:14px;color:var(--muted);max-width:420px;margin:0 auto;}
+  .toast{position:fixed;bottom:28px;right:28px;background:var(--navy);color:var(--white);padding:12px 20px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,0.2);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast.error{background:var(--red);}
   footer{text-align:center;font-size:11px;color:var(--muted);padding:16px;border-top:1px solid var(--border);margin-top:16px;}
   @media(max-width:768px){.container{grid-template-columns:1fr;}.sidebar{position:static;}.login-card{padding:32px 24px;}.header-right .welcome-text{display:none;}}
 </style>
@@ -145,7 +144,6 @@
       <button class="logout-btn" onclick="doLogout()">Sign Out</button>
     </div>
   </header>
-
   <div class="container">
     <aside class="sidebar">
       <div class="sidebar-head">Training Modules</div>
@@ -193,21 +191,50 @@
   <footer>J2 Group — Confidential &amp; Internal Use Only</footer>
 </div>
 
-<script>
-const SHEET_ID  = "1j63k0zFTHZ_98WdAJ0zk18K0F3Q5jIQedGle6LHCMTM";
-const SHEET_GID = "0";
-const CSV_URL   = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=" + SHEET_GID;
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
-// ── MODULES ──
+<script>
+// ══════════════════════════════════════════════════
+//  CONFIG — UPDATE THESE TWO VALUES
+// ══════════════════════════════════════════════════
+
+// Your Google Sheet CSV URL (for login)
+const SHEET_ID  = "1j63k0zFTHZ_98WdAJ0zk18K0F3Q5jIQedGle6LHCMTM";
+const CSV_URL   = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=0";
+
+// Your Google Apps Script Web App URL — paste it here after deploying
+// It looks like: https://script.google.com/macros/s/XXXXXXXX/exec
+const APPS_SCRIPT_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
+
+// ══════════════════════════════════════════════════
+//  TRAINING MODULES
+//  Loom embed:   https://www.loom.com/embed/VIDEO_ID
+//  Komodo embed: https://komododecks.com/recordings/VIDEO_ID/embed
+// ══════════════════════════════════════════════════
 const MODULES = [
-  { title:"Welcome to J2 Group",       desc:"An overview of who we are, what we do, and how the team works.",        embedUrl:"https://www.loom.com/embed/REPLACE_WITH_VIDEO_ID_1", source:"Loom" },
-  { title:"Systems & Tools Overview",  desc:"Walkthrough of the key platforms you'll use day-to-day.",               embedUrl:"https://www.loom.com/embed/REPLACE_WITH_VIDEO_ID_2", source:"Loom" },
-  { title:"Your Role & Responsibilities", desc:"What's expected of you in your first 30 days.",                      embedUrl:"https://komododecks.com/recordings/REPLACE_WITH_VIDEO_ID_3/embed", source:"Komodo" },
-  { title:"Processes & Workflows",     desc:"How work gets done at J2 Group — step by step.",                        embedUrl:"https://www.loom.com/embed/REPLACE_WITH_VIDEO_ID_4", source:"Loom" },
-  { title:"Policies & Code of Conduct",desc:"Key policies every team member must understand before starting.",       embedUrl:"https://www.loom.com/embed/REPLACE_WITH_VIDEO_ID_5", source:"Loom" }
+  { title:"Welcome to J2 Group",          desc:"An overview of who we are, what we do, and how the team works.",        embedUrl:"https://www.loom.com/embed/REPLACE_WITH_VIDEO_ID_1", source:"Loom" },
+  { title:"Systems & Tools Overview",     desc:"Walkthrough of the key platforms you'll use day-to-day.",               embedUrl:"https://www.loom.com/embed/REPLACE_WITH_VIDEO_ID_2", source:"Loom" },
+  { title:"Your Role & Responsibilities", desc:"What's expected of you in your first 30 days.",                         embedUrl:"https://komododecks.com/recordings/REPLACE_WITH_VIDEO_ID_3/embed", source:"Komodo" },
+  { title:"Processes & Workflows",        desc:"How work gets done at J2 Group — step by step.",                        embedUrl:"https://www.loom.com/embed/REPLACE_WITH_VIDEO_ID_4", source:"Loom" },
+  { title:"Policies & Code of Conduct",   desc:"Key policies every team member must understand before starting.",       embedUrl:"https://www.loom.com/embed/REPLACE_WITH_VIDEO_ID_5", source:"Loom" }
 ];
 
-// ── CSV PARSER ──
+// ══════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, isError) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isError ? " error" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = "toast"; }, 3500);
+}
+
+// ══════════════════════════════════════════════════
+//  CSV PARSER
+// ══════════════════════════════════════════════════
 function parseCSV(text) {
   const lines = text.trim().split("\n");
   const headers = lines[0].split(",").map(h => h.trim().replace(/\r/g,"").replace(/"/g,"").toLowerCase());
@@ -219,7 +246,9 @@ function parseCSV(text) {
   });
 }
 
-// ── LOGIN ──
+// ══════════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════════
 let currentUser = null;
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && document.getElementById("login-screen").style.display !== "none") doLogin();
@@ -256,7 +285,7 @@ async function doLogin() {
       errEl.style.display = "block";
     }
   } catch(err) {
-    errEl.textContent = "Unable to reach the user list. Make sure your Google Sheet is published: File → Share → Publish to web → select CSV → Publish.";
+    errEl.textContent = "Unable to reach the user list. Make sure your Google Sheet is published: File → Share → Publish to web → CSV → Publish.";
     errEl.style.display = "block";
   } finally {
     btn.disabled = false; loadEl.style.display = "none";
@@ -285,12 +314,37 @@ function showApp() {
   renderModule(startAt, done);
 }
 
-// ── PROGRESS (per user) ──
+// ══════════════════════════════════════════════════
+//  PROGRESS (localStorage, per user)
+// ══════════════════════════════════════════════════
 function storageKey() { return "j2_training_" + (currentUser ? currentUser.username.toLowerCase() : "guest"); }
 function loadProgress() { try { return JSON.parse(localStorage.getItem(storageKey())) || []; } catch { return []; } }
 function saveProgress(arr) { localStorage.setItem(storageKey(), JSON.stringify(arr)); }
 
-// ── TRAINING ──
+// ══════════════════════════════════════════════════
+//  LOG COMPLETION TO GOOGLE SHEET
+// ══════════════════════════════════════════════════
+async function logCompletionToSheet(moduleIndex) {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === "PASTE_YOUR_WEB_APP_URL_HERE") return;
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", // Required for Apps Script
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: currentUser.username,
+        moduleIndex: moduleIndex
+      })
+    });
+    // no-cors means we can't read the response, but the write still happens
+  } catch(err) {
+    console.warn("Sheet log failed (non-critical):", err);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  TRAINING LOGIC
+// ══════════════════════════════════════════════════
 let currentIndex = 0;
 function isUnlocked(i, done) { return i === 0 || done.includes(i - 1); }
 
@@ -298,9 +352,9 @@ function buildSidebar(done) {
   const list = document.getElementById("module-list");
   list.innerHTML = "";
   MODULES.forEach((m, i) => {
-    const unlocked = isUnlocked(i, done), completed = done.includes(i), active = i === currentIndex;
+    const unlocked = isUnlocked(i,done), completed = done.includes(i), active = i === currentIndex;
     const li = document.createElement("li");
-    li.className = "module-item" + (completed?" completed":"") + (!unlocked?" locked":"") + (active?" active":"");
+    li.className = "module-item"+(completed?" completed":"") + (!unlocked?" locked":"") + (active?" active":"");
     li.onclick = () => { if (unlocked) goTo(i); };
     li.innerHTML = `<div class="step-icon"><span class="num">${i+1}</span>${completed?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':!unlocked?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>':""}</div><div class="module-meta"><div class="module-title">${m.title}</div><div class="module-label">${completed?"Completed":!unlocked?"Locked":"Not started"} · ${m.source}</div></div>`;
     list.appendChild(li);
@@ -322,7 +376,7 @@ function renderModule(i, done) {
   const doneScreen = document.getElementById("done-screen"), actionBar = document.getElementById("action-bar");
   doneScreen.classList.remove("visible"); actionBar.style.display = "flex";
   if (unlocked) { frame.src = m.embedUrl; overlay.style.display = "none"; }
-  else { frame.src=""; overlay.style.display="flex"; document.getElementById("locked-msg").textContent = 'Complete "'+(MODULES[i-1]?MODULES[i-1].title:"the previous module")+'" to unlock this video.'; }
+  else { frame.src=""; overlay.style.display="flex"; document.getElementById("locked-msg").textContent='Complete "'+(MODULES[i-1]?MODULES[i-1].title:"the previous module")+'" to unlock this video.'; }
   const btnComplete = document.getElementById("btn-complete"), btnNext = document.getElementById("btn-next");
   const hint = document.getElementById("action-hint"), isLast = i === MODULES.length-1;
   if (completed) {
@@ -340,10 +394,16 @@ function renderModule(i, done) {
   buildSidebar(done);
 }
 
-function markComplete() {
+async function markComplete() {
   const done = loadProgress();
-  if (!done.includes(currentIndex)) done.push(currentIndex);
-  saveProgress(done);
+  if (!done.includes(currentIndex)) {
+    done.push(currentIndex);
+    saveProgress(done);
+    // Log to Google Sheet in background
+    logCompletionToSheet(currentIndex).then(() => {
+      showToast("✓ Progress saved to your training record");
+    });
+  }
   if (currentIndex === MODULES.length-1) {
     buildSidebar(done);
     document.getElementById("done-screen").classList.add("visible");
@@ -351,13 +411,21 @@ function markComplete() {
     document.getElementById("status-badge").className="status-badge done";
     document.getElementById("status-badge").textContent="✓ Completed";
     document.getElementById("completed-count").textContent=done.length;
-  } else { renderModule(currentIndex, done); }
+  } else {
+    renderModule(currentIndex, done);
+  }
 }
+
 function goNext() { if (currentIndex < MODULES.length-1) renderModule(currentIndex+1, loadProgress()); }
 function goTo(i) { renderModule(i, loadProgress()); }
-function resetProgress() { if (confirm("Reset all training progress? This cannot be undone.")) { localStorage.removeItem(storageKey()); renderModule(0,[]); } }
+function resetProgress() {
+  if (confirm("Reset all training progress? This cannot be undone.")) {
+    localStorage.removeItem(storageKey());
+    renderModule(0,[]);
+  }
+}
 
-// ── AUTO-RESTORE SESSION ──
+// Auto-restore session
 (function init() {
   const saved = sessionStorage.getItem("j2_user");
   if (saved) { try { currentUser = JSON.parse(saved); showApp(); return; } catch {} }
