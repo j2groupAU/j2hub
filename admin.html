@@ -473,7 +473,7 @@ tr:hover td { background: #faf8f4; }
         <div id="users-empty" class="empty-block" style="display:none;"><div class="icon">👥</div><p>No users yet.</p></div>
         <div class="table-wrap" id="users-table-wrap" style="display:none;">
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Monthly Rate</th><th>Password</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th style="text-align:center">Monthly Rate</th><th style="text-align:center">Password</th><th style="text-align:center">Action</th></tr></thead>
             <tbody id="users-body"></tbody>
           </table>
         </div>
@@ -681,84 +681,45 @@ function renderEntriesTable() {
   if(filteredEntries.length===0){document.getElementById("entries-empty").style.display="block";document.getElementById("entries-table-wrap").style.display="none";return;}
   document.getElementById("entries-empty").style.display="none";
   document.getElementById("entries-table-wrap").style.display="block";
-
-  // Build work entry row objects
-  const workRowObjs = filteredEntries.map(e => {
+  // Group entries by date+employee to attach meeting sub-rows
+  const rows = [];
+  filteredEntries.forEach(e => {
     const isPending = e.clockIn && !(e.billableHrs!=null&&e.billableHrs!=="");
+    const submitted = (e.clockIn||"—") + " → " + (e.clockOut||"—");
+    const actual = e.actualStart ? ("<strong>"+e.actualStart+"</strong>" + (e.actualEnd?" → "+e.actualEnd:"")) : '<span class="badge badge-amber">Pending</span>';
     const lunchStr = (e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")
       ? `<span style="font-size:11px;color:#0A8050;font-weight:700;">🍽️ ${e.lunchStart||""}–${e.lunchEnd||""}</span>`
       : '<span style="color:var(--muted);font-size:11px;">None</span>';
+    // Main work row
     const entryStatusLabel = (e.billableHrs!=null&&e.billableHrs!=="") ? (e.disputeStatus==="Resolved"?'<span class="badge badge-green" style="font-size:10px;">✓ Resolved</span>':'<span class="badge badge-green" style="font-size:10px;">✓ Approved</span>') : '<span class="badge badge-amber" style="font-size:10px;">Pending</span>';
+    // Compute meeting summary for this employee+date
     const entryMeetings=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate);
     const totalMeetHrs=entryMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-    const meetingCell=totalMeetHrs>0?`<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${totalMeetHrs.toFixed(1)}h</span>`:'—';
-    // Leave on same date — show in Time Off col
-    const leaveOnDay=allLeaves.find(l=>l.sdrName===e.sdrName&&l.leaveDate===e.workDate);
+    const meetingCell=totalMeetHrs>0
+      ? `<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${totalMeetHrs.toFixed(1)}h</span>`
+      : '—';
+    // Time Off: check if employee has approved leave on this date
+    const leaveOnDay=allLeaves.find(l=>l.sdrName===e.sdrName&&l.leaveDate===e.workDate&&l.status==="Approved");
     const timeOffCell=leaveOnDay
-      ?`<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>`
-      :'—';
-    return {
-      _date: e.workDate, _name: e.sdrName,
-      _html: `<tr>
-        <td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openEditModal('${e.id}')">${isPending?"Enter":"Edit"}</button></td>
-        <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
-        <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong></td>
-        <td style="font-size:12px;white-space:nowrap">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
-        <td style="font-size:12px;white-space:nowrap">${(e.billableHrs!=null&&e.billableHrs!=="")?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
-        <td style="font-size:11px;">${lunchStr}</td>
-        <td style="font-size:11px;">${meetingCell}</td>
-        <td style="font-size:11px;">${timeOffCell}</td>
-        <td style="font-size:12px;">${(()=>{if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(e.billableHrs,mH,e.lunchTaken));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
-        <td style="font-size:12px;">${(()=>{if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(e.billableHrs,mH,e.lunchTaken);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
-        <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
-        <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
-      </tr>`
-    };
+      ? `<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>`
+      : '—';
+    rows.push(`<tr>
+      <td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openEditModal('${e.id}')">${isPending?"Enter":"Edit"}</button></td>
+      <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
+      <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong></td>
+      <td style="font-size:12px;white-space:nowrap">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
+      <td style="font-size:12px;white-space:nowrap">${(e.billableHrs!=null&&e.billableHrs!=="")?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
+      <td style="font-size:11px;">${lunchStr}</td>
+      <td style="font-size:11px;">${meetingCell}</td>
+      <td style="font-size:11px;">${timeOffCell}</td>
+      <td style="font-size:12px;">${(()=>{if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(e.billableHrs,mH,e.lunchTaken));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
+      <td style="font-size:12px;">${(()=>{if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(e.billableHrs,mH,e.lunchTaken);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
+      <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
+      <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
+    </tr>`);
   });
-
-  // Build leave-only rows (leave entries for employees in the current filter, on dates with no clock entry)
-  const sdrFilter = document.getElementById('filter-sdr')?.value||'';
-  const workKeys = new Set(filteredEntries.map(e=>e.sdrName+'|'+e.workDate));
-  const leaveRowObjs = allLeaves
-    .filter(l => (!sdrFilter || l.sdrName===sdrFilter))
-    .map(l => {
-      const hrs = getLeaveHours(l.leaveType);
-      const payBadge = l.status==="Approved"
-        ?(l.payType==="Paid"?'<span class="badge badge-green">💰 Paid</span>':'<span class="badge badge-red">Unpaid</span>')
-        :'<span class="badge badge-gray">Pending</span>';
-      const paidHrsCell = l.status==="Approved"
-        ?(l.payType==="Paid"?`<strong style="color:#0A8050;">${hrs}h</strong>`:`<span style="color:var(--muted);text-decoration:line-through;">${hrs}h</span>`)
-        :`<span style="color:var(--muted);">${hrs}h</span>`;
-      // Always show a leave row regardless of whether there's a clock entry
-      return {
-        _date: l.leaveDate, _name: l.sdrName,
-        _html: `<tr style="background:#fffbeb;border-bottom:1px solid #fde68a;">
-          <td>—</td>
-          <td style="font-size:12px;white-space:nowrap">${formatDate(l.leaveDate)}</td>
-          <td><strong style="font-size:12px;">${l.sdrName||"—"}</strong></td>
-          <td colspan="5" style="font-size:12px;">
-            🏖️ <strong>${l.leaveType||"Leave"}</strong>
-            <span style="color:var(--muted);margin-left:8px;">${l.reason||""}</span>
-            &nbsp;${payBadge}
-            ${l.adminNote?`<span style="font-size:11px;color:var(--muted);margin-left:6px;">· ${l.adminNote}</span>`:""}
-          </td>
-          <td style="text-align:center;">${paidHrsCell}</td>
-          <td>—</td>
-          <td>—</td>
-          <td>—</td>
-        </tr>`
-      };
-    }).filter(Boolean);
-
-  // Merge and sort by date desc, then name asc
-  const allRowObjs = [...workRowObjs, ...leaveRowObjs].sort((a,b)=>{
-    const dc = b._date.localeCompare(a._date);
-    return dc !== 0 ? dc : a._name.localeCompare(b._name);
-  });
-
-  document.getElementById("entries-body").innerHTML = allRowObjs.map(r=>r._html).join("");
+  document.getElementById("entries-body").innerHTML = rows.join("");
 }
-
 
 function openEditModal(id) {
   const e = allEntries.find(x=>x.id==id); if(!e) return;
@@ -1059,17 +1020,11 @@ async function renderPayroll(){
     Object.entries(bySdr).sort().forEach(([name,entries])=>{
       const cutoffRate=(getRate(name))/2;
       const dailyRate=cutoffRate/Math.max(wDays,1);
-      // Paid leave billable hours for this employee in this cutoff
-      // Use filterByCutoff date-range logic for leave matching
-      const empLeaveBillable=(()=>{
-        const fakeEntries=allLeaves.filter(l=>l.sdrName===name&&l.status==="Approved"&&l.payType==="Paid").map(l=>({...l,workDate:l.leaveDate}));
-        return filterByCutoff(fakeEntries,payrollCutoff).reduce((s,l)=>s+getLeaveHours(l.leaveType),0);
-      })();
-      // Total billable hours (phone + lunch + meetings per entry + paid leave)
+      // Total billable hours (phone + lunch + meetings per entry)
       const totalBillable=entries.reduce((s,e)=>{
         const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
         return s+Math.min(8,calcWorkHours(e.billableHrs,mH,e.lunchTaken));
-      },0)+empLeaveBillable;
+      },0);
       // Total deduction hours
       const totalDed=entries.reduce((s,e)=>{
         const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
@@ -1136,7 +1091,8 @@ async function loadUsers(){
     document.getElementById("users-body").innerHTML=users.map(u=>`<tr>
       <td><strong>${u.name}</strong></td>
       <td>${u.email||"—"}</td>
-      <td><code style="background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;">${u.password||"—"}</code></td>
+      <td style="text-align:center"><code style="background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;">${u.rate ? '$'+parseFloat(u.rate).toLocaleString() : "—"}</code></td>
+      <td style="text-align:center"><code style="background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;">${u.password||"—"}</code></td>
       <td style="text-align:center"><button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}','${u.name.replace(/'/g,"\\'")}')">Remove</button></td>
     </tr>`).join("");
   } catch(e){document.getElementById("users-loading").textContent="Could not load users: "+e.message;}
@@ -1420,26 +1376,6 @@ function buildTsCard(t) {
   const disputeHtml = isDisputed && t.disputeNotes
     ? '<div class="dispute-box" style="margin-bottom:14px;"><div class="dispute-label">Review Reason</div><div class="dispute-text">'+t.disputeNotes+'</div></div>'
     : "";
-
-  // Leave rows for this SDR's cutoff period
-  const tsEntries = allEntries.filter(e=>e.sdrName===t.sdrName&&(e.cutoffPeriod===t.cutoffLabel||e.cutoffPeriod===t.cutoffKey));
-  const tsDates = new Set(tsEntries.map(e=>e.workDate));
-  const tsLeaves = allLeaves.filter(l=>l.sdrName===t.sdrName&&tsDates.has(l.leaveDate));
-  const leaveHtml = tsLeaves.length>0
-    ? '<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:14px;">'
-      + '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px;">🏖️ Leave This Period</div>'
-      + '<table style="width:100%;font-size:12px;border-collapse:collapse;">'
-      + '<thead><tr style="color:var(--muted);font-size:11px;"><th style="text-align:left;padding:3px 8px 3px 0;">Date</th><th style="text-align:left;padding:3px 8px;">Type</th><th style="text-align:left;padding:3px 8px;">Status</th><th style="text-align:left;padding:3px 8px;">Pay</th><th style="text-align:right;padding:3px 0 3px 8px;">Paid Hrs</th></tr></thead>'
-      + '<tbody>'
-      + tsLeaves.sort((a,b)=>a.leaveDate.localeCompare(b.leaveDate)).map(l=>{
-          const hrs=getLeaveHours(l.leaveType);
-          const payBadge=l.status==="Approved"?(l.payType==="Paid"?'<span class="badge badge-green">💰 Paid</span>':'<span class="badge badge-red">Unpaid</span>'):'<span class="badge badge-gray">Pending</span>';
-          const paidHrsCell=l.status==="Approved"?(l.payType==="Paid"?`<strong style="color:#0A8050;">${hrs}h</strong>`:`<span style="color:var(--muted);text-decoration:line-through;">${hrs}h</span>`):`<span style="color:var(--muted);">${hrs}h</span>`;
-          return`<tr style="border-top:1px solid #fde68a;"><td style="padding:4px 8px 4px 0;">${formatDate(l.leaveDate)}</td><td style="padding:4px 8px;">${l.leaveType}</td><td style="padding:4px 8px;">${getLeaveBadge(l.status)}</td><td style="padding:4px 8px;">${payBadge}</td><td style="text-align:right;padding:4px 0 4px 8px;">${paidHrsCell}</td></tr>`;
-        }).join('')
-      + '</tbody></table></div>'
-    : "";
-
   return '<div class="card" style="margin-bottom:14px;'+borderStyle+'">'
     + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">'
     +   '<div>'
@@ -1449,7 +1385,6 @@ function buildTsCard(t) {
     +   getTsBadge(t.status)
     + '</div>'
     + disputeHtml
-    + leaveHtml
     + '<div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px;">'
     +   '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">💰 Incentives (optional)</div>'
     +   '<div id="incentive-rows-'+tid+'">'
@@ -1686,13 +1621,6 @@ function renderLeave() {
   }
 
   document.getElementById("leave-content").innerHTML=html;
-}
-
-function getLeaveHours(leaveType){
-  if(!leaveType) return 0;
-  if(leaveType==="Full Day") return 8;
-  if(leaveType.startsWith("Half Day")) return 4;
-  return 0;
 }
 
 function getLeaveBadge(status){
