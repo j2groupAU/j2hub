@@ -740,10 +740,19 @@ function startLiveClock() {
   update(); setInterval(update, 1000);
   // Auto clock-out check every minute
   setInterval(checkAutoClockOut, 60000);
+  // Keep the visible date fields in sync with Sydney time even if the tab
+  // is left open across a Sydney midnight rollover (e.g. SA-based staff)
+  setInterval(setTodayDate, 60000);
+}
+
+function currentSydneyDate() {
+  // Always computes "today" fresh in Australia/Sydney time, regardless of the
+  // user's own device/browser timezone (e.g. South Africa-based staff).
+  return new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
 }
 
 function setTodayDate() {
-  const today = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+  const today = currentSydneyDate();
   ["clock-in-date","meeting-date"].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
 }
 
@@ -1013,7 +1022,8 @@ async function submitClockIn() {
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
   try {
     const aestTime=new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"});
-    const date=document.getElementById("clock-in-date").value;
+    const date=currentSydneyDate();
+    document.getElementById("clock-in-date").value=date;
     const entries=await fetchEntries();
     const todayOpen=entries.find(e=>e.workDate===date&&e.clockIn&&!e.clockOut);
     if(todayOpen){showAlert(alert,"error","You already have an open clock-in for today.");btn.innerHTML="Clock In Now";btn.disabled=false;return;}
@@ -1053,7 +1063,7 @@ async function submitQuickMeeting() {
   if(start>=end){showAlert(alert,"error","End time must be after start time.");return;}
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
   try {
-    const date=document.getElementById("clock-in-date").value;
+    const date=currentSydneyDate();
     await apiPost({action:"addMeeting",sdrName:currentUser.name,email:currentUser.email,date,startTime:start,endTime:end,meetingType:type,status:"Pending"});
     showAlert(alert,"success","✓ Meeting submitted for approval.");
     document.getElementById("qm-start").value=""; document.getElementById("qm-end").value=""; document.getElementById("qm-type").value="";

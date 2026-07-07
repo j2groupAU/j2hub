@@ -534,6 +534,7 @@ tr:hover td { background: #faf8f4; }
     <div class="modal-title" id="edit-modal-title">Edit Entry</div>
     <div class="modal-sub" id="edit-modal-sub">—</div>
     <div id="alert-edit" class="alert"></div>
+    <div class="field-group"><label>Work Date</label><input type="date" id="em-work-date" /></div>
     <div class="info-row"><span class="key">Clock In (Submitted)</span><span class="val" id="em-clock-in">—</span></div>
     <div class="info-row"><span class="key">Clock Out (Submitted)</span><span class="val" id="em-clock-out">—</span></div>
     <hr class="modal-divider">
@@ -721,11 +722,14 @@ function renderEntriesTable() {
   document.getElementById("entries-body").innerHTML = rows.join("");
 }
 
+function getCutoffLabel(dateStr){const d=new Date(dateStr+"T12:00:00");return d.getDate()>=11&&d.getDate()<=25?"11th–25th (Pay 30th)":"26th–10th (Pay 15th)";}
+
 function openEditModal(id) {
   const e = allEntries.find(x=>x.id==id); if(!e) return;
   editItemId = id;
   document.getElementById("edit-modal-title").textContent = `${e.sdrName} — ${formatDate(e.workDate)}`;
   document.getElementById("edit-modal-sub").textContent = `Cutoff: ${e.cutoffPeriod||"Not set"}`;
+  document.getElementById("em-work-date").value = e.workDate||"";
   document.getElementById("em-clock-in").textContent = e.clockIn||"—";
   document.getElementById("em-clock-out").textContent = e.clockOut||"—";
   // Work Hours: show stored billableHrs (even if 0)
@@ -793,6 +797,11 @@ function calcDailyPay(billableHrs, meetingHrs, lunchTaken, dailyRate){
 
 async function saveEntry() {
   const btn=document.getElementById("btn-save-entry"); const alert=document.getElementById("alert-edit");
+  const entry=allEntries.find(x=>x.id==editItemId)||{};
+  const newDate=document.getElementById("em-work-date").value;
+  if(!newDate){showAlert(alert,"error","Work Date cannot be empty.");return;}
+  const dateChanged = newDate !== entry.workDate;
+  if(dateChanged && !confirm(`Change work date from ${formatDate(entry.workDate)} to ${formatDate(newDate)}? This will move the entry to the matching pay cutoff.`)) return;
   btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
   try {
     const billable=parseFloat(document.getElementById("em-billable").value)||0;
@@ -801,13 +810,17 @@ async function saveEntry() {
     const notes=document.getElementById("em-admin-notes").value;
     const lunchStart=document.getElementById("em-lunch-start")?.value||"";
     const lunchEnd=document.getElementById("em-lunch-end")?.value||"";
-    await apiPost({action:"updateEntry",id:editItemId,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,
-      lunchStart:lunchStart||"",lunchEnd:lunchEnd||"",lunchTaken:lunchStart?"TRUE":"FALSE"});
+    const newCutoff = dateChanged ? getCutoffLabel(newDate) : entry.cutoffPeriod;
+    const payload={action:"updateEntry",id:editItemId,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,
+      lunchStart:lunchStart||"",lunchEnd:lunchEnd||"",lunchTaken:lunchStart?"TRUE":"FALSE"};
+    if(dateChanged){ payload.workDate=newDate; payload.cutoffPeriod=newCutoff; }
+    await apiPost(payload);
     const idx=allEntries.findIndex(x=>x.id==editItemId);
-    if(idx!==-1) allEntries[idx]={...allEntries[idx],billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart,lunchEnd:lunchEnd,lunchTaken:lunchStart?"TRUE":"FALSE"};
+    if(idx!==-1) allEntries[idx]={...allEntries[idx],billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart,lunchEnd:lunchEnd,lunchTaken:lunchStart?"TRUE":"FALSE",...(dateChanged?{workDate:newDate,cutoffPeriod:newCutoff}:{})};
     showAlert(alert,"success","✓ Entry saved. Review below or close when done.");
     const alertBottom=document.getElementById("alert-edit-bottom");
     if(alertBottom) showAlert(alertBottom,"success","✓ Saved — you can make further edits or close.");
+    if(dateChanged){ document.getElementById("edit-modal-title").textContent = `${entry.sdrName} — ${formatDate(newDate)}`; document.getElementById("edit-modal-sub").textContent = `Cutoff: ${newCutoff}`; }
     applyFilters(); renderPayroll();
   } catch(e){showAlert(alert,"error","Save failed: "+e.message);}
   btn.innerHTML="Save Entry"; btn.disabled=false;
