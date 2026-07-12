@@ -1169,6 +1169,7 @@ function filterByCutoff(entries,cutoff){
     else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
     else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
   }
+  end.setHours(23,59,59,999); // include the entire last day of the cutoff — entries are compared at T12:00:00
   return entries.filter(e=>{if(!e.workDate)return false;const d=new Date(e.workDate+"T12:00:00");return d>=start&&d<=end;});
 }
 
