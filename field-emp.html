@@ -497,9 +497,52 @@ tr:hover td { background: rgba(100,160,255,0.04); }
     <div class="page" id="page-timesheet">
       <div class="page-header">
         <div><h2>My Timesheet</h2></div>
-        <button class="btn-refresh" onclick="loadTimesheet()">↻ Refresh</button>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-primary" onclick="openManualTimesheetModal()" style="font-size:13px;padding:8px 18px;">📋 Manual Timesheet</button>
+          <button class="btn-refresh" onclick="loadTimesheet()">↻ Refresh</button>
+        </div>
       </div>
       <div id="alert-timesheet" class="alert"></div>
+
+      <!-- Manual Timesheet Modal -->
+      <div id="manual-ts-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,0.65);z-index:9999;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:20px;padding:36px 32px 28px 32px;width:440px;max-width:95vw;box-shadow:0 24px 64px rgba(0,80,180,0.22);">
+          <div style="font-size:20px;font-weight:800;color:#0A1628;margin-bottom:6px;">📋 Manual Timesheet Entry</div>
+          <div style="font-size:13px;color:#5577AA;margin-bottom:24px;">Fill in your details for the day you worked.</div>
+
+          <div class="field-group">
+            <label>Date</label>
+            <input type="date" id="mts-date" style="width:100%;padding:10px 12px;border:1.5px solid #C5D8F5;border-radius:10px;font-size:14px;outline:none;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="field-group">
+              <label>Start Time</label>
+              <input type="time" id="mts-start" style="width:100%;padding:10px 12px;border:1.5px solid #C5D8F5;border-radius:10px;font-size:14px;outline:none;">
+            </div>
+            <div class="field-group">
+              <label>End Time</label>
+              <input type="time" id="mts-end" style="width:100%;padding:10px 12px;border:1.5px solid #C5D8F5;border-radius:10px;font-size:14px;outline:none;">
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Suburb</label>
+            <input type="text" id="mts-suburb" placeholder="e.g. Parramatta" style="width:100%;padding:10px 12px;border:1.5px solid #C5D8F5;border-radius:10px;font-size:14px;outline:none;">
+          </div>
+          <div class="field-group">
+            <label>Leads Generated (SQLs)</label>
+            <input type="number" id="mts-leads" min="0" step="1" placeholder="e.g. 5" style="width:100%;padding:10px 12px;border:1.5px solid #C5D8F5;border-radius:10px;font-size:14px;outline:none;">
+          </div>
+          <div class="field-group">
+            <label>Reason for Manual Entry</label>
+            <input type="text" id="mts-reason" placeholder="e.g. Forgot to clock in" style="width:100%;padding:10px 12px;border:1.5px solid #C5D8F5;border-radius:10px;font-size:14px;outline:none;">
+          </div>
+          <div id="mts-error" style="display:none;color:#FF4D6A;font-size:12px;margin-bottom:10px;"></div>
+          <div style="display:flex;gap:10px;margin-top:8px;">
+            <button onclick="submitManualTimesheet()" style="flex:1;background:linear-gradient(135deg,#0055BB,#0077CC);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;">Submit</button>
+            <button onclick="document.getElementById('manual-ts-overlay').style.display='none';" style="background:#EEF4FF;color:#0A1628;border:none;border-radius:10px;padding:13px 18px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
+          </div>
+        </div>
+      </div>
       <div id="timesheet-loading" class="loading-block">Loading your records…</div>
       <div id="timesheet-content"></div>
     </div>
@@ -1853,6 +1896,61 @@ async function mtsSubmit() {
       mtsClose(); await loadTimesheet();
     } else { throw new Error('No ID returned'); }
   } catch(ex){errEl.textContent='Failed: '+ex.message;errEl.style.display='block';btn.disabled=false;btn.textContent='Submit for Review';}
+}
+
+
+function openManualTimesheetModal() {
+  // Set default date to today
+  const today = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+  document.getElementById("mts-date").value = today;
+  document.getElementById("mts-start").value = "";
+  document.getElementById("mts-end").value = "";
+  document.getElementById("mts-suburb").value = "";
+  document.getElementById("mts-leads").value = "";
+  document.getElementById("mts-reason").value = "";
+  document.getElementById("mts-error").style.display = "none";
+  document.getElementById("manual-ts-overlay").style.display = "flex";
+}
+
+async function submitManualTimesheet() {
+  const date   = document.getElementById("mts-date").value;
+  const start  = document.getElementById("mts-start").value;
+  const end    = document.getElementById("mts-end").value;
+  const suburb = document.getElementById("mts-suburb").value.trim();
+  const leads  = document.getElementById("mts-leads").value.trim();
+  const reason = document.getElementById("mts-reason").value.trim();
+  const errEl  = document.getElementById("mts-error");
+
+  if(!date||!start||!end||!suburb) {
+    errEl.textContent="Please fill in Date, Start Time, End Time and Suburb.";
+    errEl.style.display="block"; return;
+  }
+  errEl.style.display="none";
+
+  const leadCount = parseInt(leads)||0;
+  const notes = "[Suburb:"+suburb+"] [Leads:"+leadCount+"] [Manual Entry] "+(reason||"");
+
+  try {
+    const result = await apiPost({
+      action:"addEntry",
+      sdrName:currentUser.name,
+      email:currentUser.email,
+      workDate:date,
+      clockIn:start,
+      clockOut:end,
+      cutoffPeriod:getCutoffLabel(date),
+      adminNotes:notes,
+      disputeStatus:"Manual Request",
+      disputeNotes:reason||"Manual timesheet entry"
+    });
+    if(!result.success) throw new Error("Failed to submit");
+    document.getElementById("manual-ts-overlay").style.display="none";
+    showAlert(document.getElementById("alert-timesheet"),"success","✓ Manual timesheet submitted for "+formatDate(date)+". Your manager will review it.");
+    allEntries=[]; loadTimesheet();
+  } catch(e) {
+    errEl.textContent="Could not submit. "+e.message;
+    errEl.style.display="block";
+  }
 }
 
 </script>
