@@ -660,7 +660,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycby13I-n4tJRPaT47HIORmK7UvchKXfgQv0A4HlyXIatny-ucFnKdD5Kr9iXBQPIACYOJg/exec";
+const API = "https://script.google.com/macros/s/AKfycbxcRLE6CeLtluT7i5ja6O6ehu0aEQZYTk7nM7IdF3rvbKzzpKQP6-lm0lMT1pF6Sq21xg/exec";
 let currentUser = null;
 let openClockInEntry = null;
 let allEntries = [];
@@ -691,7 +691,7 @@ async function doLogin() {
   try {
     const result = await apiPost({ action: "getUsers" });
     const users = result.users || [];
-    const user = users.find(u => u.name.toLowerCase().trim() === name.toLowerCase().trim() && u.password === pass);
+    const user = users.find(u => u.name.toLowerCase().trim() === name.toLowerCase().trim() && u.password === pass && (u.userType||"sdr")==="field");
     if (!user) { err.style.display="block"; err.textContent="Incorrect name or password."; loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In to J2 Hub"; return; }
     currentUser = { id: user.id, name: user.name, email: user.email||"", rate: parseFloat(user.rate)||0 };
     document.getElementById("login-screen").style.display="none";

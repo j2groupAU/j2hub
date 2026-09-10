@@ -596,8 +596,8 @@ tr:hover td { background: #faf8f4; }
 </div>
 
 <script>
-const ADMIN_PASSWORD = "J2Group@123";
-const API = "https://script.google.com/macros/s/AKfycby13I-n4tJRPaT47HIORmK7UvchKXfgQv0A4HlyXIatny-ucFnKdD5Kr9iXBQPIACYOJg/exec";
+const ADMIN_PASSWORD = "J2Field@123";
+const API = "https://script.google.com/macros/s/AKfycbxcRLE6CeLtluT7i5ja6O6ehu0aEQZYTk7nM7IdF3rvbKzzpKQP6-lm0lMT1pF6Sq21xg/exec";
 const HOURLY_RATE = 2000 / 7;
 
 let allEntries = [];
@@ -634,8 +634,9 @@ async function loadAllEntries() {
   setLoading("entries",true); setLoading("disputes",true); setLoading("payroll",true);
   try {
     const result = await apiPost({ action: "getEntries" });
-    allEntries = (result.entries || []).sort((a,b) => b.workDate.localeCompare(a.workDate));
-    try{ const ur=await apiPost({action:"getUsers"}); allUsers=ur.users||[]; }catch(e){}
+    const _allRaw = (result.entries || []).sort((a,b) => b.workDate.localeCompare(a.workDate));
+    allEntries = _allRaw;
+    try{ const ur=await apiPost({action:"getUsers"}); allUsers=(ur.users||[]).filter(u=>(u.userType||"sdr")==="field"); const _fieldNames=new Set(allUsers.map(u=>u.name)); allEntries=allEntries.filter(e=>_fieldNames.has(e.sdrName)); allTimesheets=(allTimesheets||[]).filter(t=>_fieldNames.has(t.sdrName)); allLeaves=(allLeaves||[]).filter(l=>_fieldNames.has(l.sdrName)); allMeetings=(allMeetings||[]).filter(m=>_fieldNames.has(m.sdrName)); }catch(e){}
     // Load all supporting data in parallel before rendering
     try{
       const [mr,tr,lr] = await Promise.all([
@@ -1116,7 +1117,7 @@ async function addUser(){
   btn.innerHTML='<span class="spinner"></span> Adding…'; btn.disabled=true;
   try {
     const rate=parseFloat(document.getElementById("new-user-rate").value)||0;
-    const result=await apiPost({action:"addUser",name,email,password,rate});
+    const result=await apiPost({action:"addUser",name,email,password,rate,userType:"field"});
     if(!result.success) throw new Error("Failed");
     showAlert(alert,"success",`✓ ${name} added. They can log in immediately.`);
     document.getElementById("new-user-name").value="";
