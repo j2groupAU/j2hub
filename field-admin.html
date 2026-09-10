@@ -634,9 +634,8 @@ async function loadAllEntries() {
   setLoading("entries",true); setLoading("disputes",true); setLoading("payroll",true);
   try {
     const result = await apiPost({ action: "getEntries" });
-    const _allRaw = (result.entries || []).sort((a,b) => b.workDate.localeCompare(a.workDate));
-    allEntries = _allRaw;
-    try{ const ur=await apiPost({action:"getUsers"}); allUsers=(ur.users||[]).filter(u=>(u.userType||"sdr")==="field"); const _fieldNames=new Set(allUsers.map(u=>u.name)); allEntries=allEntries.filter(e=>_fieldNames.has(e.sdrName)); allTimesheets=(allTimesheets||[]).filter(t=>_fieldNames.has(t.sdrName)); allLeaves=(allLeaves||[]).filter(l=>_fieldNames.has(l.sdrName)); allMeetings=(allMeetings||[]).filter(m=>_fieldNames.has(m.sdrName)); }catch(e){}
+    allEntries = (result.entries || []).sort((a,b) => b.workDate.localeCompare(a.workDate));
+    try{ const ur=await apiPost({action:"getUsers"}); allUsers=ur.users||[]; }catch(e){}
     // Load all supporting data in parallel before rendering
     try{
       const [mr,tr,lr] = await Promise.all([
@@ -1117,7 +1116,7 @@ async function addUser(){
   btn.innerHTML='<span class="spinner"></span> Adding…'; btn.disabled=true;
   try {
     const rate=parseFloat(document.getElementById("new-user-rate").value)||0;
-    const result=await apiPost({action:"addUser",name,email,password,rate,userType:"field"});
+    const result=await apiPost({action:"addUser",name,email,password,rate});
     if(!result.success) throw new Error("Failed");
     showAlert(alert,"success",`✓ ${name} added. They can log in immediately.`);
     document.getElementById("new-user-name").value="";
