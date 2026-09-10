@@ -933,9 +933,18 @@ function dismissNotif(i) {
 }
 
 function checkTimesheetReminder() {
-  // Field SDR is fortnightly (see FIELD_ANCHOR cutoff logic) — the old monthly
-  // 25th/26th/10th/11th reminder banner doesn't apply here and referenced
-  // elements (#notif-bar/#notif-inner) that no longer exist, so it's disabled.
+  // Field SDR: fortnightly cutoff — check if today is the last day of the current period
+  const todayStr = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+  const {end} = getFieldCurrentCutoff();
+  const endStr = end.toISOString().slice(0,10);
+  if(todayStr === endStr) {
+    const bar = document.getElementById("notif-bar");
+    const inner = document.getElementById("notif-inner");
+    if(bar && inner) {
+      bar.style.display = "block";
+      inner.insertAdjacentHTML("afterbegin", `<div class="notif-pill notif-warning">📅 Reminder: Today is the last day of your current cutoff. Submit your timesheet!</div>`);
+    }
+  }
 }
 
 // ── CLOCK IN/OUT ──
@@ -1746,15 +1755,15 @@ function switchTab(tab){
 }
 
 // ── HELPERS ──
-// filterByCutoff replaced by field fortnightly version
+
 function getWorkingDaysFromKey(key){
   if(!key) return 11;
   // Estimate from key - just return standard
   return 11;
 }
 
-// getCutoffPeriodKey replaced by field fortnightly version
-// getCutoffDisplayLabel replaced by field fortnightly version
+
+
 function getPayDateFromCutoffLabel(label){
   if(!label) return "—";
   const parts=(label||"").split("_to_");
@@ -1870,11 +1879,12 @@ async function mtsSubmit() {
   } catch(ex){errEl.textContent='Failed: '+ex.message;errEl.style.display='block';btn.disabled=false;btn.textContent='Submit for Review';}
 }
 
+
+
 // ── FIELD SDR FORTNIGHTLY CUTOFF (anchor: 4 Sep 2026) ──
 const FIELD_ANCHOR = new Date("2026-09-04T00:00:00");
 
 function getFieldCutoffForDate(dateStr) {
-  // Returns {start, end} Date objects for the cutoff containing dateStr
   const d = new Date((dateStr || new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"})) + "T00:00:00");
   const diffDays = Math.floor((d - FIELD_ANCHOR) / 86400000);
   const periodIndex = Math.floor(diffDays / 14);
@@ -1894,8 +1904,7 @@ function getFieldPrevCutoff() {
   const {start} = getFieldCurrentCutoff();
   const prevDay = new Date(start);
   prevDay.setDate(prevDay.getDate() - 1);
-  const prevStr = prevDay.toISOString().slice(0,10);
-  return getFieldCutoffForDate(prevStr);
+  return getFieldCutoffForDate(prevDay.toISOString().slice(0,10));
 }
 
 function formatFieldDate(d) {
@@ -1903,14 +1912,12 @@ function formatFieldDate(d) {
 }
 
 function getCutoffLabel(dateStr) {
-  // For storing with entries — use the cutoff key as label
   return getCutoffKeyForDate(dateStr);
 }
 
 function getCutoffKeyForDate(dateStr) {
   const {start, end} = getFieldCutoffForDate(dateStr);
-  const fmt = d => d.toISOString().slice(0,10);
-  return fmt(start) + "_to_" + fmt(end);
+  return start.toISOString().slice(0,10) + "_to_" + end.toISOString().slice(0,10);
 }
 
 function getCutoffDisplayLabel(which) {
