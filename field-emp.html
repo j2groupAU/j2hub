@@ -1108,8 +1108,8 @@ async function loadTimesheet() {
     allTimesheets = (tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
     allMeetings = (mr.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
     allLeaves = (lr.leaves||[]).filter(l=>l.sdrName===currentUser.name);
-    renderTimesheetGrouped();
-  } catch(e){ document.getElementById("timesheet-loading").textContent="Could not load entries."; }
+    try { renderTimesheetGrouped(); } catch(re){ document.getElementById("timesheet-loading").style.display="block"; document.getElementById("timesheet-loading").textContent="Could not render entries: "+re.message; console.error("renderTimesheetGrouped error:",re); }
+  } catch(e){ document.getElementById("timesheet-loading").textContent="Could not load entries: "+e.message; console.error("loadTimesheet error:",e); }
 }
 
 function renderTimesheetGrouped() {
@@ -1173,7 +1173,6 @@ function renderTimesheetGrouped() {
   }).join("");
 
   content.innerHTML=`
-    <div style="font-size:12px;font-weight:700;color:#5577AA;margin-bottom:10px;">${fromDate&&toDate?"Period: "+new Date(fromDate).toLocaleDateString("en-AU",{day:"numeric",month:"short"})+" – "+new Date(toDate).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}):""}</div>
     <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;border:1px solid #E8EEF8;display:flex;gap:24px;flex-wrap:wrap;">
       <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total Entries</span><div style="font-size:18px;font-weight:800;color:#0A1628;">${sorted.length}</div></div>
       <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total SQLs</span><div style="font-size:18px;font-weight:800;color:#0055BB;">${totalSQLs}</div></div>
