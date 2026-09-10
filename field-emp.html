@@ -523,22 +523,6 @@ tr:hover td { background: rgba(100,160,255,0.04); }
           </div>
         </div>
 
-        <!-- Current Cutoff Summary — ~960px (~10 inches) -->
-        <div style="flex:1;min-width:400px;">
-          <div class="card">
-            <div class="card-title"><div class="card-icon">📊</div> Current Cutoff Summary</div>
-            <div id="ts-summary-loading" style="color:var(--muted);font-size:13px;">Loading…</div>
-            <div id="ts-summary-content" style="display:none;">
-              <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:12px;" id="ts-summary-period"></div>
-              <div class="mini-grid">
-                <div class="mini-card"><div class="lbl">Days</div><div class="val" id="tss-days">—</div></div>
-                <div class="mini-card"><div class="lbl">Billable Hrs</div><div class="val gold" id="tss-hrs">—</div></div>
-                <div class="mini-card"><div class="lbl">Timesheet</div><div class="val" id="tss-status">—</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
 
@@ -599,10 +583,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
         <div><h2>Submit Timesheet</h2><p>Review and submit at the end of each cutoff to get paid.</p></div>
       </div>
       <div id="alert-submit" class="alert"></div>
-      <div class="cutoff-selector">
-        <button class="cutoff-btn active" onclick="selectSubmitCutoff('current')" id="subco-current">Current Period</button>
-        <button class="cutoff-btn" onclick="selectSubmitCutoff('prev')" id="subco-prev">Previous Period</button>
-      </div>
+
       <div id="submit-loading" class="loading-block">Loading…</div>
       <div id="submit-content" style="display:none;"></div>
     </div>
@@ -871,7 +852,6 @@ async function loadNotifications() {
   } catch(e) { console.warn("loadNotifications error:", e); }
 
   renderNotifications(notifs);
-  loadTimeSummary();
 }
 
 function toggleNotifPanel() {
@@ -970,8 +950,7 @@ async function checkOpenClockIn() {
     const open = entries.find(e => e.workDate===today && e.clockIn && !e.clockOut);
     if (open) { openClockInEntry={itemId:open.id, clockInTime:open.clockIn}; showClockedIn(open.clockIn, open); }
     else showClockedOut();
-    loadTimeSummary();
-  } catch(e) { showClockedOut(); }
+    } catch(e) { showClockedOut(); }
 }
 
 function showClockedIn(t, lunchData) {
@@ -1024,7 +1003,7 @@ async function submitSuburbAndClockIn() {
     if(!result.success) throw new Error("Failed");
     openClockInEntry={itemId:result.id,clockInTime:aestTime};
     showClockedIn(aestTime); showAlert(alert,"success","✓ Clocked in at "+aestTime+" from "+suburb+"!");
-    allEntries=[]; loadTimeSummary();
+    allEntries=[]; 
   } catch(e){showAlert(alert,"error","Could not save. "+e.message);}
   btn.innerHTML="Clock In Now"; btn.disabled=false;
 }
@@ -1053,7 +1032,7 @@ async function submitLeadsAndClockOut() {
     resetLunchUI();
     showClockedOut();
     showAlert(alert,"success","✓ Clocked out at "+aestTime+" · "+leads+" SQL"+(leads!==1?"s":"")+" logged!");
-    allEntries=[]; loadTimeSummary();
+    allEntries=[]; 
   } catch(e){showAlert(alert,"error","Could not save. "+e.message);}
   btn.innerHTML="Clock Out Now"; btn.disabled=false;
 }
@@ -1078,36 +1057,6 @@ async function submitQuickMeeting() {
 }
 
 // ── CURRENT CUTOFF SUMMARY ──
-async function loadTimeSummary() {
-  const loading=document.getElementById("ts-summary-loading");
-  const content=document.getElementById("ts-summary-content");
-  loading.style.display="block"; content.style.display="none";
-  try {
-    if(allEntries.length===0) allEntries=await fetchEntries();
-    const filtered=filterByCutoff(allEntries,"current").filter(e=>e.clockIn);
-    const monthlyRate=currentUser.rate||0;
-    const cutoffRate=monthlyRate/2;
-    const wDays=getWorkingDaysInCutoff("current");
-    const dailyRate=cutoffRate/wDays;
-    const totalHrs=filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
-    let totalPay=filtered.reduce((s,e)=>s+calcEntryPay(e,dailyRate).pay,0);
-    totalPay=Math.min(totalPay,cutoffRate);
-    // Get timesheet status
-    if(allTimesheets.length===0){try{const tr=await apiPost({action:"getTimesheets"});allTimesheets=(tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);}catch(e){}}
-    const cutoffKey=getCutoffPeriodKey("current");
-    const ts=allTimesheets.find(t=>t.cutoffKey===cutoffKey);
-    const tsStatus=ts?ts.status:"Not submitted";
-    document.getElementById("ts-summary-period").textContent="Period: "+getCutoffDisplayLabel("current");
-    document.getElementById("tss-days").textContent=filtered.length;
-    document.getElementById("tss-hrs").textContent=totalHrs.toFixed(1)+" hrs";
-    const statusEl=document.getElementById("tss-status");
-    if(tsStatus==="Approved") statusEl.innerHTML='<span class="badge badge-green">✓ Approved</span>';
-    else if(tsStatus==="Pending") statusEl.innerHTML='<span class="badge badge-amber">⏳ Pending</span>';
-    else if(tsStatus==="Rejected") statusEl.innerHTML='<span class="badge badge-red">✗ Rejected</span>';
-    else statusEl.innerHTML='<span class="badge badge-gray">Not submitted</span>';
-    loading.style.display="none"; content.style.display="block";
-  } catch(e){ loading.textContent="Could not load summary."; }
-}
 
 // ── FETCH ENTRIES ──
 async function fetchEntries() {
@@ -1140,103 +1089,76 @@ async function loadTimesheet() {
 function renderTimesheetGrouped() {
   document.getElementById("timesheet-loading").style.display="none";
   const content=document.getElementById("timesheet-content");
-  if(allEntries.length===0){ content.innerHTML='<div class="empty-block"><div class="eicon">📭</div><p>No entries yet.</p></div>'; return; }
-  // Group by cutoff
-  const groups={};
-  allEntries.forEach(e=>{
-    const key=e.cutoffPeriod||getCutoffLabel(e.workDate);
-    if(!groups[key]) groups[key]=[];
-    groups[key].push(e);
-  });
-  let html="";
-  Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([cutoffLabel, entries])=>{
-    const cutoffKey=deriveCutoffKeyFromLabel(cutoffLabel);
-    const ts=allTimesheets.find(t=>t.cutoffKey===cutoffKey||t.cutoffLabel===cutoffLabel);
-    const tsStatus=ts?ts.status:"Not submitted";
-    const tsStatusBadge=getTsBadge(tsStatus);
-    const totalHrs=entries.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
-    // Get approved meetings for this cutoff's dates
-    const cutoffDates = new Set(entries.map(e=>e.workDate));
-    const cutoffMeetings = allMeetings.filter(m=>m.status==="Approved"&&cutoffDates.has(m.date));
-    const totalMeetingHrs=cutoffMeetings.reduce((s,m)=>{
-      const mins=calcMins(m.startTime,m.endTime);
-      return s+(mins>0?mins/60:0);
-    },0);
-    const grandTotalHrs=totalHrs+totalMeetingHrs;
+  if(allEntries.length===0){ content.innerHTML='<div class="empty-block"><div class="eicon">📭</div><p>No entries yet. Clock in to get started.</p></div>'; return; }
 
-    const _aestToday = new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
-    const _aestDateStr = _aestToday.toISOString().slice(0,10);
-    const isCurrent = cutoffLabel === getCutoffDisplayLabel('current') || cutoffKey === getCutoffPeriodKey('current') || cutoffLabel === getCutoffLabel(_aestDateStr);
-    html+=`<div class="cutoff-group">
-      <div class="cutoff-group-header">
-        <div><div class="title">${cutoffLabel}</div><div class="meta">${entries.length} entries &nbsp;·&nbsp; ${grandTotalHrs.toFixed(1)} billable hrs (incl. ${totalMeetingHrs.toFixed(1)}h meetings)</div></div>
-        <div style="display:flex;align-items:center;gap:10px;">${tsStatusBadge}${isCurrent?'&nbsp;<button onclick="mtsOpen(this.dataset.co)" style="font-size:11px;padding:4px 12px;background:#EEF4FF;color:#0A1628;border:1.5px solid #C5D8F5;border-radius:8px;cursor:pointer;font-weight:600;" data-co="${cutoffLabel}">+ Enter Timesheet</button>':''}</div>
-      </div>
-      <div class="cutoff-group-body">
-        <div class="table-wrap"><table>
-          <colgroup>
-            <col style="width:110px"><col style="width:80px"><col style="width:85px">
-            <col style="width:95px"><col style="width:130px"><col style="width:75px">
-            <col style="width:90px"><col style="width:90px"><col style="width:90px">
-            <col style="width:auto">
-          </colgroup>
-          <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
-          <tbody>${(()=>{const shownMeetingDates=new Set();return entries.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
-            const actualStr=(e.billableHrs!=null&&e.billableHrs!=="")?'Entered':'<span style="color:var(--muted)">Pending</span>';
-            const canEntryDispute=!["Under Review","Approved"].includes(tsStatus)&&(e.billableHrs!=null&&e.billableHrs!=="")&&!["Under Review","Resolved"].includes(e.disputeStatus);
-            const disputeCell=canEntryDispute
-              ?`${getDisputeBadge(e.disputeStatus)} <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Request Review</button>`
-              :getDisputeBadge(e.disputeStatus);
-            const lunchStr=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")
-              ?`<span style="font-size:11px;color:#0A8050;font-weight:700;">🍽️ ${e.lunchStart||""}–${e.lunchEnd||""}</span>`
-              :'<span style="color:var(--muted);font-size:11px;">None</span>';
-            // Get meetings for this specific date
-            const dayMeetings=cutoffMeetings.filter(m=>m.date===e.workDate);
-            // Compute work hours live from actual times (full span, no subtraction)
-            const workHrsVal=(e.billableHrs!=null&&e.billableHrs!=="") ? parseFloat(e.billableHrs) : null;
-            const workHoursStr=workHrsVal!==null
-              ?`${workHrsVal.toFixed(2)} hrs`
-              :'<span style="color:var(--muted)">Pending</span>';
-            const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-            const totalWorkHrs=workHrsVal!==null?Math.min(8,calcWorkHours(workHrsVal,meetHrsTotal,e.lunchTaken)):null;
-            const billableDisplay = totalWorkHrs!==null
-              ? `<strong>${totalWorkHrs.toFixed(2)} hrs</strong>`
-              : (e.clockIn?"<span style='color:var(--muted)'>Pending</span>":"—");
-            // Meeting column: total hours only
-            const totalMeetCellHrs=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-            const meetingCell=totalMeetCellHrs>0
-              ?`<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${totalMeetCellHrs.toFixed(1)}h</span>`
-              :'<span style="color:var(--muted);font-size:11px;">—</span>';
-            // Time Off column: check approved leave for this date
-            const leaveOnDay=allLeaves.find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
-            const timeOffCell=leaveOnDay
-              ?`<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>`
-              :'<span style="color:var(--muted);font-size:11px;">—</span>';
-            const mainRow=`<tr style="border-bottom:1px solid #f0ece4;">
-              <td><strong>${formatDate(e.workDate)}</strong></td>
-              <td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td>
-              <td style="font-size:12px;">${workHoursStr}</td>
-              <td>${lunchStr}</td>
-              <td style="font-size:11px;">${meetingCell}</td>
-              <td style="font-size:11px;">${timeOffCell}</td>
-              <td>${billableDisplay}</td>
-              <td>${(()=>{const ded=workHrsVal!==null?calcDeduction(workHrsVal,meetHrsTotal,e.lunchTaken):0;return ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+'h</span>':"—";})()}</td>
-              <td style="white-space:nowrap;">${disputeCell}</td>
-            </tr>`;
-            return mainRow;
-          });})().join("")}</tbody>
-        </table></div>`;
-    // Cutoff-level dispute (after timesheet submitted)
-    if(ts && ["Pending","Rejected","Disputed"].includes(ts.status)) {
-      html+=`<div style="padding:16px;border-top:1.5px solid var(--border);background:#fffbf5;">
-        <div style="font-size:12px;font-weight:700;color:#c2410c;margin-bottom:8px;">⚠️ Request Review this Cutoff Timesheet</div>
-        <div class="field-group" style="margin-bottom:8px;"><textarea id="cutoff-dispute-${ts.id}" rows="2" placeholder="Describe the issue with this cutoff…" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;font-family:inherit;"></textarea></div>
-        <button class="btn btn-danger btn-sm" onclick="submitCutoffDisputeFromTs('${ts.id}')">Submit Request Review</button>
-      </div>`;
-    }
-    html+=`</div></div>`;
-  });
-  content.innerHTML=html;
+  const SQL_INCENTIVE = 50;
+  const hourlyRate = parseFloat(currentUser.rate||0);
+
+  const sorted = [...allEntries].sort((a,b)=>b.workDate.localeCompare(a.workDate));
+
+  // Totals
+  const totalSQLs = sorted.reduce((s,e)=>{ const m=(e.adminNotes||"").match(/\[Leads:(\d+)\]/); return s+(m?parseInt(m[1]):0); },0);
+  const totalBasePay = sorted.reduce((s,e)=>{
+    if(e.billableHrs==null||e.billableHrs==="") return s;
+    const mH=(allMeetings||[]).filter(m=>m.status==="Approved"&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+    return s+((parseFloat(e.billableHrs||0)+mH)*hourlyRate);
+  },0);
+  const totalIncentive = totalSQLs * SQL_INCENTIVE;
+  const totalPay = totalBasePay + totalIncentive;
+
+  const rows = sorted.map(e=>{
+    const workHrsVal = (e.billableHrs!=null&&e.billableHrs!=="") ? parseFloat(e.billableHrs) : null;
+    const workHoursStr = workHrsVal!==null ? `${workHrsVal.toFixed(2)} hrs` : '<span style="color:var(--muted)">Pending</span>';
+    const dayMeetings = (allMeetings||[]).filter(m=>m.status==="Approved"&&m.date===e.workDate);
+    const meetHrsTotal = dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+    const meetingCell = meetHrsTotal>0 ? `<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${meetHrsTotal.toFixed(1)}h</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>';
+    const leaveOnDay = (allLeaves||[]).find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
+    const timeOffCell = leaveOnDay ? `<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>';
+    const sqlMatch = (e.adminNotes||"").match(/\[Leads:(\d+)\]/);
+    const sqls = sqlMatch ? parseInt(sqlMatch[1]) : null;
+    const sqlCell = sqls!==null ? `<strong style="color:#0055BB;">${sqls}</strong>` : '<span style="color:var(--muted);font-size:11px;">—</span>';
+    const suburbMatch = (e.adminNotes||"").match(/\[Suburb:([^\]]+)\]/);
+    const suburbCell = suburbMatch ? `<span style="font-size:11px;color:#5577AA;">📍${suburbMatch[1]}</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>';
+    const totalHrs = workHrsVal!==null ? workHrsVal+meetHrsTotal : null;
+    const basePay = totalHrs!==null ? totalHrs*hourlyRate : null;
+    const incentive = sqls!==null ? sqls*SQL_INCENTIVE : null;
+    const entryTotal = (basePay||0)+(incentive||0);
+    const basePayCell = basePay!==null ? `<strong style="color:#15803d;">$${basePay.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">${totalHrs.toFixed(2)}h × $${hourlyRate.toFixed(2)}</div>` : '<span style="color:var(--muted);font-size:11px;">Pending</span>';
+    const incentiveCell = incentive!==null ? (incentive>0 ? `<strong style="color:#d97706;">$${incentive.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">${sqls} × $50</div>` : '<span style="color:var(--muted)">—</span>') : '<span style="color:var(--muted)">—</span>';
+    const totalPayCell = (basePay!==null||incentive!==null) ? `<strong style="color:#0A1628;font-size:13px;">$${entryTotal.toFixed(2)}</strong>` : '<span style="color:var(--muted)">Pending</span>';
+    const canDispute = (e.billableHrs!=null&&e.billableHrs!=="")&&!["Under Review","Resolved"].includes(e.disputeStatus);
+    const disputeCell = canDispute ? `${getDisputeBadge(e.disputeStatus)} <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Request Review</button>` : getDisputeBadge(e.disputeStatus);
+    return `<tr style="border-bottom:1px solid #f0ece4;">
+      <td><strong>${formatDate(e.workDate)}</strong></td>
+      <td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td>
+      <td style="font-size:12px;">${workHoursStr}</td>
+      <td>${suburbCell}</td>
+      <td style="font-size:11px;">${meetingCell}</td>
+      <td style="font-size:11px;">${timeOffCell}</td>
+      <td style="text-align:center;">${sqlCell}</td>
+      <td>${basePayCell}</td>
+      <td>${incentiveCell}</td>
+      <td>${totalPayCell}</td>
+      <td style="white-space:nowrap;">${disputeCell}</td>
+    </tr>`;
+  }).join("");
+
+  content.innerHTML=`
+    <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;border:1px solid #E8EEF8;display:flex;gap:24px;flex-wrap:wrap;">
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total Entries</span><div style="font-size:18px;font-weight:800;color:#0A1628;">${sorted.length}</div></div>
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total SQLs</span><div style="font-size:18px;font-weight:800;color:#0055BB;">${totalSQLs}</div></div>
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Base Pay</span><div style="font-size:18px;font-weight:800;color:#15803d;">$${totalBasePay.toFixed(2)}</div></div>
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Incentive</span><div style="font-size:18px;font-weight:800;color:#d97706;">$${totalIncentive.toFixed(2)}</div></div>
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total Pay</span><div style="font-size:20px;font-weight:800;color:#0A1628;">$${totalPay.toFixed(2)}</div></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th>
+        <th>Suburb</th><th>Meeting</th><th>Time Off</th><th>SQLs</th>
+        <th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Request Review</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
 }
 
 function getTsBadge(status) {
@@ -1619,82 +1541,78 @@ async function loadSubmitPage(){
   document.getElementById("submit-content").style.display="none";
   document.getElementById("submit-content").innerHTML="";
   allTimesheets=[];
-  if(allEntries.length===0){try{allEntries=await fetchEntries();}catch(e){}}
-  try{const tr=await apiPost({action:"getTimesheets"});allTimesheets=(tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);}catch(e){}
+  try{
+    if(allEntries.length===0) allEntries=await fetchEntries();
+    const [tr,mr,lr]=await Promise.all([apiPost({action:"getTimesheets"}),apiPost({action:"getMeetings"}),apiPost({action:"getLeaves"})]);
+    allTimesheets=(tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
+    allMeetings=(mr.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    allLeaves=(lr.leaves||[]).filter(l=>l.sdrName===currentUser.name);
+  }catch(e){}
   renderSubmitPage();
 }
 function renderSubmitPage(){
   document.getElementById("submit-loading").style.display="none";
-  const filtered=filterByCutoff(allEntries,submitCutoffVal).filter(e=>e.clockIn);
-  const cutoffKey=getCutoffPeriodKey(submitCutoffVal);
-  const existing=allTimesheets.find(t=>t.cutoffKey===cutoffKey);
-  const monthlyRate=currentUser.rate||0,cutoffRate=monthlyRate/2;
-  const wDays=getWorkingDaysInCutoff(submitCutoffVal),dailyRate=cutoffRate/wDays;
-  const totalHrs=filtered.reduce((s,e)=>{
-    const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
-    return s+((e.billableHrs!=null&&e.billableHrs!=="")?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0);
+  const filtered = allEntries.filter(e=>e.clockIn);
+  const hourlyRate = parseFloat(currentUser.rate||0);
+  const SQL_INCENTIVE = 50;
+
+  // Check if already submitted (use any existing timesheet)
+  const existing = allTimesheets.length>0 ? allTimesheets[allTimesheets.length-1] : null;
+
+  const totalHrs = filtered.reduce((s,e)=>{
+    const mH=(allMeetings||[]).filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+    return s+((e.billableHrs!=null&&e.billableHrs!=="")?(parseFloat(e.billableHrs||0)+mH):0);
   },0);
-  const totalDed=filtered.reduce((s,e)=>{
-    const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
-    return s+((e.billableHrs!=null&&e.billableHrs!=="")?calcDeduction(parseFloat(e.billableHrs||0),mH,e.lunchTaken):0);
-  },0);
-  let totalPay=filtered.reduce((s,e)=>s+calcEntryPay(e,dailyRate).pay,0);
-  totalPay=Math.min(totalPay,cutoffRate);
+  const totalSQLs = filtered.reduce((s,e)=>{ const m=(e.adminNotes||"").match(/\[Leads:(\d+)\]/); return s+(m?parseInt(m[1]):0); },0);
+  const totalBasePay = totalHrs*hourlyRate;
+  const totalIncentive = totalSQLs*SQL_INCENTIVE;
+  const totalPay = totalBasePay+totalIncentive;
+
   let statusHtml="";
   if(!existing&&filtered.length>0){
     statusHtml=`<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
       <div style="font-size:14px;font-weight:800;color:#15803d;margin-bottom:6px;">Ready to submit?</div>
-      <p style="font-size:13px;color:#166534;margin-bottom:14px;">Once submitted, row-level disputes are locked. Submit a cutoff dispute after if needed.</p>
+      <p style="font-size:13px;color:#166534;margin-bottom:14px;">Review your entries below then submit for payroll processing.</p>
       <button class="btn btn-primary" onclick="submitTimesheet()" id="btn-submit-ts" style="background:#15803d;">📤 Submit Timesheet</button>
     </div>`;
   } else if(existing){
-    const colors={Pending:"#eff6ff;border-color:#bfdbfe;color:#1d4ed8",Approved:"#f0fdf4;border-color:#bbf7d0;color:#15803d",Rejected:"#fef2f2;border-color:#fecaca;color:#b91c1c",Disputed:"#fffbeb;border-color:#fde68a;color:#92400e"};
-    const icons={Pending:"⏳",Approved:"✓",Rejected:"✗",Disputed:"⚠️"};
-    const style=colors[existing.status]||"#f8fafc;border-color:var(--border);color:var(--muted)";
-    const icon=icons[existing.status]||"";
-    let msg=icon+" Timesheet "+existing.status;
-    if(existing.status==="Approved") msg+=" — Payment will be processed on the due date.";
-    if(existing.status==="Rejected"&&existing.adminNote) msg+=" — Note: "+existing.adminNote;
-    statusHtml=`<div style="background:${style};border:1.5px solid;padding:14px 18px;border-radius:10px;margin-bottom:16px;font-size:14px;font-weight:700;">${msg}</div>`;
-    if(["Pending","Rejected"].includes(existing.status)){
-      statusHtml+=`<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:8px;">⚠️ Request Review this Timesheet</div>
-        <div class="field-group" style="margin-bottom:8px;"><textarea id="ts-cutoff-dispute-text" rows="2" placeholder="Describe the issue…" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;font-family:inherit;"></textarea></div>
-        <button class="btn btn-danger btn-sm" onclick="submitCutoffDisputeSubmit('${existing.id}')">Submit Request Review</button>
-      </div>`;
-    }
-  }
-  const content=document.getElementById("submit-content");
-  content.innerHTML=`
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:14px;">Period: ${getCutoffDisplayLabel(submitCutoffVal)}</div>
-    ${statusHtml}
-    <div class="card">
-      <div class="card-title">📊 Summary</div>
-      <div class="mini-grid">
-        <div class="mini-card"><div class="lbl">Days</div><div class="val">${filtered.length}</div></div>
-        <div class="mini-card"><div class="lbl">Billable Hrs</div><div class="val gold">${totalHrs.toFixed(2)}</div></div>
-
-      </div>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div style="padding:12px 16px;border-bottom:1.5px solid var(--border);"><div class="card-title" style="margin-bottom:0;">Entries</div></div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Status</th></tr></thead>
-        <tbody>${filtered.length===0?'<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">No entries for this period.</td></tr>':filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
-          const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-          const totalBil=(e.billableHrs!=null&&e.billableHrs!=="")?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0;
-          const ded2=(e.billableHrs!=null&&e.billableHrs!=="")?calcDeduction(parseFloat(e.billableHrs||0),mH,e.lunchTaken):0;
-          const lunchCell=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")?('<span style="color:#0A8050;font-weight:600;font-size:11px;">🍽 '+(e.lunchStart||'')+(e.lunchEnd?'–'+e.lunchEnd:'')+'</span>'):'<span style="color:var(--muted);font-size:11px;">None</span>';
-          const meetCell=mH>0?('<span style="font-size:12px;font-weight:600;color:#1d4ed8;">'+mH.toFixed(1)+'h</span>'):'—';
-          const leaveOnDay=(allLeaves||[]).find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
-          const timeOffCell=leaveOnDay?('<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">'+(leaveOnDay.leaveType||'Leave')+'</span>'):'—';
-          const entryStatus=(e.billableHrs!=null&&e.billableHrs!=="")?'<span style="color:#15803d;font-weight:700;">✓ Complete</span>':'<span style="color:#92400e;">Pending</span>';
-          return('<tr><td>'+formatDate(e.workDate)+'</td><td>'+(e.clockIn||'-')+'</td><td>'+(e.clockOut||'-')+'</td><td>'+((e.billableHrs!=null&&e.billableHrs!=="")?parseFloat(e.billableHrs).toFixed(2)+' hrs':'<span style="color:var(--muted);font-size:11px;">Pending</span>')+'</td><td>'+lunchCell+'</td><td>'+meetCell+'</td><td>'+timeOffCell+'</td><td>'+(totalBil>0?totalBil.toFixed(2)+' hrs':'-')+'</td><td>'+(ded2>0?'<span style="color:#dc2626">-'+ded2.toFixed(2)+'h</span>':'-')+'</td><td>'+entryStatus+'</td></tr>');
-        }).join("")}</tbody>
-      </table></div>
+    const colors={Pending:"eff6ff;border-color:#bfdbfe;color:#1d4ed8",Approved:"f0fdf4;border-color:#bbf7d0;color:#15803d",Rejected:"fef2f2;border-color:#fecaca;color:#b91c1c"};
+    const s=colors[existing.status]||"f8fafc;border-color:#e2e8f0;color:#64748b";
+    statusHtml=`<div style="background:#${s.split(";")[0]};border:1.5px solid #${s.split("border-color:#")[1].split(";")[0]};border-radius:10px;padding:14px 20px;margin-bottom:16px;">
+      <div style="font-weight:700;color:#${s.split("color:#")[1]};">Timesheet: ${existing.status}</div>
     </div>`;
-  content.style.display="block";
+  }
+
+  const rows = filtered.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
+    const mH=(allMeetings||[]).filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+    const hrs=(e.billableHrs!=null&&e.billableHrs!=="")?(parseFloat(e.billableHrs||0)+mH):0;
+    const sqlM=(e.adminNotes||"").match(/\[Leads:(\d+)\]/);
+    const sqls=sqlM?parseInt(sqlM[1]):0;
+    const entryStatus=(e.billableHrs!=null&&e.billableHrs!=="")?"<span style='color:#15803d;font-weight:700;'>✓ Complete</span>":"<span style='color:#92400e;'>Pending</span>";
+    return `<tr><td>${formatDate(e.workDate)}</td><td>${e.clockIn||"-"}</td><td>${e.clockOut||"-"}</td>
+      <td>${(e.billableHrs!=null&&e.billableHrs!=="")?(parseFloat(e.billableHrs).toFixed(2)+" hrs"):"Pending"}</td>
+      <td>${mH>0?mH.toFixed(1)+"h":"—"}</td>
+      <td>$${(hrs*hourlyRate).toFixed(2)}</td>
+      <td>${sqls>0?"$"+(sqls*50).toFixed(2):"—"}</td>
+      <td><strong>$${(hrs*hourlyRate+sqls*50).toFixed(2)}</strong></td>
+      <td>${entryStatus}</td></tr>`;
+  }).join("");
+
+  document.getElementById("submit-content").innerHTML=`
+    ${statusHtml}
+    <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;border:1px solid #E8EEF8;display:flex;gap:24px;flex-wrap:wrap;">
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total Hours</span><div style="font-size:18px;font-weight:800;color:#0A1628;">${totalHrs.toFixed(1)}h</div></div>
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Base Pay</span><div style="font-size:18px;font-weight:800;color:#15803d;">$${totalBasePay.toFixed(2)}</div></div>
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Incentive</span><div style="font-size:18px;font-weight:800;color:#d97706;">$${totalIncentive.toFixed(2)}</div></div>
+      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total Pay</span><div style="font-size:20px;font-weight:800;color:#0A1628;">$${totalPay.toFixed(2)}</div></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>Meeting</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  document.getElementById("submit-content").style.display="block";
 }
+
 function selectSubmitCutoff(val){
   submitCutoffVal=val;
   document.querySelectorAll("#page-submit .cutoff-btn").forEach(b=>b.classList.remove("active"));
@@ -1703,20 +1621,32 @@ function selectSubmitCutoff(val){
 }
 async function submitTimesheet(){
   const btn=document.getElementById("btn-submit-ts");
-  const alert=document.getElementById("alert-submit");
-  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
-  try {
-    const cutoffKey=getCutoffPeriodKey(submitCutoffVal);
-    const filtered=filterByCutoff(allEntries,submitCutoffVal).filter(e=>e.clockIn);
-    const monthlyRate=currentUser.rate||0,cutoffRate=monthlyRate/2;
-    const wDays=getWorkingDaysInCutoff(submitCutoffVal),dailyRate=cutoffRate/wDays;
-    let totalPay=filtered.reduce((s,e)=>s+calcEntryPay(e,dailyRate).pay,0);
-    totalPay=Math.min(totalPay,cutoffRate);
-    await apiPost({action:"addTimesheet",sdrName:currentUser.name,email:currentUser.email,cutoffKey,cutoffLabel:getCutoffDisplayLabel(submitCutoffVal),totalDays:filtered.length,totalPay:totalPay.toFixed(2),status:"Pending",disputeNotes:"",adminNote:""});
-    showAlert(alert,"success","✓ Timesheet submitted for approval!");
-    allTimesheets=[]; loadSubmitPage();
-  } catch(e){showAlert(alert,"error","Could not submit: "+e.message);}
-  btn.innerHTML="📤 Submit Timesheet"; btn.disabled=false;
+  if(btn){btn.disabled=true;btn.textContent="Submitting…";}
+  try{
+    const hourlyRate=parseFloat(currentUser.rate||0);
+    const SQL_INCENTIVE=50;
+    const filtered=allEntries.filter(e=>e.clockIn);
+    const wDays=filtered.length||1;
+    const totalHrs=filtered.reduce((s,e)=>{
+      const mH=(allMeetings||[]).filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+      return s+((e.billableHrs!=null&&e.billableHrs!=="")?(parseFloat(e.billableHrs||0)+mH):0);
+    },0);
+    const totalSQLs=filtered.reduce((s,e)=>{const m=(e.adminNotes||"").match(/\[Leads:(\d+)\]/);return s+(m?parseInt(m[1]):0);},0);
+    const totalBasePay=totalHrs*hourlyRate;
+    const totalIncentive=totalSQLs*SQL_INCENTIVE;
+    const totalPay=totalBasePay+totalIncentive;
+    const now=new Date();
+    const cutoffKey="all-"+now.getFullYear()+"-"+now.getMonth();
+    const cutoffLabel="All Entries";
+    const r=await apiPost({action:"addTimesheet",sdrName:currentUser.name,email:currentUser.email,
+      cutoffKey,cutoffLabel,totalDays:wDays,totalPay:totalBasePay.toFixed(2),
+      status:"Pending",totalIncentive:totalIncentive.toFixed(2),grandTotal:totalPay.toFixed(2)});
+    if(!r.success) throw new Error("Failed");
+    allTimesheets=[];
+    showAlert(document.getElementById("alert-submit"),"success","✓ Timesheet submitted! Your manager will review it.");
+    loadSubmitPage();
+  }catch(e){showAlert(document.getElementById("alert-submit"),"error","Could not submit. "+e.message);}
+  if(btn){btn.disabled=false;btn.textContent="📤 Submit Timesheet";}
 }
 async function submitCutoffDisputeSubmit(tsId){
   const notes=document.getElementById("ts-cutoff-dispute-text")?.value.trim();
