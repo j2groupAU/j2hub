@@ -388,16 +388,16 @@ tr:hover td { background: rgba(100,160,255,0.04); }
         <div><h2>Time Management</h2><p>Clock in, clock out, log meetings, log daily leads, and track your current cutoff.</p></div>
       </div>
 
-      <!-- Clock Status -->
-      <div id="clock-status-block" class="clock-status clocked-out">
-        <div class="status-dot"></div><span id="clock-status-text">You are currently clocked out.</span>
-      </div>
-      <div id="alert-clock" class="alert"></div>
-
-
-
       <!-- All cards wrapped in same container -->
       <div style="display:inline-flex;flex-direction:column;gap:18px;width:100%;max-width:978px;">
+
+        <!-- Clock Status + Alert -->
+        <div>
+          <div id="clock-status-block" class="clock-status clocked-out">
+            <div class="status-dot"></div><span id="clock-status-text">You are currently clocked out.</span>
+          </div>
+          <div id="alert-clock" class="alert"></div>
+        </div>
 
         <!-- Top row: Clock In/Out + Log Meeting side by side -->
         <div style="display:flex;gap:18px;align-items:stretch;">
@@ -422,32 +422,6 @@ tr:hover td { background: rgba(100,160,255,0.04); }
           <div style="margin-bottom:16px;">
             <div class="time-display" id="live-time-2">--:--:--</div>
             <div class="time-sub">Current AEST time — recorded on clock out</div>
-          </div>
-          <!-- LUNCH BUTTON -->
-          <div id="lunch-section" style="margin-bottom:14px;">
-            <div id="lunch-not-started">
-              <button class="btn btn-full" onclick="startLunch()" id="btn-start-lunch"
-                style="background:linear-gradient(135deg,#FF8C00,#FFA500);color:white;margin-bottom:8px;">
-                🍽️ Start Lunch Break
-              </button>
-            </div>
-            <div id="lunch-in-progress" style="display:none;">
-              <div style="background:linear-gradient(135deg,#FFF8EC,#FFEECC);border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid #FFA500;">
-                <div style="font-size:11px;color:#996600;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">On Lunch Break since</div>
-                <div style="font-size:15px;font-weight:800;color:#664400;" id="lunch-start-display">—</div>
-              </div>
-              <button class="btn btn-full" onclick="endLunch()" id="btn-end-lunch"
-                style="background:linear-gradient(135deg,#FFA500,#FF8C00);color:white;margin-bottom:8px;">
-                ✅ End Lunch Break
-              </button>
-            </div>
-            <div id="lunch-done" style="display:none;">
-              <div style="background:linear-gradient(135deg,#E8FFF5,#D0F5E8);border-radius:10px;padding:10px 14px;border-left:3px solid #00D68F;">
-                <span style="font-size:12px;font-weight:700;color:#0A8050;">🍽️ Lunch taken</span>
-                <span style="font-size:11px;color:#15803d;margin-left:8px;" id="lunch-time-display">—</span>
-                <span style="font-size:10px;color:#0A8050;margin-left:8px;">1hr paid ✓</span>
-              </div>
-            </div>
           </div>
           <button class="btn btn-danger btn-full" onclick="submitClockOut()" id="btn-clock-out">Clock Out Now</button>
         </div>
@@ -723,6 +697,13 @@ function initApp() {
   checkOpenClockIn();
   loadNotifications();
   checkTimesheetReminder();
+  // Update cutoff selector labels with actual date ranges
+  try {
+    const curr = document.getElementById('subco-current');
+    const prev = document.getElementById('subco-prev');
+    if(curr) curr.textContent = getCutoffDisplayLabel('current');
+    if(prev) prev.textContent = 'Prev: '+getCutoffDisplayLabel('prev');
+  } catch(e){}
 }
 
 function startLiveClock() {
@@ -955,7 +936,7 @@ function checkTimesheetReminder() {
   const today = new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
   const day = today.getDate();
   if (day === 25 || day === 26 || day === 10 || day === 11) {
-    const period = (day === 25 || day === 26) ? "11th–25th" : "26th–10th";
+    // Field SDR fortnightly - no monthly reminder needed
     const bar = document.getElementById("notif-bar");
     const inner = document.getElementById("notif-inner");
     bar.style.display = "block";
@@ -1145,92 +1126,109 @@ function renderTimesheetGrouped() {
   document.getElementById("timesheet-loading").style.display="none";
   const content=document.getElementById("timesheet-content");
   if(allEntries.length===0){ content.innerHTML='<div class="empty-block"><div class="eicon">📭</div><p>No entries yet.</p></div>'; return; }
-  // Group by cutoff
+
+  const SQL_INCENTIVE = 50;
+  const hourlyRate = parseFloat(currentUser.rate||0);
+
   const groups={};
   allEntries.forEach(e=>{
     const key=e.cutoffPeriod||getCutoffLabel(e.workDate);
     if(!groups[key]) groups[key]=[];
     groups[key].push(e);
   });
+
   let html="";
   Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([cutoffLabel, entries])=>{
     const cutoffKey=deriveCutoffKeyFromLabel(cutoffLabel);
     const ts=allTimesheets.find(t=>t.cutoffKey===cutoffKey||t.cutoffLabel===cutoffLabel);
     const tsStatus=ts?ts.status:"Not submitted";
     const tsStatusBadge=getTsBadge(tsStatus);
-    const totalHrs=entries.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
-    // Get approved meetings for this cutoff's dates
     const cutoffDates = new Set(entries.map(e=>e.workDate));
     const cutoffMeetings = allMeetings.filter(m=>m.status==="Approved"&&cutoffDates.has(m.date));
-    const totalMeetingHrs=cutoffMeetings.reduce((s,m)=>{
-      const mins=calcMins(m.startTime,m.endTime);
-      return s+(mins>0?mins/60:0);
-    },0);
-    const grandTotalHrs=totalHrs+totalMeetingHrs;
 
-    const _aestToday = new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
-    const _aestDateStr = _aestToday.toISOString().slice(0,10);
-    const isCurrent = cutoffLabel === getCutoffDisplayLabel('current') || cutoffKey === getCutoffPeriodKey('current') || cutoffLabel === getCutoffLabel(_aestDateStr);
+    const totalSQLs = entries.reduce((s,e)=>{ const m=(e.adminNotes||"").match(/\[Leads:(\d+)\]/); return s+(m?parseInt(m[1]):0); },0);
+    const totalIncentive = totalSQLs * SQL_INCENTIVE;
+    const totalBasePay = entries.reduce((s,e)=>{
+      if(e.billableHrs==null||e.billableHrs==="") return s;
+      const mH=cutoffMeetings.filter(m=>m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+      const hrs=(parseFloat(e.billableHrs||0)+mH); // Field SDR: phone + meetings
+      return s+(hrs*hourlyRate);
+    },0);
+    const totalPay = totalBasePay + totalIncentive;
+
+    const isCurrent = cutoffKey === getCutoffPeriodKey('current') || cutoffLabel === getCutoffPeriodKey('current');
+
     html+=`<div class="cutoff-group">
       <div class="cutoff-group-header">
-        <div><div class="title">${cutoffLabel}</div><div class="meta">${entries.length} entries &nbsp;·&nbsp; ${grandTotalHrs.toFixed(1)} billable hrs (incl. ${totalMeetingHrs.toFixed(1)}h meetings)</div></div>
+        <div>
+          <div class="title">${cutoffLabel}</div>
+          <div class="meta">${entries.length} entries &nbsp;·&nbsp; ${totalSQLs} SQLs &nbsp;·&nbsp; Base: <strong>$${totalBasePay.toFixed(2)}</strong> &nbsp;·&nbsp; Total: <strong>$${totalPay.toFixed(2)}</strong></div>
+        </div>
         <div style="display:flex;align-items:center;gap:10px;">${tsStatusBadge}${isCurrent?'&nbsp;<button onclick="mtsOpen(this.dataset.co)" style="font-size:11px;padding:4px 12px;background:#EEF4FF;color:#0A1628;border:1.5px solid #C5D8F5;border-radius:8px;cursor:pointer;font-weight:600;" data-co="${cutoffLabel}">+ Enter Timesheet</button>':''}</div>
       </div>
       <div class="cutoff-group-body">
         <div class="table-wrap"><table>
           <colgroup>
-            <col style="width:110px"><col style="width:80px"><col style="width:85px">
-            <col style="width:95px"><col style="width:130px"><col style="width:75px">
-            <col style="width:90px"><col style="width:90px"><col style="width:90px">
-            <col style="width:auto">
+            <col style="width:105px"><col style="width:70px"><col style="width:75px">
+            <col style="width:85px"><col style="width:60px">
+            <col style="width:70px"><col style="width:50px"><col style="width:105px">
+            <col style="width:95px"><col style="width:85px"><col style="width:auto">
           </colgroup>
-          <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
-          <tbody>${(()=>{const shownMeetingDates=new Set();return entries.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
-            const actualStr=(e.billableHrs!=null&&e.billableHrs!=="")?'Entered':'<span style="color:var(--muted)">Pending</span>';
+          <thead><tr>
+            <th>Date</th><th>Clock In</th><th>Clock Out</th>
+            <th>Work Hrs</th><th>Meeting</th>
+            <th>Time Off</th><th>SQLs</th><th>Base Pay (incl. super)</th>
+            <th>Incentive</th><th>Total Pay</th><th>Request Review</th>
+          </tr></thead>
+          <tbody>${(()=>{ return entries.sort((a,b)=>b.workDate.localeCompare(a.workDate)).map(e=>{
             const canEntryDispute=!["Under Review","Approved"].includes(tsStatus)&&(e.billableHrs!=null&&e.billableHrs!=="")&&!["Under Review","Resolved"].includes(e.disputeStatus);
             const disputeCell=canEntryDispute
               ?`${getDisputeBadge(e.disputeStatus)} <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Request Review</button>`
               :getDisputeBadge(e.disputeStatus);
-            const lunchStr=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")
-              ?`<span style="font-size:11px;color:#0A8050;font-weight:700;">🍽️ ${e.lunchStart||""}–${e.lunchEnd||""}</span>`
-              :'<span style="color:var(--muted);font-size:11px;">None</span>';
-            // Get meetings for this specific date
-            const dayMeetings=cutoffMeetings.filter(m=>m.date===e.workDate);
-            // Compute work hours live from actual times (full span, no subtraction)
+
             const workHrsVal=(e.billableHrs!=null&&e.billableHrs!=="") ? parseFloat(e.billableHrs) : null;
-            const workHoursStr=workHrsVal!==null
-              ?`${workHrsVal.toFixed(2)} hrs`
-              :'<span style="color:var(--muted)">Pending</span>';
+            const workHoursStr=workHrsVal!==null ? `${workHrsVal.toFixed(2)} hrs` : '<span style="color:var(--muted)">Pending</span>';
+            const dayMeetings=cutoffMeetings.filter(m=>m.date===e.workDate);
             const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-            const totalWorkHrs=workHrsVal!==null?Math.min(8,calcWorkHours(workHrsVal,meetHrsTotal,e.lunchTaken)):null;
-            const billableDisplay = totalWorkHrs!==null
-              ? `<strong>${totalWorkHrs.toFixed(2)} hrs</strong>`
-              : (e.clockIn?"<span style='color:var(--muted)'>Pending</span>":"—");
-            // Meeting column: total hours only
-            const totalMeetCellHrs=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-            const meetingCell=totalMeetCellHrs>0
-              ?`<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${totalMeetCellHrs.toFixed(1)}h</span>`
+            const meetingCell=meetHrsTotal>0
+              ?`<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${meetHrsTotal.toFixed(1)}h</span>`
               :'<span style="color:var(--muted);font-size:11px;">—</span>';
-            // Time Off column: check approved leave for this date
             const leaveOnDay=allLeaves.find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
             const timeOffCell=leaveOnDay
               ?`<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>`
               :'<span style="color:var(--muted);font-size:11px;">—</span>';
-            const mainRow=`<tr style="border-bottom:1px solid #f0ece4;">
+            const sqlMatch=(e.adminNotes||"").match(/\[Leads:(\d+)\]/);
+            const sqls = sqlMatch ? parseInt(sqlMatch[1]) : null;
+            const sqlCell = sqls!==null
+              ? `<strong style="color:#0055BB;">${sqls}</strong>`
+              : '<span style="color:var(--muted);font-size:11px;">—</span>';
+            const totalBillableHrs = workHrsVal!==null ? (workHrsVal + meetHrsTotal) : null; // Field SDR: phone + meetings, no lunch, no cap
+            const basePay = totalBillableHrs!==null ? totalBillableHrs * hourlyRate : null;
+            const basePayCell = basePay!==null
+              ? `<strong style="color:#15803d;">$${basePay.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">${totalBillableHrs.toFixed(2)}h × $${hourlyRate.toFixed(2)}</div>`
+              : '<span style="color:var(--muted);font-size:11px;">Pending</span>';
+            const incentive = sqls!==null ? sqls * SQL_INCENTIVE : null;
+            const incentiveCell = incentive!==null
+              ? (incentive>0 ? `<strong style="color:#d97706;">$${incentive.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">${sqls} × $${SQL_INCENTIVE}</div>` : '<span style="color:var(--muted);font-size:11px;">—</span>')
+              : '<span style="color:var(--muted);font-size:11px;">—</span>';
+            const entryTotal = (basePay||0) + (incentive||0);
+            const totalPayCell = (basePay!==null||incentive!==null)
+              ? `<strong style="color:#0A1628;font-size:13px;">$${entryTotal.toFixed(2)}</strong>`
+              : '<span style="color:var(--muted);font-size:11px;">Pending</span>';
+            return `<tr style="border-bottom:1px solid #f0ece4;">
               <td><strong>${formatDate(e.workDate)}</strong></td>
               <td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td>
               <td style="font-size:12px;">${workHoursStr}</td>
-              <td>${lunchStr}</td>
               <td style="font-size:11px;">${meetingCell}</td>
               <td style="font-size:11px;">${timeOffCell}</td>
-              <td>${billableDisplay}</td>
-              <td>${(()=>{const ded=workHrsVal!==null?calcDeduction(workHrsVal,meetHrsTotal,e.lunchTaken):0;return ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+'h</span>':"—";})()}</td>
+              <td style="text-align:center;">${sqlCell}</td>
+              <td>${basePayCell}</td>
+              <td>${incentiveCell}</td>
+              <td>${totalPayCell}</td>
               <td style="white-space:nowrap;">${disputeCell}</td>
             </tr>`;
-            return mainRow;
-          });})().join("")}</tbody>
+          }).join("");})()}</tbody>
         </table></div>`;
-    // Cutoff-level dispute (after timesheet submitted)
     if(ts && ["Pending","Rejected","Disputed"].includes(ts.status)) {
       html+=`<div style="padding:16px;border-top:1.5px solid var(--border);background:#fffbf5;">
         <div style="font-size:12px;font-weight:700;color:#c2410c;margin-bottom:8px;">⚠️ Request Review this Cutoff Timesheet</div>
@@ -1365,7 +1363,7 @@ function renderPayslips(timesheets) {
         <tbody>${entries.length===0?'<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--muted);">No entries</td></tr>':entries.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
           const phoneH=parseFloat(e.billableHrs||0);
           const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-          const totalH=phoneH>0?Math.min(8,calcWorkHours(phoneH,mH,e.lunchTaken)):0;
+          const totalH=phoneH>0?(parseFloat(phoneH||0)+mH):0; // Field SDR: no cap
           const ded=phoneH>0?calcDeduction(phoneH,mH,e.lunchTaken):0;
           return`<tr style="border-bottom:1px solid var(--border);">
             <td style="padding:9px 12px;">${formatDate(e.workDate)}</td>
@@ -1563,9 +1561,8 @@ function calcMins(s,e){
   return Math.max(0,(eh*60+em)-(sh*60+sm));
 }
 function calcWorkHours(billableHrs, meetingHrs, lunchTaken){
-  // Billable = phone hours + 1hr lunch (ONLY if punched) + meeting hours
-  const lunch = (lunchTaken==="TRUE"||lunchTaken===true||lunchTaken==="true"||lunchTaken==="1") ? 1 : 0;
-  return parseFloat(billableHrs||0) + lunch + parseFloat(meetingHrs||0);
+  // Field SDR: no lunch break — total = phone hours + meeting hours only
+  return parseFloat(billableHrs||0) + parseFloat(meetingHrs||0);
 }
 function calcDeduction(billableHrs, meetingHrs, lunchTaken){
   return Math.max(0, 8 - Math.min(8, calcWorkHours(billableHrs, meetingHrs, lunchTaken)));
@@ -1600,7 +1597,7 @@ function renderSubmitPage(){
   const wDays=getWorkingDaysInCutoff(submitCutoffVal);
   const totalHrs=filtered.reduce((s,e)=>{
     const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
-    return s+((e.billableHrs!=null&&e.billableHrs!=="")?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0);
+    return s+((e.billableHrs!=null&&e.billableHrs!=="")?(parseFloat(e.billableHrs||0)+mH):0); // Field SDR: no cap
   },0);
   const totalDed=filtered.reduce((s,e)=>{
     const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
@@ -1647,17 +1644,21 @@ function renderSubmitPage(){
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:12px 16px;border-bottom:1.5px solid var(--border);"><div class="card-title" style="margin-bottom:0;">Entries</div></div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Status</th></tr></thead>
+        <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Meeting</th><th>Time Off</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Status</th></tr></thead>
         <tbody>${filtered.length===0?'<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">No entries for this period.</td></tr>':filtered.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
           const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-          const totalBil=(e.billableHrs!=null&&e.billableHrs!=="")?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0;
-          const ded2=(e.billableHrs!=null&&e.billableHrs!=="")?calcDeduction(parseFloat(e.billableHrs||0),mH,e.lunchTaken):0;
-          const lunchCell=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")?('<span style="color:#0A8050;font-weight:600;font-size:11px;">🍽 '+(e.lunchStart||'')+(e.lunchEnd?'–'+e.lunchEnd:'')+'</span>'):'<span style="color:var(--muted);font-size:11px;">None</span>';
+          // Field SDR: total hours = phone + meetings, no lunch, no cap
+          const totalBil=(e.billableHrs!=null&&e.billableHrs!=="")?parseFloat(e.billableHrs||0)+mH:0;
           const meetCell=mH>0?('<span style="font-size:12px;font-weight:600;color:#1d4ed8;">'+mH.toFixed(1)+'h</span>'):'—';
           const leaveOnDay=(allLeaves||[]).find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
           const timeOffCell=leaveOnDay?('<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">'+(leaveOnDay.leaveType||'Leave')+'</span>'):'—';
+          const rowBasePay=totalBil>0?totalBil*hourlyRate:null;
+          const sqlM2=(e.adminNotes||'').match(/\[Leads:(\d+)\]/);
+          const rowSQLs=sqlM2?parseInt(sqlM2[1]):0;
+          const rowIncentive=rowSQLs*50;
+          const rowTotal=(rowBasePay||0)+rowIncentive;
           const entryStatus=(e.billableHrs!=null&&e.billableHrs!=="")?'<span style="color:#15803d;font-weight:700;">✓ Complete</span>':'<span style="color:#92400e;">Pending</span>';
-          return('<tr><td>'+formatDate(e.workDate)+'</td><td>'+(e.clockIn||'-')+'</td><td>'+(e.clockOut||'-')+'</td><td>'+((e.billableHrs!=null&&e.billableHrs!=="")?parseFloat(e.billableHrs).toFixed(2)+' hrs':'<span style="color:var(--muted);font-size:11px;">Pending</span>')+'</td><td>'+lunchCell+'</td><td>'+meetCell+'</td><td>'+timeOffCell+'</td><td>'+(totalBil>0?totalBil.toFixed(2)+' hrs':'-')+'</td><td>'+(ded2>0?'<span style="color:#dc2626">-'+ded2.toFixed(2)+'h</span>':'-')+'</td><td>'+entryStatus+'</td></tr>');
+          return('<tr><td>'+formatDate(e.workDate)+'</td><td>'+(e.clockIn||'-')+'</td><td>'+(e.clockOut||'-')+'</td><td>'+((e.billableHrs!=null&&e.billableHrs!=="")?parseFloat(e.billableHrs).toFixed(2)+' hrs':'<span style="color:var(--muted);font-size:11px;">Pending</span>')+'</td><td>'+meetCell+'</td><td>'+timeOffCell+'</td><td>'+(rowBasePay!=null?'$'+rowBasePay.toFixed(2):'-')+'</td><td>'+(rowIncentive>0?'$'+rowIncentive.toFixed(2):'-')+'</td><td>'+(rowBasePay!=null?'<strong>$'+rowTotal.toFixed(2)+'</strong>':'-')+'</td><td>'+entryStatus+'</td></tr>');
         }).join("")}</tbody>
       </table></div>
     </div>`;
@@ -1751,77 +1752,25 @@ function switchTab(tab){
 }
 
 // ── HELPERS ──
-function filterByCutoff(entries,cutoff){
-  if(cutoff==="all") return entries;
-  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
-  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
-  let start,end;
-  if(cutoff==="current"){
-    if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
-    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
-    else{start=new Date(year,month,11);end=new Date(year,month,25);}
-  } else {
-    if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
-    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
-    else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
-  }
-  return entries.filter(e=>{if(!e.workDate)return false;const d=new Date(e.workDate+"T12:00:00");return d>=start&&d<=end;});
-}
-
-function getWorkingDaysInCutoff(cutoff){
-  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
-  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
-  let start,end;
-  if(cutoff==="current"){
-    if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
-    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
-    else{start=new Date(year,month,11);end=new Date(year,month,25);}
-  } else {
-    if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
-    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
-    else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
-  }
-  let count=0;const d=new Date(start);
-  while(d<=end){const dow=d.getDay();if(dow!==0&&dow!==6)count++;d.setDate(d.getDate()+1);}
-  return count||1;
-}
-
+// filterByCutoff replaced by field fortnightly version
 function getWorkingDaysFromKey(key){
   if(!key) return 11;
   // Estimate from key - just return standard
   return 11;
 }
 
-function getCutoffPeriodKey(cutoff){
-  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
-  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
-  if(cutoff==="current"){
-    if(day>=26) return year+"-"+(month+1)+"-26-to-"+(month===11?year+1:year)+"-"+((month+1)%12+1)+"-10";
-    if(day<=10) return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-26-to-"+year+"-"+(month+1)+"-10";
-    return year+"-"+(month+1)+"-11-to-"+year+"-"+(month+1)+"-25";
-  } else {
-    if(day>=26) return year+"-"+(month+1)+"-11-to-"+year+"-"+(month+1)+"-25";
-    if(day<=10) return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-11-to-"+(month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-25";
-    return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-26-to-"+year+"-"+(month+1)+"-10";
-  }
-}
-
-function deriveCutoffKeyFromLabel(label){ return label; }
-
-function getCutoffLabel(dateStr){const d=new Date(dateStr);return d.getDate()>=11&&d.getDate()<=25?"11th–25th (Pay 30th)":"26th–10th (Pay 15th)";}
-
-function getCutoffDisplayLabel(cutoff){
-  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
-  const day=today.getDate(),mo=today.toLocaleString("en-AU",{month:"long",timeZone:"Australia/Sydney"}),yr=today.getFullYear();
-  if(cutoff==="current"){if(day>=26)return"26 "+mo+" – 10 next month";if(day<=10)return"26 last month – 10 "+mo+" "+yr;return"11–25 "+mo+" "+yr;}
-  return "Previous cutoff period";
-}
-
+// getCutoffPeriodKey replaced by field fortnightly version
+// getCutoffDisplayLabel replaced by field fortnightly version
 function getPayDateFromCutoffLabel(label){
   if(!label) return "—";
-  if(label.includes("11th–25th")||label.includes("11–25")) return "30th of the month";
-  if(label.includes("26th–10th")||label.includes("26")) return "15th of next month";
-  return "—";
+  const parts=(label||"").split("_to_");
+  if(parts.length===2){
+    const endDate=new Date(parts[1]+"T00:00:00");
+    const payDay=new Date(endDate);
+    payDay.setDate(endDate.getDate()+(12-endDate.getDay())%7+1);
+    return payDay.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
+  }
+  return "Following Friday";
 }
 
 function getDisputeBadge(s){
@@ -2014,3 +1963,77 @@ async function mtsSubmit() {
 </div>
 </body>
 </html>
+// ── FIELD SDR FORTNIGHTLY CUTOFF (anchor: 4 Sep 2026) ──
+const FIELD_ANCHOR = new Date("2026-09-04T00:00:00");
+
+function getFieldCutoffForDate(dateStr) {
+  // Returns {start, end} Date objects for the cutoff containing dateStr
+  const d = new Date((dateStr || new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"})) + "T00:00:00");
+  const diffDays = Math.floor((d - FIELD_ANCHOR) / 86400000);
+  const periodIndex = Math.floor(diffDays / 14);
+  const start = new Date(FIELD_ANCHOR);
+  start.setDate(FIELD_ANCHOR.getDate() + periodIndex * 14);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 13);
+  return {start, end};
+}
+
+function getFieldCurrentCutoff() {
+  const todayStr = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+  return getFieldCutoffForDate(todayStr);
+}
+
+function getFieldPrevCutoff() {
+  const {start} = getFieldCurrentCutoff();
+  const prevDay = new Date(start);
+  prevDay.setDate(prevDay.getDate() - 1);
+  const prevStr = prevDay.toISOString().slice(0,10);
+  return getFieldCutoffForDate(prevStr);
+}
+
+function formatFieldDate(d) {
+  return d.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
+}
+
+function getCutoffLabel(dateStr) {
+  // For storing with entries — use the cutoff key as label
+  return getCutoffKeyForDate(dateStr);
+}
+
+function getCutoffKeyForDate(dateStr) {
+  const {start, end} = getFieldCutoffForDate(dateStr);
+  const fmt = d => d.toISOString().slice(0,10);
+  return fmt(start) + "_to_" + fmt(end);
+}
+
+function getCutoffDisplayLabel(which) {
+  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
+  return formatFieldDate(start) + " – " + formatFieldDate(end);
+}
+
+function getCutoffPeriodKey(which) {
+  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
+  return start.toISOString().slice(0,10) + "_to_" + end.toISOString().slice(0,10);
+}
+
+function deriveCutoffKeyFromLabel(label) { return label; }
+
+function getWorkingDaysInCutoff(which) {
+  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
+  let count = 0;
+  const d = new Date(start);
+  while(d <= end) { const dow=d.getDay(); if(dow!==0&&dow!==6) count++; d.setDate(d.getDate()+1); }
+  return count || 1;
+}
+
+function filterByCutoff(entries, cutoff) {
+  if(cutoff === "all") return entries;
+  const {start, end} = cutoff === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
+  return entries.filter(e => {
+    if(!e.workDate) return false;
+    const d = new Date(e.workDate + "T12:00:00");
+    return d >= start && d <= end;
+  });
+}
+
+
