@@ -396,62 +396,56 @@ tr:hover td { background: rgba(100,160,255,0.04); }
 
 
 
-      <div style="display:flex;gap:0;align-items:start;margin-bottom:0;">
-        <!-- Clock In/Out Card — ~5 inches wide -->
-        <div style="width:480px;max-width:100%;">
-        <div class="card" id="clock-card-in">
-          <div class="card-title"><div class="card-icon">▶</div> Clock In</div>
-          <div class="field-group"><label>Date</label><input type="date" id="clock-in-date" /></div>
-          <div style="margin-bottom:16px;">
-            <div class="time-display" id="live-time">--:--:--</div>
-            <div class="time-sub">Current AEST time — recorded on clock in</div>
-          </div>
-          <button class="btn btn-primary btn-full" onclick="submitClockIn()" id="btn-clock-in">Clock In Now</button>
-        </div>
-        <div class="card" id="clock-card-out" style="display:none;">
-          <div class="card-title"><div class="card-icon">⏹</div> Clock Out</div>
-          <div style="margin-bottom:12px;">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Clocked in at</div>
-            <div style="font-size:16px;font-weight:800;color:var(--navy);" id="clock-in-time-display">—</div>
-          </div>
-          <div style="margin-bottom:16px;">
-            <div class="time-display" id="live-time-2">--:--:--</div>
-            <div class="time-sub">Current AEST time — recorded on clock out</div>
-          </div>
-          <!-- LUNCH BUTTON -->
-          <div id="lunch-section" style="margin-bottom:14px;">
-            <div id="lunch-not-started">
-              <button class="btn btn-full" onclick="startLunch()" id="btn-start-lunch"
-                style="background:linear-gradient(135deg,#FF8C00,#FFA500);color:white;margin-bottom:8px;">
-                🍽️ Start Lunch Break
-              </button>
+      <div style="display:flex;gap:18px;align-items:stretch;margin-bottom:18px;">
+
+        <!-- Clock In/Out Card -->
+        <div style="flex:1;display:flex;flex-direction:column;">
+          <div class="card" id="clock-card-in" style="flex:1;">
+            <div class="card-title"><div class="card-icon">▶</div> Clock In</div>
+            <div class="field-group"><label>Date</label><input type="date" id="clock-in-date" /></div>
+            <div style="margin-bottom:16px;">
+              <div class="time-display" id="live-time">--:--:--</div>
+              <div class="time-sub">Current AEST time — recorded on clock in</div>
             </div>
-            <div id="lunch-in-progress" style="display:none;">
-              <div style="background:linear-gradient(135deg,#FFF8EC,#FFEECC);border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid #FFA500;">
-                <div style="font-size:11px;color:#996600;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">On Lunch Break since</div>
-                <div style="font-size:15px;font-weight:800;color:#664400;" id="lunch-start-display">—</div>
-              </div>
-              <button class="btn btn-full" onclick="endLunch()" id="btn-end-lunch"
-                style="background:linear-gradient(135deg,#FFA500,#FF8C00);color:white;margin-bottom:8px;">
-                ✅ End Lunch Break
-              </button>
-            </div>
-            <div id="lunch-done" style="display:none;">
-              <div style="background:linear-gradient(135deg,#E8FFF5,#D0F5E8);border-radius:10px;padding:10px 14px;border-left:3px solid #00D68F;">
-                <span style="font-size:12px;font-weight:700;color:#0A8050;">🍽️ Lunch taken</span>
-                <span style="font-size:11px;color:#15803d;margin-left:8px;" id="lunch-time-display">—</span>
-                <span style="font-size:10px;color:#0A8050;margin-left:8px;">1hr paid ✓</span>
-              </div>
-            </div>
+            <button class="btn btn-primary btn-full" onclick="submitClockIn()" id="btn-clock-in">Clock In Now</button>
           </div>
-          <button class="btn btn-danger btn-full" onclick="submitClockOut()" id="btn-clock-out">Clock Out Now</button>
+          <div class="card" id="clock-card-out" style="flex:1;display:none;">
+            <div class="card-title"><div class="card-icon">⏹</div> Clock Out</div>
+            <div style="margin-bottom:12px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Clocked in at</div>
+              <div style="font-size:16px;font-weight:800;color:var(--navy);" id="clock-in-time-display">—</div>
+            </div>
+            <div style="margin-bottom:16px;">
+              <div class="time-display" id="live-time-2">--:--:--</div>
+              <div class="time-sub">Current AEST time — recorded on clock out</div>
+            </div>
+            <button class="btn btn-danger btn-full" onclick="submitClockOut()" id="btn-clock-out">Clock Out Now</button>
+          </div>
         </div>
 
-        <!-- NOTIFICATIONS COLUMN - bell icon only; panel is fixed -->
-        </div><!-- end clock card width wrapper -->
-      </div><!-- end clock flex row -->
+        <!-- Log Meeting Card — same size -->
+        <div style="flex:1;display:flex;flex-direction:column;">
+          <div class="card" id="quick-meeting-card" style="flex:1;">
+            <div class="card-title"><div class="card-icon">📅</div> Log Meeting</div>
+            <div class="two-col">
+              <div class="field-group"><label>Start Time</label><input type="time" id="qm-start" /></div>
+              <div class="field-group"><label>End Time</label><input type="time" id="qm-end" /></div>
+            </div>
+            <div class="field-group">
+              <label>Meeting Type</label>
+              <select id="qm-type">
+                <option value="">— Select type —</option>
+                <option value="Coaching">Coaching</option>
+                <option value="Team Huddle">Team Huddle</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" onclick="submitQuickMeeting()" id="btn-qm">Submit for Approval</button>
+          </div>
+        </div>
 
-      <!-- ══ FIXED NOTIFICATION PANEL ══ -->
+      </div>
+
+            <!-- ══ FIXED NOTIFICATION PANEL ══ -->
       <div id="inline-notif-wrap" style="
           display:none;
           position:fixed;
@@ -496,34 +490,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
         </div>
       </div>
 
-      <!-- Quick Meeting Log + Cutoff Summary — side by side -->
-      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-top:18px;">
 
-        <!-- Log Meeting — 480px (~5 inches), same as clock card -->
-        <div style="width:480px;max-width:100%;flex-shrink:0;">
-          <div class="card" id="quick-meeting-card">
-            <div class="card-title"><div class="card-icon">📅</div> Log Meeting</div>
-            <div class="two-col">
-              <div class="field-group">
-                <label>Start Time</label><input type="time" id="qm-start" />
-              </div>
-              <div class="field-group">
-                <label>End Time</label><input type="time" id="qm-end" />
-              </div>
-            </div>
-            <div class="field-group">
-              <label>Meeting Type</label>
-              <select id="qm-type">
-                <option value="">— Select type —</option>
-                <option value="Coaching">Coaching</option>
-                <option value="Team Huddle">Team Huddle</option>
-              </select>
-            </div>
-            <button class="btn btn-secondary" onclick="submitQuickMeeting()" id="btn-qm">Submit for Approval</button>
-          </div>
-        </div>
-
-      </div>
     </div>
 
     <!-- ══ MY TIMESHEET ══ -->
