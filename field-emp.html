@@ -1876,6 +1876,79 @@ async function mtsSubmit() {
   } catch(ex){errEl.textContent='Failed: '+ex.message;errEl.style.display='block';btn.disabled=false;btn.textContent='Submit for Review';}
 }
 
+// ── FIELD SDR FORTNIGHTLY CUTOFF (anchor: 4 Sep 2026) ──
+const FIELD_ANCHOR = new Date("2026-09-04T00:00:00");
+
+function getFieldCutoffForDate(dateStr) {
+  // Returns {start, end} Date objects for the cutoff containing dateStr
+  const d = new Date((dateStr || new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"})) + "T00:00:00");
+  const diffDays = Math.floor((d - FIELD_ANCHOR) / 86400000);
+  const periodIndex = Math.floor(diffDays / 14);
+  const start = new Date(FIELD_ANCHOR);
+  start.setDate(FIELD_ANCHOR.getDate() + periodIndex * 14);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 13);
+  return {start, end};
+}
+
+function getFieldCurrentCutoff() {
+  const todayStr = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+  return getFieldCutoffForDate(todayStr);
+}
+
+function getFieldPrevCutoff() {
+  const {start} = getFieldCurrentCutoff();
+  const prevDay = new Date(start);
+  prevDay.setDate(prevDay.getDate() - 1);
+  const prevStr = prevDay.toISOString().slice(0,10);
+  return getFieldCutoffForDate(prevStr);
+}
+
+function formatFieldDate(d) {
+  return d.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
+}
+
+function getCutoffLabel(dateStr) {
+  // For storing with entries — use the cutoff key as label
+  return getCutoffKeyForDate(dateStr);
+}
+
+function getCutoffKeyForDate(dateStr) {
+  const {start, end} = getFieldCutoffForDate(dateStr);
+  const fmt = d => d.toISOString().slice(0,10);
+  return fmt(start) + "_to_" + fmt(end);
+}
+
+function getCutoffDisplayLabel(which) {
+  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
+  return formatFieldDate(start) + " – " + formatFieldDate(end);
+}
+
+function getCutoffPeriodKey(which) {
+  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
+  return start.toISOString().slice(0,10) + "_to_" + end.toISOString().slice(0,10);
+}
+
+function deriveCutoffKeyFromLabel(label) { return label; }
+
+function getWorkingDaysInCutoff(which) {
+  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
+  let count = 0;
+  const d = new Date(start);
+  while(d <= end) { const dow=d.getDay(); if(dow!==0&&dow!==6) count++; d.setDate(d.getDate()+1); }
+  return count || 1;
+}
+
+function filterByCutoff(entries, cutoff) {
+  if(cutoff === "all") return entries;
+  const {start, end} = cutoff === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
+  return entries.filter(e => {
+    if(!e.workDate) return false;
+    const d = new Date(e.workDate + "T12:00:00");
+    return d >= start && d <= end;
+  });
+}
+
 </script>
 
 <!-- ── MANUAL TIMESHEET MODAL ── -->
@@ -1963,77 +2036,3 @@ async function mtsSubmit() {
 </div>
 </body>
 </html>
-// ── FIELD SDR FORTNIGHTLY CUTOFF (anchor: 4 Sep 2026) ──
-const FIELD_ANCHOR = new Date("2026-09-04T00:00:00");
-
-function getFieldCutoffForDate(dateStr) {
-  // Returns {start, end} Date objects for the cutoff containing dateStr
-  const d = new Date((dateStr || new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"})) + "T00:00:00");
-  const diffDays = Math.floor((d - FIELD_ANCHOR) / 86400000);
-  const periodIndex = Math.floor(diffDays / 14);
-  const start = new Date(FIELD_ANCHOR);
-  start.setDate(FIELD_ANCHOR.getDate() + periodIndex * 14);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 13);
-  return {start, end};
-}
-
-function getFieldCurrentCutoff() {
-  const todayStr = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
-  return getFieldCutoffForDate(todayStr);
-}
-
-function getFieldPrevCutoff() {
-  const {start} = getFieldCurrentCutoff();
-  const prevDay = new Date(start);
-  prevDay.setDate(prevDay.getDate() - 1);
-  const prevStr = prevDay.toISOString().slice(0,10);
-  return getFieldCutoffForDate(prevStr);
-}
-
-function formatFieldDate(d) {
-  return d.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
-}
-
-function getCutoffLabel(dateStr) {
-  // For storing with entries — use the cutoff key as label
-  return getCutoffKeyForDate(dateStr);
-}
-
-function getCutoffKeyForDate(dateStr) {
-  const {start, end} = getFieldCutoffForDate(dateStr);
-  const fmt = d => d.toISOString().slice(0,10);
-  return fmt(start) + "_to_" + fmt(end);
-}
-
-function getCutoffDisplayLabel(which) {
-  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
-  return formatFieldDate(start) + " – " + formatFieldDate(end);
-}
-
-function getCutoffPeriodKey(which) {
-  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
-  return start.toISOString().slice(0,10) + "_to_" + end.toISOString().slice(0,10);
-}
-
-function deriveCutoffKeyFromLabel(label) { return label; }
-
-function getWorkingDaysInCutoff(which) {
-  const {start, end} = which === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
-  let count = 0;
-  const d = new Date(start);
-  while(d <= end) { const dow=d.getDay(); if(dow!==0&&dow!==6) count++; d.setDate(d.getDate()+1); }
-  return count || 1;
-}
-
-function filterByCutoff(entries, cutoff) {
-  if(cutoff === "all") return entries;
-  const {start, end} = cutoff === "prev" ? getFieldPrevCutoff() : getFieldCurrentCutoff();
-  return entries.filter(e => {
-    if(!e.workDate) return false;
-    const d = new Date(e.workDate + "T12:00:00");
-    return d >= start && d <= end;
-  });
-}
-
-
