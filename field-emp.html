@@ -1113,81 +1113,100 @@ async function loadTimesheet() {
 }
 
 function renderTimesheetGrouped() {
-  document.getElementById("timesheet-loading").style.display="none";
-  const content=document.getElementById("timesheet-content");
-  if(allEntries.length===0){ content.innerHTML='<div class="empty-block"><div class="eicon">📭</div><p>No entries yet. Clock in to get started.</p></div>'; return; }
+  var loading = document.getElementById("timesheet-loading");
+  var content = document.getElementById("timesheet-content");
+  loading.style.display = "none";
 
-  const SQL_INCENTIVE = 50;
-  const hourlyRate = parseFloat(currentUser.rate||0);
+  if (!allEntries || allEntries.length === 0) {
+    content.innerHTML = '<div class="empty-block"><div class="eicon">📭</div><p>No entries yet. Clock in to get started.</p></div>';
+    return;
+  }
 
-  const sorted = [...allEntries].sort((a,b)=>b.workDate.localeCompare(a.workDate));
+  var SQL_INCENTIVE = 50;
+  var hourlyRate = parseFloat((currentUser && currentUser.rate) || 0);
+  var sorted = allEntries.slice().sort(function(a,b){ return b.workDate > a.workDate ? 1 : -1; });
 
-  // Totals
-  const totalSQLs = sorted.reduce((s,e)=>{ const m=(e.adminNotes||"").match(/\[Leads:(\d+)\]/); return s+(m?parseInt(m[1]):0); },0);
-  const totalBasePay = sorted.reduce((s,e)=>{
-    if(e.billableHrs==null||e.billableHrs==="") return s;
-    const mH=(allMeetings||[]).filter(m=>m.status==="Approved"&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
-    return s+((parseFloat(e.billableHrs||0)+mH)*hourlyRate);
-  },0);
-  const totalIncentive = totalSQLs * SQL_INCENTIVE;
-  const totalPay = totalBasePay + totalIncentive;
+  var totalSQLs = 0, totalBasePay = 0;
+  sorted.forEach(function(e) {
+    var m = (e.adminNotes||"").match(/\[Leads:(\d+)\]/);
+    if (m) totalSQLs += parseInt(m[1]);
+    if (e.billableHrs != null && e.billableHrs !== "") {
+      var mH = (allMeetings||[]).filter(function(m){ return m.status==="Approved" && m.date===e.workDate; })
+        .reduce(function(s,m){ return s + calcMins(m.startTime,m.endTime)/60; }, 0);
+      totalBasePay += (parseFloat(e.billableHrs||0) + mH) * hourlyRate;
+    }
+  });
+  var totalIncentive = totalSQLs * SQL_INCENTIVE;
+  var totalPay = totalBasePay + totalIncentive;
 
-  const rows = sorted.map(e=>{
-    const workHrsVal = (e.billableHrs!=null&&e.billableHrs!=="") ? parseFloat(e.billableHrs) : null;
-    const workHoursStr = workHrsVal!==null ? `${workHrsVal.toFixed(2)} hrs` : '<span style="color:var(--muted)">Pending</span>';
-    const dayMeetings = (allMeetings||[]).filter(m=>m.status==="Approved"&&m.date===e.workDate);
-    const meetHrsTotal = dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
-    const meetingCell = meetHrsTotal>0 ? `<span style="font-size:12px;font-weight:600;color:#1d4ed8;">${meetHrsTotal.toFixed(1)}h</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>';
-    const leaveOnDay = (allLeaves||[]).find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
-    const timeOffCell = leaveOnDay ? `<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>';
-    const sqlMatch = (e.adminNotes||"").match(/\[Leads:(\d+)\]/);
-    const sqls = sqlMatch ? parseInt(sqlMatch[1]) : null;
-    const sqlCell = sqls!==null ? `<strong style="color:#0055BB;">${sqls}</strong>` : '<span style="color:var(--muted);font-size:11px;">—</span>';
-    const suburbMatch = (e.adminNotes||"").match(/\[Suburb:([^\]]+)\]/);
-    const suburbCell = suburbMatch ? `<span style="font-size:11px;color:#5577AA;">📍${suburbMatch[1]}</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>';
-    const totalHrs = workHrsVal!==null ? workHrsVal+meetHrsTotal : null;
-    const basePay = totalHrs!==null ? totalHrs*hourlyRate : null;
-    const incentive = sqls!==null ? sqls*SQL_INCENTIVE : null;
-    const entryTotal = (basePay||0)+(incentive||0);
-    const basePayCell = basePay!==null ? `<strong style="color:#15803d;">$${basePay.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">${totalHrs.toFixed(2)}h × $${hourlyRate.toFixed(2)}</div>` : '<span style="color:var(--muted);font-size:11px;">Pending</span>';
-    const incentiveCell = incentive!==null ? (incentive>0 ? `<strong style="color:#d97706;">$${incentive.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">${sqls} × $50</div>` : '<span style="color:var(--muted)">—</span>') : '<span style="color:var(--muted)">—</span>';
-    const totalPayCell = (basePay!==null||incentive!==null) ? `<strong style="color:#0A1628;font-size:13px;">$${entryTotal.toFixed(2)}</strong>` : '<span style="color:var(--muted)">Pending</span>';
-    const disputeStatus = e.disputeStatus||"";
-    const disputeBadge = disputeStatus==="Under Review" ? '<span class="badge badge-amber">⏳ Under Review</span>' : disputeStatus==="Resolved" ? '<span class="badge badge-green">✓ Resolved</span>' : '';
-    const disputeCell = disputeStatus!=="Resolved"
-      ? `${disputeBadge}<button style="display:inline-block;padding:4px 10px;font-size:11px;font-weight:600;background:#EEF4FF;color:#0A1628;border:1.5px solid #C5D8F5;border-radius:6px;cursor:pointer;white-space:nowrap;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Adjustment</button>`
+  var rows = sorted.map(function(e) {
+    var workHrsVal = (e.billableHrs != null && e.billableHrs !== "") ? parseFloat(e.billableHrs) : null;
+    var workHoursStr = workHrsVal !== null ? (workHrsVal.toFixed(2) + " hrs") : '<span style="color:#aaa">Pending</span>';
+
+    var dayMeetings = (allMeetings||[]).filter(function(m){ return m.status==="Approved" && m.date===e.workDate; });
+    var meetHrsTotal = dayMeetings.reduce(function(s,m){ return s + calcMins(m.startTime,m.endTime)/60; }, 0);
+    var meetingCell = meetHrsTotal > 0 ? ('<b style="color:#1d4ed8;">' + meetHrsTotal.toFixed(1) + 'h</b>') : '—';
+
+    var leaveOnDay = (allLeaves||[]).find(function(l){ return l.leaveDate===e.workDate && l.status==="Approved"; });
+    var timeOffCell = leaveOnDay ? ('<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">' + (leaveOnDay.leaveType||"Leave") + '</span>') : '—';
+
+    var sqlMatch = (e.adminNotes||"").match(/\[Leads:(\d+)\]/);
+    var sqls = sqlMatch ? parseInt(sqlMatch[1]) : null;
+    var sqlCell = sqls !== null ? ('<b style="color:#0055BB;">' + sqls + '</b>') : '—';
+
+    var suburbMatch = (e.adminNotes||"").match(/\[Suburb:([^\]]+)\]/);
+    var suburbCell = suburbMatch ? ('<span style="font-size:11px;color:#5577AA;">📍' + suburbMatch[1] + '</span>') : '—';
+
+    var totalHrs = workHrsVal !== null ? (workHrsVal + meetHrsTotal) : null;
+    var basePay = totalHrs !== null ? (totalHrs * hourlyRate) : null;
+    var incentive = sqls !== null ? (sqls * SQL_INCENTIVE) : null;
+    var entryTotal = (basePay||0) + (incentive||0);
+
+    var basePayCell = basePay !== null
+      ? ('<b style="color:#15803d;">$' + basePay.toFixed(2) + '</b><div style="font-size:10px;color:#aaa;">' + totalHrs.toFixed(2) + 'h × $' + hourlyRate.toFixed(2) + '</div>')
+      : '<span style="color:#aaa;font-size:11px;">Pending</span>';
+    var incentiveCell = incentive !== null
+      ? (incentive > 0 ? ('<b style="color:#d97706;">$' + incentive.toFixed(2) + '</b><div style="font-size:10px;color:#aaa;">' + sqls + ' × $50</div>') : '—')
+      : '—';
+    var totalPayCell = (basePay !== null || incentive !== null)
+      ? ('<b style="color:#0A1628;font-size:13px;">$' + entryTotal.toFixed(2) + '</b>')
+      : '<span style="color:#aaa;font-size:11px;">Pending</span>';
+
+    var disputeStatus = e.disputeStatus || "";
+    var disputeBadge = disputeStatus === "Under Review" ? '<span class="badge badge-amber">⏳ Under Review</span>'
+      : disputeStatus === "Resolved" ? '<span class="badge badge-green">✓ Resolved</span>' : '';
+    var adjBtn = disputeStatus !== "Resolved"
+      ? (disputeBadge + ' <button style="display:inline-block;padding:4px 10px;font-size:11px;font-weight:600;background:#EEF4FF;color:#0A1628;border:1.5px solid #C5D8F5;border-radius:6px;cursor:pointer;" onclick="openDisputeModal(\'' + e.id + '\',\'' + e.workDate + '\')">Adjustment</button>')
       : disputeBadge;
-    return `<tr style="border-bottom:1px solid #f0ece4;">
-      <td><strong>${formatDate(e.workDate)}</strong></td>
-      <td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td>
-      <td style="font-size:12px;">${workHoursStr}</td>
-      <td>${suburbCell}</td>
-      <td style="font-size:11px;">${meetingCell}</td>
-      <td style="font-size:11px;">${timeOffCell}</td>
-      <td style="text-align:center;">${sqlCell}</td>
-      <td>${basePayCell}</td>
-      <td>${incentiveCell}</td>
-      <td>${totalPayCell}</td>
-      <td style="white-space:nowrap;">${disputeCell}</td>
-    </tr>`;
+
+    return '<tr style="border-bottom:1px solid #f0ece4;">'
+      + '<td><b>' + formatDate(e.workDate) + '</b></td>'
+      + '<td>' + (e.clockIn||"—") + '</td>'
+      + '<td>' + (e.clockOut||"—") + '</td>'
+      + '<td style="font-size:12px;">' + workHoursStr + '</td>'
+      + '<td>' + suburbCell + '</td>'
+      + '<td>' + meetingCell + '</td>'
+      + '<td>' + timeOffCell + '</td>'
+      + '<td style="text-align:center;">' + sqlCell + '</td>'
+      + '<td>' + basePayCell + '</td>'
+      + '<td>' + incentiveCell + '</td>'
+      + '<td>' + totalPayCell + '</td>'
+      + '<td style="white-space:nowrap;">' + adjBtn + '</td>'
+      + '</tr>';
   }).join("");
 
-  content.innerHTML=`
-    <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;border:1px solid #E8EEF8;display:flex;gap:24px;flex-wrap:wrap;">
-      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total Entries</span><div style="font-size:18px;font-weight:800;color:#0A1628;">${sorted.length}</div></div>
-      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total SQLs</span><div style="font-size:18px;font-weight:800;color:#0055BB;">${totalSQLs}</div></div>
-      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Base Pay</span><div style="font-size:18px;font-weight:800;color:#15803d;">$${totalBasePay.toFixed(2)}</div></div>
-      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Incentive</span><div style="font-size:18px;font-weight:800;color:#d97706;">$${totalIncentive.toFixed(2)}</div></div>
-      <div><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Total Pay</span><div style="font-size:20px;font-weight:800;color:#0A1628;">$${totalPay.toFixed(2)}</div></div>
-    </div>
-    <div class="table-wrap"><table>
-      <thead><tr>
-        <th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th>
-        <th>Suburb</th><th>Meeting</th><th>Time Off</th><th>SQLs</th>
-        <th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Adjustment</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>`;
+  content.innerHTML =
+    '<div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;border:1px solid #E8EEF8;display:flex;gap:24px;flex-wrap:wrap;">'
+    + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Total Entries</span><div style="font-size:18px;font-weight:800;">' + sorted.length + '</div></div>'
+    + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Total SQLs</span><div style="font-size:18px;font-weight:800;color:#0055BB;">' + totalSQLs + '</div></div>'
+    + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Base Pay</span><div style="font-size:18px;font-weight:800;color:#15803d;">$' + totalBasePay.toFixed(2) + '</div></div>'
+    + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Incentive</span><div style="font-size:18px;font-weight:800;color:#d97706;">$' + totalIncentive.toFixed(2) + '</div></div>'
+    + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Total Pay</span><div style="font-size:20px;font-weight:800;">$' + totalPay.toFixed(2) + '</div></div>'
+    + '</div>'
+    + '<div class="table-wrap"><table>'
+    + '<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>Suburb</th><th>Meeting</th><th>Time Off</th><th>SQLs</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Adjustment</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody>'
+    + '</table></div>';
 }
 
 function getTsBadge(status) {
