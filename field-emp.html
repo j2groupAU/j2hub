@@ -726,8 +726,29 @@ function initApp() {
   startLiveClock();
   setTodayDate();
   checkOpenClockIn();
-  loadNotifications();
   checkTimesheetReminder();
+  preloadAllData();
+}
+
+async function preloadAllData() {
+  try {
+    const [er, tr, mr, lr] = await Promise.all([
+      apiPost({action:"getEntries"}),
+      apiPost({action:"getTimesheets"}),
+      apiPost({action:"getMeetings"}),
+      apiPost({action:"getLeaves"})
+    ]);
+    allEntries = (er.entries||[]).filter(e=>e.sdrName&&e.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    allTimesheets = (tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
+    allMeetings = (mr.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    allLeaves = (lr.leaves||[]).filter(l=>l.sdrName===currentUser.name);
+    // Render the default tab now data is ready
+    renderTimesheetGrouped();
+    loadNotifications();
+  } catch(e) {
+    console.error("Preload error:", e);
+    loadNotifications();
+  }
 }
 
 function startLiveClock() {
@@ -1095,21 +1116,21 @@ async function loadTimesheet() {
   document.getElementById("timesheet-loading").style.display="block";
   document.getElementById("timesheet-content").innerHTML="";
   try {
-    // Always fetch fresh data so approved meeting hours show immediately
-    allEntries = await fetchEntries();
-    allTimesheets = [];
-    allMeetings = [];
-    allLeaves = [];
-    const [tr, mr, lr] = await Promise.all([
+    // Refresh data
+    const [er, tr, mr, lr] = await Promise.all([
+      apiPost({action:"getEntries"}),
       apiPost({action:"getTimesheets"}),
       apiPost({action:"getMeetings"}),
       apiPost({action:"getLeaves"})
     ]);
+    allEntries = (er.entries||[]).filter(e=>e.sdrName&&e.sdrName.toLowerCase()===currentUser.name.toLowerCase());
     allTimesheets = (tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
     allMeetings = (mr.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
     allLeaves = (lr.leaves||[]).filter(l=>l.sdrName===currentUser.name);
-    try { renderTimesheetGrouped(); } catch(re){ document.getElementById("timesheet-loading").style.display="block"; document.getElementById("timesheet-loading").textContent="Could not render entries: "+re.message; console.error("renderTimesheetGrouped error:",re); }
-  } catch(e){ document.getElementById("timesheet-loading").textContent="Could not load entries: "+e.message; console.error("loadTimesheet error:",e); }
+    renderTimesheetGrouped();
+  } catch(e) {
+    document.getElementById("timesheet-loading").textContent="Could not load entries.";
+  }
 }
 
 function renderTimesheetGrouped() {
@@ -1513,8 +1534,10 @@ async function loadMeetings() {
   document.getElementById("meetings-empty").style.display="none";
   document.getElementById("meetings-table-wrap").style.display="none";
   try {
-    const result=await apiPost({action:"getMeetings"});
-    allMeetings=(result.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    if(allMeetings.length===0){
+      const result=await apiPost({action:"getMeetings"});
+      allMeetings=(result.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    }
     renderMeetings();
   } catch(e){ document.getElementById("meetings-loading").textContent="Could not load."; }
 }
@@ -1731,8 +1754,10 @@ async function loadLeave(){
   document.getElementById("leave-empty").style.display="none";
   document.getElementById("leave-table-wrap").style.display="none";
   try{
-    const r=await apiPost({action:"getLeaves"});
-    allLeaves=(r.leaves||[]).filter(l=>l.sdrName&&l.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    if(allLeaves.length===0){
+      const r=await apiPost({action:"getLeaves"});
+      allLeaves=(r.leaves||[]).filter(l=>l.sdrName&&l.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    }
     renderLeave();
   }catch(e){document.getElementById("leave-loading").textContent="Could not load.";}
 }
@@ -1774,7 +1799,7 @@ function switchTab(tab){
   document.getElementById("tab-"+tab).classList.add("active");
   if(tab==="timesheet") loadTimesheet();
   if(tab==="payslip") loadPayslip();
-  if(tab==="meetings") { allMeetings=[]; loadMeetings(); }
+  if(tab==="meetings") { loadMeetings(); }
   if(tab==="submit") loadSubmitPage();
   if(tab==="leave") loadLeave();
 }
