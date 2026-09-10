@@ -933,15 +933,9 @@ function dismissNotif(i) {
 }
 
 function checkTimesheetReminder() {
-  const today = new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
-  const day = today.getDate();
-  if (day === 25 || day === 26 || day === 10 || day === 11) {
-    // Field SDR fortnightly - no monthly reminder needed
-    const bar = document.getElementById("notif-bar");
-    const inner = document.getElementById("notif-inner");
-    bar.style.display = "block";
-    inner.insertAdjacentHTML("afterbegin", `<div class="notif-pill notif-warning">📅 Reminder: Submit your ${period} timesheet today!</div>`);
-  }
+  // Field SDR is fortnightly (see FIELD_ANCHOR cutoff logic) — the old monthly
+  // 25th/26th/10th/11th reminder banner doesn't apply here and referenced
+  // elements (#notif-bar/#notif-inner) that no longer exist, so it's disabled.
 }
 
 // ── CLOCK IN/OUT ──
