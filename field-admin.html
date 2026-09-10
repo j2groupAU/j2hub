@@ -684,6 +684,13 @@ function getLeadsFromEntry(e) {
   return m ? '<span style="font-weight:700;color:#0055BB;">'+m[1]+'</span>' : '—';
 }
 
+
+function getSuburbFromEntry(e) {
+  if(!e.adminNotes) return null;
+  const m = (e.adminNotes||'').match(/\[Suburb:([^\]]+)\]/);
+  return m ? m[1] : null;
+}
+
 function renderEntriesTable() {
   setLoading("entries",false);
   if(filteredEntries.length===0){document.getElementById("entries-empty").style.display="block";document.getElementById("entries-table-wrap").style.display="none";return;}
@@ -714,7 +721,7 @@ function renderEntriesTable() {
     rows.push(`<tr>
       <td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openEditModal('${e.id}')">${isPending?"Enter":"Edit"}</button></td>
       <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
-      <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong></td>
+      <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong>${(()=>{const s=getSuburbFromEntry(e);return s?`<div style="font-size:10px;color:#5577AA;margin-top:2px;">📍 ${s}</div>`:"";})()}</td>
       <td style="font-size:12px;white-space:nowrap">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
       <td style="font-size:12px;white-space:nowrap">${(e.billableHrs!=null&&e.billableHrs!=="")?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
       <td style="font-size:11px;">${lunchStr}</td>

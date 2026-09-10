@@ -1002,16 +1002,28 @@ function showClockedOut() {
 async function submitClockIn() {
   const btn=document.getElementById("btn-clock-in"); const alert=document.getElementById("alert-clock");
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  // Show suburb popup first — actual clock-in happens in submitSuburbAndClockIn()
+  document.getElementById("suburb-input").value="";
+  document.getElementById("suburb-error").style.display="none";
+  document.getElementById("suburb-overlay").style.display="flex";
+  setTimeout(()=>document.getElementById("suburb-input").focus(),100);
+}
+
+async function submitSuburbAndClockIn() {
+  const suburb = document.getElementById("suburb-input").value.trim();
+  if (!suburb) { document.getElementById("suburb-error").style.display="block"; return; }
+  document.getElementById("suburb-overlay").style.display="none";
+  const btn=document.getElementById("btn-clock-in"); const alert=document.getElementById("alert-clock");
   try {
     const aestTime=new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"});
     const date=document.getElementById("clock-in-date").value;
     const entries=await fetchEntries();
     const todayOpen=entries.find(e=>e.workDate===date&&e.clockIn&&!e.clockOut);
     if(todayOpen){showAlert(alert,"error","You already have an open clock-in for today.");btn.innerHTML="Clock In Now";btn.disabled=false;return;}
-    const result=await apiPost({action:"addEntry",sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:aestTime,cutoffPeriod:getCutoffLabel(date)});
+    const result=await apiPost({action:"addEntry",sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:aestTime,cutoffPeriod:getCutoffLabel(date),adminNotes:"[Suburb:"+suburb+"]"});
     if(!result.success) throw new Error("Failed");
     openClockInEntry={itemId:result.id,clockInTime:aestTime};
-    showClockedIn(aestTime); showAlert(alert,"success","✓ Clocked in at "+aestTime+"!");
+    showClockedIn(aestTime); showAlert(alert,"success","✓ Clocked in at "+aestTime+" from "+suburb+"!");
     allEntries=[]; loadTimeSummary();
   } catch(e){showAlert(alert,"error","Could not save. "+e.message);}
   btn.innerHTML="Clock In Now"; btn.disabled=false;
@@ -1918,6 +1930,33 @@ async function mtsSubmit() {
 <!-- ── MANUAL TIMESHEET MODAL ── -->
 
 <!-- ══ LEADS POPUP MODAL ══ -->
+
+<!-- ══ SUBURB POPUP MODAL ══ -->
+<div id="suburb-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,0.65);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px 28px 32px;width:380px;max-width:95vw;box-shadow:0 24px 64px rgba(0,80,180,0.22);">
+    <div style="font-size:22px;font-weight:800;color:#0A1628;margin-bottom:6px;">📍 Where are you working from?</div>
+    <div style="font-size:14px;color:#5577AA;margin-bottom:24px;">Enter your suburb before clocking in.</div>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:12px;font-weight:700;color:#5577AA;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Suburb</label>
+      <input type="text" id="suburb-input" placeholder="e.g. Parramatta"
+        style="width:100%;padding:12px 14px;border:1.5px solid #C5D8F5;border-radius:10px;font-size:16px;font-weight:600;color:#0A1628;outline:none;"
+        oninput="this.style.borderColor='#0077CC'"
+        onkeydown="if(event.key==='Enter') submitSuburbAndClockIn()">
+      <div id="suburb-error" style="display:none;color:#FF4D6A;font-size:12px;margin-top:6px;">Please enter your suburb.</div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="submitSuburbAndClockIn()"
+        style="flex:1;background:linear-gradient(135deg,#0055BB,#0077CC);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;">
+        ▶ Clock In Now
+      </button>
+      <button onclick="document.getElementById('suburb-overlay').style.display='none';document.getElementById('btn-clock-in').innerHTML='Clock In Now';document.getElementById('btn-clock-in').disabled=false;"
+        style="background:#EEF4FF;color:#0A1628;border:none;border-radius:10px;padding:13px 16px;font-size:14px;font-weight:600;cursor:pointer;">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="leads-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,0.65);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:20px;padding:36px 32px 28px 32px;width:360px;max-width:95vw;box-shadow:0 24px 64px rgba(0,80,180,0.22);">
     <div style="font-size:22px;font-weight:800;color:#0A1628;margin-bottom:6px;">📊 Before You Go</div>
