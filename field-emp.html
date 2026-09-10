@@ -1743,15 +1743,21 @@ function getLeaveBadge(s){
 
 // ── TAB SWITCHING ──
 function switchTab(tab){
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
-  document.getElementById("page-"+tab).classList.add("active");
-  document.getElementById("tab-"+tab).classList.add("active");
-  if(tab==="timesheet") loadTimesheet();
-  if(tab==="payslip") loadPayslip();
-  if(tab==="meetings") { allMeetings=[]; loadMeetings(); }
-  if(tab==="submit") loadSubmitPage();
-  if(tab==="leave") loadLeave();
+  try {
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+    const pageEl = document.getElementById("page-"+tab);
+    const tabEl = document.getElementById("tab-"+tab);
+    if(!pageEl){ console.error("Cannot find page-"+tab); return; }
+    if(!tabEl){ console.error("Cannot find tab-"+tab); return; }
+    pageEl.classList.add("active");
+    tabEl.classList.add("active");
+    if(tab==="timesheet") loadTimesheet().catch(e=>console.error("loadTimesheet error:",e));
+    if(tab==="payslip") loadPayslip().catch(e=>console.error("loadPayslip error:",e));
+    if(tab==="meetings") { allMeetings=[]; loadMeetings().catch(e=>console.error("loadMeetings error:",e)); }
+    if(tab==="submit") loadSubmitPage().catch(e=>console.error("loadSubmitPage error:",e));
+    if(tab==="leave") loadLeave().catch(e=>console.error("loadLeave error:",e));
+  } catch(e){ console.error("switchTab error:",e); }
 }
 
 // ── HELPERS ──
