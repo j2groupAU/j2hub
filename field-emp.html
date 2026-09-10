@@ -396,12 +396,15 @@ tr:hover td { background: rgba(100,160,255,0.04); }
 
 
 
-      <!-- Top row: Clock In/Out + Log Meeting side by side -->
-      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px;">
+      <!-- All cards wrapped in same container -->
+      <div style="display:inline-flex;flex-direction:column;gap:18px;width:100%;max-width:978px;">
 
-        <!-- Clock In/Out Card — 480px -->
-        <div style="width:480px;max-width:100%;flex-shrink:0;">
-        <div class="card" id="clock-card-in">
+        <!-- Top row: Clock In/Out + Log Meeting side by side -->
+        <div style="display:flex;gap:18px;align-items:stretch;">
+
+          <!-- Clock In/Out Card — 480px -->
+          <div style="width:480px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="card" id="clock-card-in" style="flex:1;">
           <div class="card-title"><div class="card-icon">▶</div> Clock In</div>
           <div class="field-group"><label>Date</label><input type="date" id="clock-in-date" /></div>
           <div style="margin-bottom:16px;">
@@ -410,7 +413,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
           </div>
           <button class="btn btn-primary btn-full" onclick="submitClockIn()" id="btn-clock-in">Clock In Now</button>
         </div>
-        <div class="card" id="clock-card-out" style="display:none;">
+        <div class="card" id="clock-card-out" style="flex:1;display:none;">
           <div class="card-title"><div class="card-icon">⏹</div> Clock Out</div>
           <div style="margin-bottom:12px;">
             <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Clocked in at</div>
@@ -449,11 +452,11 @@ tr:hover td { background: rgba(100,160,255,0.04); }
           <button class="btn btn-danger btn-full" onclick="submitClockOut()" id="btn-clock-out">Clock Out Now</button>
         </div>
 
-        </div><!-- end clock card width wrapper -->
+        </div><!-- end clock card wrapper -->
 
         <!-- Log Meeting — 480px, same row as clock card -->
-        <div style="width:480px;max-width:100%;flex-shrink:0;">
-          <div class="card" id="quick-meeting-card">
+        <div style="flex:1;display:flex;flex-direction:column;">
+          <div class="card" id="quick-meeting-card" style="flex:1;">
             <div class="card-title"><div class="card-icon">📅</div> Log Meeting</div>
             <div class="two-col">
               <div class="field-group">
