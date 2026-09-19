@@ -806,6 +806,11 @@ function calcDailyPay(billableHrs, meetingHrs, lunchTaken, dailyRate){
   const workHrs = Math.min(8, calcWorkHours(billableHrs, meetingHrs, lunchTaken));
   return (workHrs / 8) * parseFloat(dailyRate||0);
 }
+function calcHourlyPay(billableHrs, meetingHrs, lunchTaken, hourlyRate){
+  // Field SDR: pay = hours actually worked (capped at 8) × hourly rate
+  const workHrs = Math.min(8, calcWorkHours(billableHrs, meetingHrs, lunchTaken));
+  return workHrs * parseFloat(hourlyRate||0);
+}
 
 async function saveEntry() {
   const btn=document.getElementById("btn-save-entry"); const alert=document.getElementById("alert-edit");
@@ -993,12 +998,12 @@ async function renderPayroll(){
   // Compute total payroll
   let totalPayroll=0;
   Object.entries(bySdr).forEach(([name,entries])=>{
-    const hourlyRate=getRate(name); const dailyRate=hourlyRate; // Field SDR: hourly × hours
+    const hourlyRate=getRate(name); // Field SDR: hourly × hours
     const payRaw=entries.reduce((s,e)=>{
       const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
-      return s+calcDailyPay(e.billableHrs,mH,e.lunchTaken,dailyRate);
+      return s+calcHourlyPay(e.billableHrs,mH,e.lunchTaken,hourlyRate);
     },0);
-    const pay=isNaN(payRaw)||payRaw; // Field SDR: no pay cap
+    const pay=isNaN(payRaw)?0:payRaw; // Field SDR: no pay cap
     const ts=approvedTs.find(t=>t.sdrName===name);
     const incentive=parseFloat(ts?.totalIncentive||0);
     if(!isNaN(pay)) totalPayroll+=pay+incentive;
@@ -1034,7 +1039,7 @@ async function renderPayroll(){
     html+=`<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted);">No payable entries found.</td></tr>`;
   } else {
     Object.entries(bySdr).sort().forEach(([name,entries])=>{
-      const hourlyRate=getRate(name); const dailyRate=hourlyRate; // Field SDR: hourly × hours
+      const hourlyRate=getRate(name); // Field SDR: hourly × hours
       // Total billable hours (phone + lunch + meetings per entry)
       const totalBillable=entries.reduce((s,e)=>{
         const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
@@ -1048,7 +1053,7 @@ async function renderPayroll(){
       // Base pay
       const basePayRaw=entries.reduce((s,e)=>{
         const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
-        return s+calcDailyPay(e.billableHrs,mH,e.lunchTaken,dailyRate);
+        return s+calcHourlyPay(e.billableHrs,mH,e.lunchTaken,hourlyRate);
       },0);
       const basePay=isNaN(basePayRaw)?0:basePayRaw; // Field SDR: no pay cap
       // Incentives from approved timesheet
@@ -1058,7 +1063,7 @@ async function renderPayroll(){
       // Check if already marked as processed
       const isProcessed=ts?.adminNote==="Processed";
       html+=`<tr style="border-bottom:1px solid var(--border-light);">
-        <td style="padding:14px 16px;"><strong style="font-size:14px;">${name}</strong><div style="font-size:11px;color:var(--muted);margin-top:2px;">$${dailyRate.toFixed(2)}/hr hourly · $${dailyRate.toFixed(2)}/day</div></td>
+        <td style="padding:14px 16px;"><strong style="font-size:14px;">${name}</strong><div style="font-size:11px;color:var(--muted);margin-top:2px;">$${hourlyRate.toFixed(2)}/hr</div></td>
         <td style="padding:14px 16px;text-align:center;"><strong style="font-size:15px;color:var(--accent);">${totalBillable.toFixed(1)}h</strong></td>
         <td style="padding:14px 16px;text-align:center;"><strong style="font-size:15px;color:#1d4ed8;">$${isNaN(basePay)?"—":basePay.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">base pay</div></td>
         <td style="padding:14px 16px;text-align:center;">${incentive>0?`<strong style="color:#15803d;">+$${incentive.toFixed(2)}</strong>`:'<span style="color:var(--muted)">—</span>'}</td>
