@@ -1791,7 +1791,13 @@ async function reopenTimesheet(id, name) {
 // A clock-in always means Present; otherwise use the attendance set by a manual entry.
 function getAttendance(e){
   if(e.clockIn) return "Present";
-  const a=String(e.attendance||"").trim().toLowerCase();
+  // Accept either header casing from the sheet ("attendance" / "Attendance")
+  let a=String(e.attendance||e.Attendance||"").trim().toLowerCase();
+  // Fallback: manual entries also record attendance in Admin Notes
+  if(!a){
+    const m=String(e.adminNotes||"").match(/Manual entry by admin\s*[—-]\s*(Absent|Present)/i);
+    if(m) a=m[1].toLowerCase();
+  }
   if(a==="absent") return "Absent";
   if(a==="present") return "Present";
   return "";
