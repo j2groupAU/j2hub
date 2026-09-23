@@ -541,8 +541,11 @@ tr:hover td { background: #faf8f4; }
     <div class="modal-sub" id="edit-modal-sub">—</div>
     <div id="alert-edit" class="alert"></div>
     <div class="field-group"><label>Work Date</label><input type="date" id="em-work-date" /></div>
-    <div class="info-row"><span class="key">Clock In (Submitted)</span><span class="val" id="em-clock-in">—</span></div>
-    <div class="info-row"><span class="key">Clock Out (Submitted)</span><span class="val" id="em-clock-out">—</span></div>
+    <div class="two-col">
+      <div class="field-group" style="margin-bottom:6px;"><label>Clock In</label><input type="time" id="em-clock-in" /></div>
+      <div class="field-group" style="margin-bottom:6px;"><label>Clock Out</label><input type="time" id="em-clock-out" /></div>
+    </div>
+    <div id="em-clock-original" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
     <hr class="modal-divider">
     <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
       <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Work Hours</div>
@@ -680,6 +683,19 @@ function clearDateFilter(){
   applyFilters();
 }
 
+// Re-reads the entry from the sheet to confirm the backend actually stored the new clock times
+async function verifyClockSaved(id,clockIn,clockOut){
+  try{
+    const r=await apiPost({action:"getEntries"});
+    const e=(r.entries||[]).find(x=>x.id==id); if(!e) return;
+    const norm=t=>t?toTimeInput(String(t)):"";
+    if(norm(e.clockIn)!==clockIn||norm(e.clockOut)!==clockOut){
+      const a=document.getElementById("alert-edit-bottom");
+      if(a) showAlert(a,"error",`⚠ The sheet still shows ${e.clockIn||"—"} → ${e.clockOut||"—"}. The backend's updateEntry isn't saving clock times yet.`);
+    }
+  }catch(err){}
+}
+
 function populateSdrFilter() {
   const names = [...new Set(allEntries.map(e=>e.sdrName).filter(Boolean))].sort();
   const sel = document.getElementById("filter-sdr");
@@ -767,8 +783,9 @@ function openEditModal(id) {
   document.getElementById("edit-modal-title").textContent = `${e.sdrName} — ${formatDate(e.workDate)}`;
   document.getElementById("edit-modal-sub").textContent = `Cutoff: ${e.cutoffPeriod||"Not set"}`;
   document.getElementById("em-work-date").value = e.workDate||"";
-  document.getElementById("em-clock-in").textContent = e.clockIn||"—";
-  document.getElementById("em-clock-out").textContent = e.clockOut||"—";
+  document.getElementById("em-clock-in").value = e.clockIn ? toTimeInput(e.clockIn) : "";
+  document.getElementById("em-clock-out").value = e.clockOut ? toTimeInput(e.clockOut) : "";
+  document.getElementById("em-clock-original").textContent = `Submitted by employee: ${e.clockIn||"—"} → ${e.clockOut||"—"}`;
   // Work Hours: show stored billableHrs (even if 0)
   document.getElementById("em-billable").value=(e.billableHrs!=null&&e.billableHrs!=="")?parseFloat(e.billableHrs).toFixed(2):"";
   document.getElementById("em-deduction").value = e.deduction||"";
@@ -837,6 +854,11 @@ async function saveEntry() {
   const entry=allEntries.find(x=>x.id==editItemId)||{};
   const newDate=document.getElementById("em-work-date").value;
   if(!newDate){showAlert(alert,"error","Work Date cannot be empty.");return;}
+  const newClockIn=document.getElementById("em-clock-in").value;
+  const newClockOut=document.getElementById("em-clock-out").value;
+  if(newClockOut && !newClockIn){showAlert(alert,"error","Enter a Clock In time before setting Clock Out.");return;}
+  if(newClockIn && newClockOut && newClockOut<=newClockIn){showAlert(alert,"error","Clock Out must be later than Clock In.");return;}
+  const clockChanged = newClockIn!==(entry.clockIn?toTimeInput(entry.clockIn):"") || newClockOut!==(entry.clockOut?toTimeInput(entry.clockOut):"");
   const dateChanged = newDate !== entry.workDate;
   if(dateChanged && !confirm(`Change work date from ${formatDate(entry.workDate)} to ${formatDate(newDate)}? This will move the entry to the matching pay cutoff.`)) return;
   btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
@@ -844,19 +866,30 @@ async function saveEntry() {
     const billable=parseFloat(document.getElementById("em-billable").value)||0;
     const deduction=parseFloat(document.getElementById("em-deduction").value)||0;
     const pay=parseFloat(document.getElementById("em-daily-pay").value)||0;
-    const notes=document.getElementById("em-admin-notes").value;
+    let notes=document.getElementById("em-admin-notes").value;
+    if(clockChanged){
+      // Audit trail: keep a record of the original punch in Admin Notes
+      const audit=`Clock times edited by admin (was ${entry.clockIn||"—"} → ${entry.clockOut||"—"})`;
+      notes = notes ? notes+" | "+audit : audit;
+      document.getElementById("em-admin-notes").value=notes;
+    }
     const lunchStart=document.getElementById("em-lunch-start")?.value||"";
     const lunchEnd=document.getElementById("em-lunch-end")?.value||"";
     const newCutoff = dateChanged ? getCutoffLabel(newDate) : entry.cutoffPeriod;
     const payload={action:"updateEntry",id:editItemId,billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,
       lunchStart:lunchStart||"",lunchEnd:lunchEnd||"",lunchTaken:lunchStart?"TRUE":"FALSE"};
     if(dateChanged){ payload.workDate=newDate; payload.cutoffPeriod=newCutoff; }
+    if(clockChanged){ payload.clockIn=newClockIn; payload.clockOut=newClockOut; }
     await apiPost(payload);
     const idx=allEntries.findIndex(x=>x.id==editItemId);
-    if(idx!==-1) allEntries[idx]={...allEntries[idx],billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart,lunchEnd:lunchEnd,lunchTaken:lunchStart?"TRUE":"FALSE",...(dateChanged?{workDate:newDate,cutoffPeriod:newCutoff}:{})};
+    if(idx!==-1) allEntries[idx]={...allEntries[idx],billableHrs:billable,deduction,dailyPay:pay,adminNotes:notes,lunchStart:lunchStart,lunchEnd:lunchEnd,lunchTaken:lunchStart?"TRUE":"FALSE",...(dateChanged?{workDate:newDate,cutoffPeriod:newCutoff}:{}),...(clockChanged?{clockIn:newClockIn,clockOut:newClockOut}:{})};
     showAlert(alert,"success","✓ Entry saved. Review below or close when done.");
     const alertBottom=document.getElementById("alert-edit-bottom");
     if(alertBottom) showAlert(alertBottom,"success","✓ Saved — you can make further edits or close.");
+    if(clockChanged){
+      document.getElementById("em-clock-original").textContent=`Saved: ${newClockIn||"—"} → ${newClockOut||"—"}`;
+      verifyClockSaved(editItemId,newClockIn,newClockOut);
+    }
     if(dateChanged){ document.getElementById("edit-modal-title").textContent = `${entry.sdrName} — ${formatDate(newDate)}`; document.getElementById("edit-modal-sub").textContent = `Cutoff: ${newCutoff}`; }
     applyFilters(); renderPayroll();
   } catch(e){showAlert(alert,"error","Save failed: "+e.message);}
