@@ -607,7 +607,7 @@ tr:hover td { background: #faf8f4; }
 
 <script>
 const ADMIN_PASSWORD = "J2Group@123";
-const API = "https://script.google.com/macros/s/AKfycby13I-n4tJRPaT47HIORmK7UvchKXfgQv0A4HlyXIatny-ucFnKdD5Kr9iXBQPIACYOJg/exec";
+const API = "https://script.google.com/macros/s/AKfycbxBFMgabj3DN0ivypRiYLtp41V3ijz2jXHtxcm_YXb3GgmfGIbHXz9BwqXtjOrwsb4lyQ/exec";
 const HOURLY_RATE = 2000 / 7;
 
 let allEntries = [];
@@ -2009,8 +2009,12 @@ async function saveRate(){
     const check=((await apiPost({action:"getUsers"})).users||[]);
     const saved=check.find(x=>String(x.id)===String(u.id));
     allUsers=check;
-    if(!saved||parseFloat(saved.rate)!==newRate||!saved.rateHistory){
-      showAlert(alertEl,"error","⚠ The Users sheet didn't store the change (rate and/or rateHistory). The backend needs an updateUser action and a rateHistory column.");
+    const rateOk=saved&&parseFloat(saved.rate)===newRate, histOk=saved&&!!saved.rateHistory;
+    if(!rateOk||!histOk){
+      const why = !rateOk&&!histOk ? "Neither the rate nor rateHistory was saved — the backend isn't handling updateUser (check it's added and the script is redeployed as a new version)."
+        : !rateOk ? "rateHistory came back but the rate didn't change — check the rate column header matches."
+        : "The rate saved, but rateHistory isn't coming back — add a rateHistory column to the Users sheet and make sure getUsers returns it.";
+      showAlert(alertEl,"error","⚠ "+why+(r&&r.error?" (Server said: "+r.error+")":""));
     } else {
       closeRateModal();
       showAlert(document.getElementById("alert-users"),"success",`✓ ${u.name}'s rate is now $${newRate.toLocaleString()} from ${formatDate(start)}. Earlier cutoffs keep $${oldRate.toLocaleString()}.`);
