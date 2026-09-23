@@ -393,6 +393,7 @@ tr:hover td { background: #faf8f4; }
     <div class="nav-tab" onclick="switchTab('timesheets')" id="tab-timesheets">📤 Timesheets <span class="badge-count" id="ts-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">🏖️ Leave <span class="badge-count" id="leave-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">📅 Meetings <span class="badge-count" id="meeting-count" style="display:none">0</span></div>
+    <div class="nav-tab" onclick="switchTab('coverage')" id="tab-coverage">🗓️ Coverage</div>
     <div class="nav-tab" onclick="switchTab('users')" id="tab-users">👥 Users</div>
   </div>
   <div class="main" style="max-width:100%;padding:24px 32px;">
@@ -454,6 +455,24 @@ tr:hover td { background: #faf8f4; }
     </div>
 
     <!-- USERS -->
+    <!-- COVERAGE -->
+    <div class="page" id="page-coverage">
+      <div class="page-header">
+        <div class="page-header-left"><h2>Coverage &amp; Backfill</h2><p>Spot days and hours with no work done, assign overflow SDRs, and track what's covered vs credited.</p></div>
+        <button class="btn-refresh" onclick="loadAllEntries().then(loadCoverage)">↻ Refresh</button>
+      </div>
+      <div id="alert-coverage" class="alert"></div>
+      <div class="filter-bar">
+        <div class="field-group"><label>Period</label><select id="cov-period" onchange="covSetPreset()">
+          <option value="current">Current Cutoff</option><option value="prev">Previous Cutoff</option>
+          <option value="month">This Month</option><option value="lastmonth">Last Month</option><option value="custom">Custom Dates</option></select></div>
+        <div class="field-group"><label>From</label><input type="date" id="cov-from" onchange="covCustomDates()" /></div>
+        <div class="field-group"><label>To</label><input type="date" id="cov-to" onchange="covCustomDates()" /></div>
+        <div class="field-group"><label>Client</label><select id="cov-client" onchange="renderCoverage()"><option value="">All Clients</option></select></div>
+      </div>
+      <div id="cov-content"></div>
+    </div>
+
     <div class="page" id="page-users">
       <div class="page-header">
         <div class="page-header-left"><h2>Manage Users</h2><p>Add or remove portal accounts. Changes take effect immediately.</p></div>
@@ -470,6 +489,10 @@ tr:hover td { background: #faf8f4; }
           <div class="field-group"><label>Password</label><input type="text" id="new-user-password" placeholder="Choose a password" /></div>
           <div class="field-group"><label>Monthly Rate (AUD)</label><input type="number" id="new-user-rate" placeholder="e.g. 2000" min="0" step="100" /></div>
         </div>
+        <div class="two-col">
+          <div class="field-group"><label>Client</label><input type="text" id="new-user-client" list="new-user-client-list" placeholder="Client campaign, or Overflow for backup SDRs" /><datalist id="new-user-client-list"></datalist></div>
+          <div></div>
+        </div>
         <div style="margin-top:4px;">
           <button class="btn btn-primary" onclick="addUser()" id="btn-add-user">Add User</button>
         </div>
@@ -479,7 +502,7 @@ tr:hover td { background: #faf8f4; }
         <div id="users-empty" class="empty-block" style="display:none;"><div class="icon">👥</div><p>No users yet.</p></div>
         <div class="table-wrap" id="users-table-wrap" style="display:none;">
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th style="text-align:center">Monthly Rate</th><th style="text-align:center">Password</th><th style="text-align:center">Action</th></tr></thead>
+            <thead><tr><th>Name</th><th>Client</th><th>Email</th><th style="text-align:center">Monthly Rate</th><th style="text-align:center">Password</th><th style="text-align:center">Action</th></tr></thead>
             <tbody id="users-body"></tbody>
           </table>
         </div>
@@ -1213,12 +1236,14 @@ async function loadUsers(){
     if(users.length===0){document.getElementById("users-loading").style.display="none";document.getElementById("users-empty").style.display="block";return;}
     document.getElementById("users-loading").style.display="none";
     document.getElementById("users-table-wrap").style.display="block";
+    document.getElementById("new-user-client-list").innerHTML=clientOptionsHtml();
     document.getElementById("users-body").innerHTML=users.map(u=>`<tr>
       <td><strong>${u.name}</strong></td>
+      <td style="white-space:nowrap;">${u.client?(isOverflow(u)?'<span class="badge badge-blue" style="font-size:10px;">Overflow</span>':`<span style="font-size:12px;font-weight:600;">${u.client}</span>`):'<span style="color:var(--muted);font-size:12px;">—</span>'} <button class="btn btn-secondary btn-sm" style="padding:2px 7px;font-size:10px;margin-left:4px;" onclick="openClientModal('${u.id}')">✏️</button></td>
       <td>${u.email||"—"}</td>
       <td style="text-align:center"><code style="background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;">${u.rate ? '$'+parseFloat(u.rate).toLocaleString() : "—"}</code>${(()=>{const h=parseRateHistory(u);if(h.length<2)return"";const last=h[h.length-1],prev=h[h.length-2];return`<div style="font-size:10px;color:var(--muted);margin-top:3px;">was $${parseFloat(prev.rate).toLocaleString()} · new from ${formatDate(last.from)}</div>`;})()}</td>
       <td style="text-align:center"><code style="background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;">${u.password||"—"}</code></td>
-      <td style="text-align:center;white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="margin-right:6px;" onclick="openRateModal('${u.id}')">Edit Rate</button><button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}','${u.name.replace(/'/g,"\\'")}')">Remove</button></td>
+      <td style="text-align:center;white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="margin-right:6px;" onclick="openRateModal('${u.id}')">Edit Rate</button><button class="btn btn-secondary btn-sm" style="margin-right:6px;" onclick="openPwModal('${u.id}')">Change Password</button><button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}','${u.name.replace(/'/g,"\\'")}')">Remove</button></td>
     </tr>`).join("");
   } catch(e){document.getElementById("users-loading").textContent="Could not load users: "+e.message;}
 }
@@ -1232,13 +1257,16 @@ async function addUser(){
   btn.innerHTML='<span class="spinner"></span> Adding…'; btn.disabled=true;
   try {
     const rate=parseFloat(document.getElementById("new-user-rate").value)||0;
-    const result=await apiPost({action:"addUser",name,email,password,rate});
+    let client=document.getElementById("new-user-client").value.trim();
+    if(client.toLowerCase()==="overflow") client="Overflow";
+    const result=await apiPost({action:"addUser",name,email,password,rate,client});
     if(!result.success) throw new Error("Failed");
     showAlert(alert,"success",`✓ ${name} added. They can log in immediately.`);
     document.getElementById("new-user-name").value="";
     document.getElementById("new-user-email").value="";
     document.getElementById("new-user-password").value="";
     document.getElementById("new-user-rate").value="";
+    document.getElementById("new-user-client").value="";
     loadUsers();
   } catch(e){showAlert(alert,"error","Could not add user: "+e.message);}
   btn.innerHTML="Add User"; btn.disabled=false;
@@ -1260,6 +1288,7 @@ function switchTab(tab){
   document.getElementById("page-"+tab).classList.add("active");
   document.getElementById("tab-"+tab).classList.add("active");
   if(tab==="users") loadUsers();
+  if(tab==="coverage") loadCoverage();
   if(tab==="leave") loadLeave();
   if(tab==="meetings") loadMeetings();
   if(tab==="timesheets") loadTimesheets();
@@ -2024,6 +2053,305 @@ async function saveRate(){
   btn.innerHTML="Save Rate"; btn.disabled=false;
 }
 
+
+// ── CHANGE PASSWORD ────────────────────────────────────────────────────────
+let pwEditUserId=null;
+function openPwModal(id){
+  const u=(allUsers||[]).find(x=>String(x.id)===String(id)); if(!u) return;
+  pwEditUserId=id;
+  document.getElementById("pw-modal-sub").textContent=u.name;
+  document.getElementById("pw-new").value="";
+  document.getElementById("pw-confirm").value="";
+  document.getElementById("pw-new").type="password";
+  document.getElementById("pw-confirm").type="password";
+  document.getElementById("pw-show").checked=false;
+  hideAlert(document.getElementById("alert-pw"));
+  document.getElementById("pw-modal").classList.add("open");
+}
+function closePwModal(){document.getElementById("pw-modal").classList.remove("open");pwEditUserId=null;}
+function togglePwVisibility(){
+  const t=document.getElementById("pw-show").checked?"text":"password";
+  document.getElementById("pw-new").type=t; document.getElementById("pw-confirm").type=t;
+}
+async function savePassword(){
+  const alertEl=document.getElementById("alert-pw"), btn=document.getElementById("btn-save-pw");
+  const u=(allUsers||[]).find(x=>String(x.id)===String(pwEditUserId)); if(!u) return;
+  const pw=document.getElementById("pw-new").value, pw2=document.getElementById("pw-confirm").value;
+  if(pw.length<6){showAlert(alertEl,"error","Password must be at least 6 characters.");return;}
+  if(/\s/.test(pw)){showAlert(alertEl,"error","Password can't contain spaces.");return;}
+  if(pw!==pw2){showAlert(alertEl,"error","The two passwords don't match.");return;}
+  btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
+  try{
+    const r=await apiPost({action:"updateUser",id:u.id,password:pw});
+    if(r&&(r.error||r.success===false)) throw new Error(r.error||r.message||"Server rejected the request");
+    const check=((await apiPost({action:"getUsers"})).users||[]);
+    allUsers=check;
+    const saved=check.find(x=>String(x.id)===String(u.id));
+    if(!saved||saved.password!==pw){
+      showAlert(alertEl,"error","⚠ The Users sheet didn't store the new password. Make sure the latest Code.gs is pasted into Apps Script and deployed as a new version.");
+    } else {
+      closePwModal();
+      showAlert(document.getElementById("alert-users"),"success",`✓ Password updated for ${u.name}. Let them know their new password.`);
+      loadUsers();
+    }
+  }catch(e){showAlert(alertEl,"error","Save failed: "+e.message);}
+  btn.innerHTML="Save Password"; btn.disabled=false;
+}
+
+
+// ══ COVERAGE (workforce gaps & backfill) ═══════════════════════════════════
+// Gaps are derived live from entries + approved leave. Only the resolution
+// (status / who backfilled / hours covered / notes) is stored, in the Coverage sheet,
+// keyed by "SDR Name|YYYY-MM-DD".
+let allCoverage=[], covGaps=[], covLoaded=false;
+const COV_STATUS=["Open","Assigned","Covered","Credited","Excused"];
+const isOverflow=u=>String(u.client||"").trim().toLowerCase()==="overflow";
+const covKey=(name,date)=>name+"|"+date;
+function covResolution(name,date){return allCoverage.find(c=>c.key===covKey(name,date));}
+
+function covSetPreset(){
+  const p=document.getElementById("cov-period").value;
+  const t=new Date(todaySydney()+"T12:00:00");
+  let from,to;
+  if(p==="current"||p==="prev"){
+    from=getCutoffStart(p);
+    const f=new Date(from+"T12:00:00");
+    to=f.getDate()===11?ymd(new Date(f.getFullYear(),f.getMonth(),25)):ymd(new Date(f.getFullYear(),f.getMonth()+1,10));
+  } else if(p==="month"){from=ymd(new Date(t.getFullYear(),t.getMonth(),1));to=ymd(new Date(t.getFullYear(),t.getMonth()+1,0));}
+  else if(p==="lastmonth"){from=ymd(new Date(t.getFullYear(),t.getMonth()-1,1));to=ymd(new Date(t.getFullYear(),t.getMonth(),0));}
+  if(from){document.getElementById("cov-from").value=from;document.getElementById("cov-to").value=to;}
+  renderCoverage();
+}
+function covCustomDates(){document.getElementById("cov-period").value="custom";renderCoverage();}
+
+async function loadCoverage(){
+  const el=document.getElementById("cov-content");
+  if(!covLoaded) el.innerHTML='<div class="loading-block">Loading coverage…</div>';
+  try{
+    const r=await apiPost({action:"getCoverage"});
+    allCoverage=r.coverage||[];
+    if(r.error) throw new Error(r.error);
+    covLoaded=true;
+  }catch(e){allCoverage=[];showAlert(document.getElementById("alert-coverage"),"error","Could not load backfill records ("+e.message+"). Gaps still show, but saving needs the latest Code.gs.");}
+  if(!document.getElementById("cov-from").value) covSetPreset(); else renderCoverage();
+}
+
+// Build one cell per SDR per weekday
+function computeCoverage(from,to,clientFilter){
+  const today=todaySydney();
+  const days=[]; const d=new Date(from+"T12:00:00"), end=new Date(to+"T12:00:00");
+  while(d<=end){const w=d.getDay(); if(w!==0&&w!==6) days.push(ymd(d)); d.setDate(d.getDate()+1);}
+  const firstDay={}; allEntries.forEach(e=>{if(e.workDate&&(!firstDay[e.sdrName]||e.workDate<firstDay[e.sdrName]))firstDay[e.sdrName]=e.workDate;});
+  const users=(allUsers||[]).filter(u=>!isOverflow(u)&&u.name)
+    .filter(u=>!clientFilter||(String(u.client||"").trim()||"Unassigned")===clientFilter)
+    .sort((a,b)=>(String(a.client||"~").localeCompare(String(b.client||"~")))||a.name.localeCompare(b.name));
+  const rows=[], gaps=[];
+  users.forEach(u=>{
+    const client=String(u.client||"").trim()||"Unassigned";
+    const cells={};
+    days.forEach(date=>{
+      const entries=allEntries.filter(e=>e.sdrName===u.name&&e.workDate===date);
+      const e=entries.find(x=>x.clockIn)||entries[0];
+      const leave=allLeaves.find(l=>l.sdrName===u.name&&l.leaveDate===date&&l.status==="Approved");
+      let cell={state:"none",owed:0};
+      if(e&&getAttendance(e)==="Absent") cell={state:"absent",owed:8,type:"Absent",unplanned:true};
+      else if(e&&(e.clockIn||getAttendance(e)==="Present")){
+        if(e.billableHrs==null||e.billableHrs==="") cell={state:"pending",owed:0};
+        else{
+          const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===u.name&&m.date===date).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+          const ded=Math.round(calcDeduction(e.billableHrs,mH,e.lunchTaken)*10)/10;
+          cell=ded>0?{state:"partial",owed:ded,type:"Short hours"}:{state:"present",owed:0};
+        }
+      }
+      else if(leave){const sick=/sick/i.test(leave.leaveType||"");cell={state:"leave",owed:8,type:(leave.leaveType||"Leave")+" leave",unplanned:sick};}
+      else if(date<today&&firstDay[u.name]&&date>=firstDay[u.name]) cell={state:"noshow",owed:8,type:"No record",unplanned:true};
+      else if(date>=today) cell={state:"future",owed:0};
+      if(cell.owed>0){
+        const res=covResolution(u.name,date)||{};
+        const status=res.status||"Open";
+        const covered=Math.min(cell.owed,parseFloat(res.hoursCovered)||0);
+        const g={key:covKey(u.name,date),sdrName:u.name,client,date,type:cell.type,owed:cell.owed,unplanned:!!cell.unplanned,
+          status,assignedTo:res.assignedTo||"",covered,notes:res.notes||"",
+          remaining:status==="Excused"?0:Math.round((cell.owed-covered)*10)/10};
+        cell.gapIndex=gaps.length; cell.status=status; gaps.push(g);
+      }
+      cells[date]=cell;
+    });
+    rows.push({user:u,client,cells});
+  });
+  return {days,rows,gaps};
+}
+
+function covCellHtml(c){
+  const base="display:inline-flex;align-items:center;justify-content:center;width:34px;height:26px;border-radius:6px;font-size:10px;font-weight:700;";
+  if(c.gapIndex!==undefined){
+    const st={Covered:["#dbeafe","#1d4ed8","✓C"],Credited:["#e5e7eb","#374151","CR"],Excused:["#f8fafc","#94a3b8","EX"]}[c.status];
+    const label={absent:"A",leave:"L",noshow:"?",partial:"-"+c.owed}[c.state];
+    const colors={absent:["#fee2e2","#b91c1c"],leave:["#ede9fe","#6d28d9"],noshow:["#fecaca","#7f1d1d"],partial:["#fef3c7","#92400e"]}[c.state];
+    const [bg,fg,txt]=st||[colors[0],colors[1],label];
+    const ring=c.status==="Assigned"?"box-shadow:0 0 0 2px #f59e0b;":"";
+    return `<span onclick="openGapModal(${c.gapIndex})" title="Click to manage" style="${base}background:${bg};color:${fg};cursor:pointer;${ring}">${txt}</span>`;
+  }
+  if(c.state==="present") return `<span style="${base}background:#dcfce7;color:#15803d;">✓</span>`;
+  if(c.state==="pending") return `<span style="${base}background:#f1f5f9;color:#64748b;" title="Hours not entered yet">…</span>`;
+  return `<span style="${base}color:#cbd5e1;">·</span>`;
+}
+
+function renderCoverage(){
+  const el=document.getElementById("cov-content"); if(!el) return;
+  const from=document.getElementById("cov-from").value, to=document.getElementById("cov-to").value;
+  if(!from||!to){el.innerHTML="";return;}
+  const [f,t]=from<=to?[from,to]:[to,from];
+  const clients=[...new Set((allUsers||[]).filter(u=>!isOverflow(u)).map(u=>String(u.client||"").trim()||"Unassigned"))].sort();
+  const cSel=document.getElementById("cov-client"), cVal=cSel.value;
+  cSel.innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option ${c===cVal?"selected":""}>${c}</option>`).join("");
+  const {days,rows,gaps}=computeCoverage(f,t,cSel.value);
+  covGaps=gaps;
+  const counted=gaps.filter(g=>g.status!=="Excused");
+  const sum=(arr,k)=>Math.round(arr.reduce((s,g)=>s+g[k],0)*10)/10;
+  const owed=sum(counted,"owed"), covered=sum(counted,"covered");
+  const open=sum(counted.filter(g=>g.status==="Open"||g.status==="Assigned"),"remaining");
+  const credited=sum(counted.filter(g=>g.status==="Credited"),"remaining");
+  const covDone=sum(counted.filter(g=>g.status==="Covered"),"remaining");
+  let scheduled=0,unplannedDays=0;
+  rows.forEach(r=>Object.values(r.cells).forEach(c=>{if(!["none","future"].includes(c.state))scheduled++;}));
+  counted.forEach(g=>{if(g.unplanned&&g.owed>=8)unplannedDays++;});
+  const rate=scheduled?Math.round(unplannedDays/scheduled*1000)/10:0;
+
+  // Per-client summary
+  const byClient={};
+  counted.forEach(g=>{const b=byClient[g.client]||(byClient[g.client]={owed:0,covered:0,open:0,credited:0});
+    b.owed+=g.owed;b.covered+=g.covered;if(g.status==="Open"||g.status==="Assigned")b.open+=g.remaining;if(g.status==="Credited")b.credited+=g.remaining;});
+  const r1=v=>Math.round(v*10)/10;
+
+  const showFilter=document.getElementById("cov-ledger-filter")?.value||"action";
+  const ledger=gaps.map((g,i)=>({...g,i})).filter(g=>showFilter==="all"||(showFilter==="action"?(g.status==="Open"||g.status==="Assigned"):g.status===showFilter))
+    .sort((a,b)=>a.date.localeCompare(b.date)||a.sdrName.localeCompare(b.sdrName));
+  const statusBadge=s=>({Open:'<span class="badge badge-red" style="font-size:10px;">Open</span>',Assigned:'<span class="badge badge-amber" style="font-size:10px;">Assigned</span>',Covered:'<span class="badge badge-blue" style="font-size:10px;">Covered</span>',Credited:'<span class="badge" style="font-size:10px;background:#e5e7eb;color:#374151;">Credited</span>',Excused:'<span class="badge" style="font-size:10px;background:#f1f5f9;color:#64748b;">Excused</span>'}[s]||s);
+
+  let lastClient=null;
+  const gridRows=rows.map(r=>{
+    let head="";
+    if(r.client!==lastClient){lastClient=r.client;head=`<tr><td colspan="${days.length+1}" style="background:#eef4ff;font-size:11px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;padding:6px 12px;">${r.client}</td></tr>`;}
+    return head+`<tr><td style="white-space:nowrap;font-size:12px;font-weight:700;position:sticky;left:0;background:#fff;z-index:1;">${r.user.name}</td>${days.map(d=>`<td style="text-align:center;padding:4px 2px;">${covCellHtml(r.cells[d])}</td>`).join("")}</tr>`;
+  }).join("");
+
+  el.innerHTML=`
+  <div class="stats-grid">
+    <div class="stat-card"><div class="label">Gap Hours</div><div class="value">${owed}h</div><div class="sub">${counted.length} gap${counted.length===1?"":"s"} in range</div></div>
+    <div class="stat-card"><div class="label">Covered by Overflow</div><div class="value green">${r1(covered)}h</div><div class="sub">${owed?Math.round(covered/owed*100):0}% of gap hours</div></div>
+    <div class="stat-card"><div class="label">Open / At Risk</div><div class="value red">${open}h</div><div class="sub">Still needs backfill</div></div>
+    <div class="stat-card"><div class="label">Credited to Client</div><div class="value">${credited}h</div><div class="sub">Written off</div></div>
+    <div class="stat-card"><div class="label">Unplanned Absence</div><div class="value cyan">${rate}%</div><div class="sub">${unplannedDays} of ${scheduled} scheduled days</div></div>
+  </div>
+  ${covDone>0?`<div style="font-size:11px;color:var(--muted);margin:-14px 0 16px;">Note: ${covDone}h on "Covered" gaps wasn't fully made up. Check hours covered on those.</div>`:""}
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:14px 16px 6px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;color:var(--muted);">
+      <strong style="color:var(--navy);font-size:13px;margin-right:6px;">Coverage Calendar</strong>
+      <span><b style="color:#15803d">✓</b> Present</span><span><b style="color:#92400e">-2.5</b> Short hours</span><span><b style="color:#b91c1c">A</b> Absent</span>
+      <span><b style="color:#6d28d9">L</b> Leave</span><span><b style="color:#7f1d1d">?</b> No record</span><span><b style="color:#1d4ed8">✓C</b> Covered</span>
+      <span><b style="color:#374151">CR</b> Credited</span><span><b style="color:#94a3b8">EX</b> Excused</span><span><b style="color:#f59e0b">◯</b> Assigned</span><span>… Hours pending</span>
+    </div>
+    <div class="table-wrap"><table style="min-width:${220+days.length*42}px;">
+      <thead><tr><th style="position:sticky;left:0;background:#f8fafc;z-index:2;">SDR</th>${days.map(d=>{const x=new Date(d+"T12:00:00");return`<th style="text-align:center;padding:8px 2px;font-size:10px;">${x.toLocaleDateString("en-AU",{weekday:"short"})}<br>${x.getDate()}/${x.getMonth()+1}</th>`}).join("")}</tr></thead>
+      <tbody>${gridRows||`<tr><td colspan="${days.length+1}" style="text-align:center;color:var(--muted);padding:20px;">No SDRs to show. Set each user's Client on the Users page.</td></tr>`}</tbody>
+    </table></div>
+  </div>
+  ${Object.keys(byClient).length?`<div class="card" style="padding:0;overflow:hidden;"><div style="padding:14px 16px 4px;font-weight:700;color:var(--navy);font-size:13px;">By Client</div>
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Gap Hours</th><th>Covered</th><th>Open / At Risk</th><th>Credited</th></tr></thead><tbody>
+    ${Object.entries(byClient).sort().map(([c,b])=>`<tr><td><strong>${c}</strong></td><td>${r1(b.owed)}h</td><td style="color:#15803d;font-weight:700;">${r1(b.covered)}h</td><td style="color:var(--red);font-weight:700;">${r1(b.open)}h</td><td>${r1(b.credited)}h</td></tr>`).join("")}
+    </tbody></table></div></div>`:""}
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <strong style="color:var(--navy);font-size:13px;">Gap Ledger</strong>
+      <select id="cov-ledger-filter" onchange="renderCoverage()" style="width:auto;padding:6px 10px;font-size:12px;">
+        ${[["action","Needs action (Open + Assigned)"],["all","All gaps"],...COV_STATUS.map(s=>[s,s])].map(([v,l])=>`<option value="${v}" ${v===showFilter?"selected":""}>${l}</option>`).join("")}
+      </select>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>SDR</th><th>Client</th><th>Gap</th><th>Owed</th><th>Status</th><th>Backfilled By</th><th>Covered</th><th>Remaining</th><th></th></tr></thead><tbody>
+    ${ledger.length?ledger.map(g=>`<tr><td style="white-space:nowrap;font-size:12px;">${formatDate(g.date)}</td><td><strong style="font-size:12px;">${g.sdrName}</strong></td><td style="font-size:12px;">${g.client}</td><td style="font-size:12px;">${g.type}</td><td style="font-size:12px;">${g.owed}h</td><td>${statusBadge(g.status)}</td><td style="font-size:12px;">${g.assignedTo||"—"}</td><td style="font-size:12px;">${g.covered}h</td><td style="font-size:12px;font-weight:700;${g.remaining>0?"color:var(--red)":""}">${g.remaining}h</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openGapModal(${g.i})">Manage</button></td></tr>`).join(""):`<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">Nothing here 🎉</td></tr>`}
+    </tbody></table></div>
+  </div>`;
+}
+
+let covEditIndex=null;
+function openGapModal(i){
+  const g=covGaps[i]; if(!g) return; covEditIndex=i;
+  document.getElementById("gap-modal-title").textContent=`${g.sdrName} — ${formatDate(g.date)}`;
+  document.getElementById("gap-modal-sub").textContent=`${g.client} · ${g.type} · ${g.owed}h owed`;
+  document.getElementById("gap-status").value=g.status;
+  const overflow=(allUsers||[]).filter(isOverflow).map(u=>u.name).sort();
+  const others=(allUsers||[]).filter(u=>!isOverflow(u)&&u.name!==g.sdrName).map(u=>u.name).sort();
+  const opt=n=>`<option ${n===g.assignedTo?"selected":""}>${n}</option>`;
+  document.getElementById("gap-assigned").innerHTML='<option value="">— Not assigned —</option>'
+    +(overflow.length?`<optgroup label="Overflow SDRs">${overflow.map(opt).join("")}</optgroup>`:"")
+    +`<optgroup label="Other SDRs">${others.map(opt).join("")}</optgroup>`;
+  document.getElementById("gap-covered").value=g.covered||"";
+  document.getElementById("gap-covered").max=g.owed;
+  document.getElementById("gap-notes").value=g.notes||"";
+  document.getElementById("gap-no-overflow").style.display=overflow.length?"none":"block";
+  hideAlert(document.getElementById("alert-gap"));
+  document.getElementById("gap-modal").classList.add("open");
+}
+function closeGapModal(){document.getElementById("gap-modal").classList.remove("open");covEditIndex=null;}
+function gapStatusChanged(){
+  const g=covGaps[covEditIndex], s=document.getElementById("gap-status").value, c=document.getElementById("gap-covered");
+  if(s==="Covered"&&!c.value) c.value=g.owed;
+}
+async function saveGap(){
+  const g=covGaps[covEditIndex]; if(!g) return;
+  const alertEl=document.getElementById("alert-gap"), btn=document.getElementById("btn-save-gap");
+  const status=document.getElementById("gap-status").value;
+  const assignedTo=document.getElementById("gap-assigned").value;
+  const hoursCovered=parseFloat(document.getElementById("gap-covered").value)||0;
+  if(hoursCovered<0||hoursCovered>g.owed){showAlert(alertEl,"error",`Hours covered must be between 0 and ${g.owed}.`);return;}
+  if(status==="Assigned"&&!assignedTo){showAlert(alertEl,"error","Pick who the gap is assigned to.");return;}
+  if(status==="Covered"&&!assignedTo){showAlert(alertEl,"error","Pick who covered the gap.");return;}
+  btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
+  try{
+    const rec={key:g.key,sdrName:g.sdrName,client:g.client,date:g.date,gapType:g.type,hoursOwed:g.owed,status,assignedTo,hoursCovered,notes:document.getElementById("gap-notes").value};
+    const r=await apiPost({action:"saveCoverage",...rec});
+    if(!r||r.error||!r.success) throw new Error((r&&r.error)||"The script doesn't recognise saveCoverage yet. Paste the latest Code.gs and deploy a new version.");
+    const idx=allCoverage.findIndex(c=>c.key===g.key);
+    if(idx>-1) allCoverage[idx]={...allCoverage[idx],...rec}; else allCoverage.push(rec);
+    closeGapModal(); renderCoverage();
+    showAlert(document.getElementById("alert-coverage"),"success",`✓ ${g.sdrName} · ${formatDate(g.date)} marked ${status}.`);
+  }catch(e){showAlert(alertEl,"error","Save failed: "+e.message);}
+  btn.innerHTML="Save"; btn.disabled=false;
+}
+
+// ── USER CLIENT ────────────────────────────────────────────────────────────
+let clientEditUserId=null;
+function clientOptionsHtml(){
+  return [...new Set((allUsers||[]).map(u=>String(u.client||"").trim()).filter(Boolean).concat(["Overflow"]))].sort().map(c=>`<option value="${c}">`).join("");
+}
+function openClientModal(id){
+  const u=(allUsers||[]).find(x=>String(x.id)===String(id)); if(!u) return;
+  clientEditUserId=id;
+  document.getElementById("client-modal-sub").textContent=u.name;
+  document.getElementById("client-input").value=u.client||"";
+  document.getElementById("client-list").innerHTML=clientOptionsHtml();
+  hideAlert(document.getElementById("alert-client"));
+  document.getElementById("client-modal").classList.add("open");
+}
+function closeClientModal(){document.getElementById("client-modal").classList.remove("open");clientEditUserId=null;}
+async function saveClient(){
+  const alertEl=document.getElementById("alert-client"), btn=document.getElementById("btn-save-client");
+  const u=(allUsers||[]).find(x=>String(x.id)===String(clientEditUserId)); if(!u) return;
+  let client=document.getElementById("client-input").value.trim();
+  if(client.toLowerCase()==="overflow") client="Overflow";
+  btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
+  try{
+    const r=await apiPost({action:"updateUser",id:u.id,client});
+    if(r&&(r.error||r.success===false)) throw new Error(r.error||"Server rejected the request");
+    const check=((await apiPost({action:"getUsers"})).users||[]); allUsers=check;
+    const saved=check.find(x=>String(x.id)===String(u.id));
+    if(!saved||String(saved.client||"")!==client){showAlert(alertEl,"error","⚠ The Users sheet didn't store the client. Paste the latest Code.gs into Apps Script and deploy a new version.");}
+    else{closeClientModal();showAlert(document.getElementById("alert-users"),"success",`✓ ${u.name} set to ${client||"no client"}.`);loadUsers();}
+  }catch(e){showAlert(alertEl,"error","Save failed: "+e.message);}
+  btn.innerHTML="Save"; btn.disabled=false;
+}
+
 function initApp() { loadAllEntries(); }
 
 window.addEventListener("DOMContentLoaded", function() {
@@ -2087,6 +2415,59 @@ window.addEventListener("DOMContentLoaded", function() {
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveRate()" id="btn-save-rate">Save Rate</button>
       <button class="btn btn-secondary" onclick="closeRateModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="pw-modal">
+  <div class="modal">
+    <div class="modal-title">Change Password</div>
+    <div class="modal-sub" id="pw-modal-sub">—</div>
+    <div id="alert-pw" class="alert"></div>
+    <div class="field-group"><label>New Password</label><input type="password" id="pw-new" autocomplete="new-password" /></div>
+    <div class="field-group"><label>Confirm New Password</label><input type="password" id="pw-confirm" autocomplete="new-password" /></div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:12px;cursor:pointer;"><input type="checkbox" id="pw-show" onchange="togglePwVisibility()" /> Show passwords</label>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="savePassword()" id="btn-save-pw">Save Password</button>
+      <button class="btn btn-secondary" onclick="closePwModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAP MODAL -->
+<div class="modal-overlay" id="gap-modal">
+  <div class="modal">
+    <div class="modal-title" id="gap-modal-title">—</div>
+    <div class="modal-sub" id="gap-modal-sub">—</div>
+    <div id="alert-gap" class="alert"></div>
+    <div class="two-col">
+      <div class="field-group"><label>Status</label><select id="gap-status" onchange="gapStatusChanged()">
+        <option value="Open">Open</option><option value="Assigned">Assigned</option><option value="Covered">Covered</option>
+        <option value="Credited">Credited to client</option><option value="Excused">Excused (no work required)</option></select></div>
+      <div class="field-group"><label>Hours Covered</label><input type="number" id="gap-covered" min="0" step="0.5" placeholder="0" /></div>
+    </div>
+    <div class="field-group"><label>Backfilled By</label><select id="gap-assigned"></select></div>
+    <div id="gap-no-overflow" style="display:none;font-size:11px;color:var(--muted);margin:-8px 0 12px;">Tip: set a user's Client to <b>Overflow</b> on the Users page to list them here as an overflow SDR.</div>
+    <div class="field-group"><label>Notes</label><textarea id="gap-notes" rows="2" placeholder="e.g. Covered by Sam 1–4pm, or public holiday"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveGap()" id="btn-save-gap">Save</button>
+      <button class="btn btn-secondary" onclick="closeGapModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT MODAL -->
+<div class="modal-overlay" id="client-modal">
+  <div class="modal">
+    <div class="modal-title">Set Client</div>
+    <div class="modal-sub" id="client-modal-sub">—</div>
+    <div id="alert-client" class="alert"></div>
+    <div class="field-group"><label>Client</label><input type="text" id="client-input" list="client-list" placeholder="Client campaign name" /><datalist id="client-list"></datalist></div>
+    <div style="font-size:11px;color:var(--muted);margin:-6px 0 12px;">Type <b>Overflow</b> for backup SDRs. They won't appear on the coverage calendar, and they'll show as options for backfilling gaps.</div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveClient()" id="btn-save-client">Save</button>
+      <button class="btn btn-secondary" onclick="closeClientModal()">Cancel</button>
     </div>
   </div>
 </div>
