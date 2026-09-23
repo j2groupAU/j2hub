@@ -401,7 +401,10 @@ tr:hover td { background: #faf8f4; }
     <div class="page active" id="page-entries" style="width:100%;">
       <div class="page-header">
         <div class="page-header-left"><h2>All Time Entries</h2><p>Enter work hours and compute billable hours and pay per entry.</p></div>
-        <button class="btn-refresh" onclick="loadAllEntries()">↻ Refresh</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-primary btn-sm" onclick="openManualEntryModal()">＋ Manual Entry</button>
+          <button class="btn-refresh" onclick="loadAllEntries()">↻ Refresh</button>
+        </div>
       </div>
       <div id="alert-entries" class="alert"></div>
       <div class="filter-bar">
@@ -414,7 +417,7 @@ tr:hover td { background: #faf8f4; }
         <div id="entries-empty" class="empty-block" style="display:none;"><div class="icon">📭</div><p>No entries match your filters.</p></div>
         <div class="table-wrap" id="entries-table-wrap" style="display:none;">
           <table>
-            <thead><tr style="background:linear-gradient(135deg,#EEF4FF,#E4EEFF);"><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Action</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Date</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Employee</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Clock In/Out</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Work Hours</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Lunch</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Meeting</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Time Off</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Billable</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Ded.</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Status</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Delete</th></tr></thead>
+            <thead><tr style="background:linear-gradient(135deg,#EEF4FF,#E4EEFF);"><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Action</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Date</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Employee</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Attendance</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Clock In/Out</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Work Hours</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Lunch</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Meeting</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Time Off</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Billable</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Ded.</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Status</th><th style="padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Delete</th></tr></thead>
             <tbody id="entries-body"></tbody>
           </table>
         </div>
@@ -670,7 +673,7 @@ function applyFilters() {
   filteredEntries = allEntries.filter(e => {
     if(sdr && e.sdrName !== sdr) return false;
     if(cutoff && filterByCutoff([e],cutoff).length===0) return false;
-    if(status==="pending" && ((e.billableHrs!=null&&e.billableHrs!=="") || !e.clockIn)) return false;
+    if(status==="pending" && ((e.billableHrs!=null&&e.billableHrs!=="") || getAttendance(e)!=="Present")) return false;
     if(status==="complete" && !(e.billableHrs!=null&&e.billableHrs!=="")) return false;
     return true;
   });
@@ -704,18 +707,24 @@ function renderEntriesTable() {
     const timeOffCell=leaveOnDay
       ? `<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>`
       : '—';
-    rows.push(`<tr>
+    const attendance=getAttendance(e);
+    const isAbsent=attendance==="Absent";
+    const attendanceCell=attendance==="Present"
+      ? '<span class="badge badge-green" style="font-size:10px;">Present</span>'
+      : isAbsent ? '<span class="badge badge-red" style="font-size:10px;">Absent</span>' : '—';
+    rows.push(`<tr${isAbsent?' style="background:#fff5f5;"':''}>
       <td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openEditModal('${e.id}')">${isPending?"Enter":"Edit"}</button></td>
       <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
       <td><strong style="font-size:12px;">${e.sdrName||"—"}</strong></td>
+      <td style="white-space:nowrap;">${attendanceCell}</td>
       <td style="font-size:12px;white-space:nowrap">${e.clockIn||"—"} → ${e.clockOut||"—"}</td>
-      <td style="font-size:12px;white-space:nowrap">${(e.billableHrs!=null&&e.billableHrs!=="")?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
+      <td style="font-size:12px;white-space:nowrap">${isAbsent?'0.0h':(e.billableHrs!=null&&e.billableHrs!=="")?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
       <td style="font-size:11px;">${lunchStr}</td>
       <td style="font-size:11px;">${meetingCell}</td>
       <td style="font-size:11px;">${timeOffCell}</td>
-      <td style="font-size:12px;">${(()=>{if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(e.billableHrs,mH,e.lunchTaken));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
-      <td style="font-size:12px;">${(()=>{if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(e.billableHrs,mH,e.lunchTaken);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
-      <td style="white-space:nowrap;">${entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
+      <td style="font-size:12px;">${(()=>{if(isAbsent)return"<strong>0.0h</strong>";if(e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const wh=Math.min(8,calcWorkHours(e.billableHrs,mH,e.lunchTaken));return`<strong>${wh.toFixed(1)}h</strong>`;})()}</td>
+      <td style="font-size:12px;">${(()=>{if(isAbsent||e.billableHrs==null||e.billableHrs==="")return"—";const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===e.sdrName&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);const ded=calcDeduction(e.billableHrs,mH,e.lunchTaken);return ded>0?`<span style="color:var(--red)">-${ded.toFixed(1)}</span>`:"—";})()}</td>
+      <td style="white-space:nowrap;">${isAbsent?'<span class="badge badge-red" style="font-size:10px;">Absent</span>':entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
       <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${e.sdrName}','${formatDate(e.workDate)}')">🗑</button></td>
     </tr>`);
   });
@@ -1777,6 +1786,69 @@ async function reopenTimesheet(id, name) {
   } catch(e) { alert("Failed: " + e.message); }
 }
 
+
+// ── ATTENDANCE ─────────────────────────────────────────────────────────────
+// A clock-in always means Present; otherwise use the attendance set by a manual entry.
+function getAttendance(e){
+  if(e.clockIn) return "Present";
+  const a=String(e.attendance||"").trim().toLowerCase();
+  if(a==="absent") return "Absent";
+  if(a==="present") return "Present";
+  return "";
+}
+
+function openManualEntryModal(){
+  const today=new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+  document.getElementById("me-date").value=today;
+  const names=[...new Set([...(allUsers||[]).map(u=>u.name),...allEntries.map(e=>e.sdrName)].filter(Boolean))].sort();
+  document.getElementById("me-employee").innerHTML='<option value="">Select employee…</option>'+names.map(n=>`<option value="${n.replace(/"/g,"&quot;")}">${n}</option>`).join("");
+  document.getElementById("me-attendance").value="Absent";
+  hideAlert(document.getElementById("alert-manual-entry"));
+  document.getElementById("manual-entry-modal").classList.add("open");
+}
+function closeManualEntryModal(){document.getElementById("manual-entry-modal").classList.remove("open");}
+
+async function saveManualEntry(){
+  const alertEl=document.getElementById("alert-manual-entry");
+  const btn=document.getElementById("btn-save-manual-entry");
+  const workDate=document.getElementById("me-date").value;
+  const sdrName=document.getElementById("me-employee").value;
+  const attendance=document.getElementById("me-attendance").value;
+  if(!workDate){showAlert(alertEl,"error","Please select a date.");return;}
+  if(!sdrName){showAlert(alertEl,"error","Please select an employee.");return;}
+
+  const existing=allEntries.find(e=>e.sdrName===sdrName&&e.workDate===workDate);
+  if(existing&&existing.clockIn){
+    showAlert(alertEl,"error",`${sdrName} already clocked in on ${formatDate(workDate)} (${existing.clockIn}), so attendance is automatically Present. Delete or edit that entry first if they were absent.`);
+    return;
+  }
+  if(existing&&!confirm(`${sdrName} already has an entry on ${formatDate(workDate)}. Update its attendance to ${attendance}?`)) return;
+
+  const isAbsent=attendance==="Absent";
+  const user=(allUsers||[]).find(u=>u.name===sdrName)||{};
+  const fields={
+    attendance,
+    billableHrs: isAbsent?0:"",
+    deduction:   isAbsent?0:"",
+    dailyPay:    isAbsent?0:"",
+    adminNotes:  `Manual entry by admin — ${attendance}`
+  };
+  btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
+  try{
+    const payload=existing
+      ? {action:"updateEntry",id:existing.id,...fields}
+      : {action:"addEntry",sdrName,sdrEmail:user.email||"",workDate,cutoffPeriod:getCutoffLabel(workDate),
+         clockIn:"",clockOut:"",lunchTaken:"FALSE",lunchStart:"",lunchEnd:"",disputeStatus:"",...fields};
+    const result=await apiPost(payload);
+    if(result&&(result.error||result.success===false||result.status==="error"))
+      throw new Error(result.error||result.message||"Server rejected the request");
+    closeManualEntryModal();
+    showAlert(document.getElementById("alert-entries"),"success",`✓ ${sdrName} marked ${attendance} on ${formatDate(workDate)}.`);
+    await loadAllEntries();
+  }catch(e){showAlert(alertEl,"error","Save failed: "+e.message);}
+  btn.innerHTML="Save Entry"; btn.disabled=false;
+}
+
 function initApp() { loadAllEntries(); }
 
 window.addEventListener("DOMContentLoaded", function() {
@@ -1805,6 +1877,24 @@ window.addEventListener("DOMContentLoaded", function() {
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveMeetingEdit()" id="btn-save-meeting-edit">Save</button>
       <button class="btn btn-secondary" onclick="document.getElementById('meeting-edit-modal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANUAL ENTRY MODAL -->
+<div class="modal-overlay" id="manual-entry-modal">
+  <div class="modal">
+    <div class="modal-title">Manual Timesheet Entry</div>
+    <div class="modal-sub">Record attendance for an employee on a specific date.</div>
+    <div id="alert-manual-entry" class="alert"></div>
+    <div class="field-group"><label>Date</label><input type="date" id="me-date" /></div>
+    <div class="field-group"><label>Employee</label><select id="me-employee"></select></div>
+    <div class="field-group"><label>Attendance</label>
+      <select id="me-attendance"><option value="Present">Present</option><option value="Absent">Absent</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveManualEntry()" id="btn-save-manual-entry">Save Entry</button>
+      <button class="btn btn-secondary" onclick="closeManualEntryModal()">Cancel</button>
     </div>
   </div>
 </div>
