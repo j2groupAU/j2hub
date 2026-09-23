@@ -409,8 +409,11 @@ tr:hover td { background: #faf8f4; }
       <div id="alert-entries" class="alert"></div>
       <div class="filter-bar">
         <div class="field-group"><label>Filter by Employee</label><select id="filter-sdr" onchange="applyFilters()"><option value="">All Employees</option></select></div>
-        <div class="field-group"><label>Cutoff Period</label><select id="filter-cutoff" onchange="applyFilters()"><option value="">All Periods</option><option value="current">Current Period</option><option value="prev">Previous Period</option></select></div>
+        <div class="field-group"><label>Cutoff Period</label><select id="filter-cutoff" onchange="onCutoffFilterChange()"><option value="">All Periods</option><option value="current">Current Period</option><option value="prev">Previous Period</option></select></div>
         <div class="field-group"><label>Status</label><select id="filter-status" onchange="applyFilters()"><option value="">All</option><option value="pending">Pending entry</option><option value="complete">Complete</option></select></div>
+        <div class="field-group"><label>Date From</label><input type="date" id="filter-date-from" onchange="onDateFilterChange()" /></div>
+        <div class="field-group"><label>Date To <span style="text-transform:none;font-weight:500;">(optional)</span></label><input type="date" id="filter-date-to" onchange="onDateFilterChange()" /></div>
+        <div class="field-group" style="flex:0 0 auto;min-width:0;"><button class="btn btn-secondary" onclick="clearDateFilter()">Clear Dates</button></div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
         <div id="entries-loading" class="loading-block">Loading entries…</div>
@@ -658,6 +661,25 @@ async function loadAllEntries() {
   }
 }
 
+// Date range and cutoff period are mutually exclusive so they never silently conflict
+function onDateFilterChange(){
+  if(document.getElementById("filter-date-from").value||document.getElementById("filter-date-to").value)
+    document.getElementById("filter-cutoff").value="";
+  applyFilters();
+}
+function onCutoffFilterChange(){
+  if(document.getElementById("filter-cutoff").value){
+    document.getElementById("filter-date-from").value="";
+    document.getElementById("filter-date-to").value="";
+  }
+  applyFilters();
+}
+function clearDateFilter(){
+  document.getElementById("filter-date-from").value="";
+  document.getElementById("filter-date-to").value="";
+  applyFilters();
+}
+
 function populateSdrFilter() {
   const names = [...new Set(allEntries.map(e=>e.sdrName).filter(Boolean))].sort();
   const sel = document.getElementById("filter-sdr");
@@ -670,8 +692,14 @@ function applyFilters() {
   const sdr = document.getElementById("filter-sdr").value;
   const cutoff = document.getElementById("filter-cutoff").value;
   const status = document.getElementById("filter-status").value;
+  let dFrom = document.getElementById("filter-date-from").value;
+  let dTo = document.getElementById("filter-date-to").value;
+  if(dFrom && !dTo) dTo = dFrom;            // only "From" set = that single date
+  if(!dFrom && dTo) dFrom = dTo;            // only "To" set = that single date
+  if(dFrom && dTo && dFrom > dTo) [dFrom, dTo] = [dTo, dFrom];
   filteredEntries = allEntries.filter(e => {
     if(sdr && e.sdrName !== sdr) return false;
+    if(dFrom && (!e.workDate || e.workDate < dFrom || e.workDate > dTo)) return false;
     if(cutoff && filterByCutoff([e],cutoff).length===0) return false;
     if(status==="pending" && ((e.billableHrs!=null&&e.billableHrs!=="") || getAttendance(e)!=="Present")) return false;
     if(status==="complete" && !(e.billableHrs!=null&&e.billableHrs!=="")) return false;
