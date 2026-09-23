@@ -1800,6 +1800,9 @@ function getAttendance(e){
   }
   if(a==="absent") return "Absent";
   if(a==="present") return "Present";
+  // Final fallback: no clock-in/out and hours explicitly set to 0 = absent day
+  const hasHours=e.billableHrs!=null&&e.billableHrs!=="";
+  if(!e.clockOut&&hasHours&&parseFloat(e.billableHrs)===0) return "Absent";
   return "";
 }
 
