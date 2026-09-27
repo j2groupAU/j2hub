@@ -2160,11 +2160,10 @@ function computeCoverage(from,to,clientFilter){
         else{
           const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===u.name&&m.date===date).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
           const ded=Math.round(calcDeduction(e.billableHrs,mH,e.lunchTaken)*10)/10;
-          cell=ded>0?{state:"partial",owed:ded,type:"Short hours"}:{state:"present",owed:0};
+          cell=ded>0?{state:"partial",owed:ded,type:"Under time"}:{state:"present",owed:0};
         }
       }
-      else if(leave){const sick=/sick/i.test(leave.leaveType||"");cell={state:"leave",owed:8,type:(leave.leaveType||"Leave")+" leave",unplanned:sick};}
-      else if(date<today&&firstDay[u.name]&&date>=firstDay[u.name]) cell={state:"noshow",owed:8,type:"No record",unplanned:true};
+      else if(leave) cell={state:"leave",owed:8,type:(leave.leaveType?leave.leaveType+" leave":"Leave")};
       else if(date>=today) cell={state:"future",owed:0};
       if(cell.owed>0){
         const res=covResolution(u.name,date)||{};
@@ -2186,8 +2185,8 @@ function covCellHtml(c){
   const base="display:inline-flex;align-items:center;justify-content:center;width:34px;height:26px;border-radius:6px;font-size:10px;font-weight:700;";
   if(c.gapIndex!==undefined){
     const st={Covered:["#dbeafe","#1d4ed8","✓C"],Credited:["#e5e7eb","#374151","CR"],Excused:["#f8fafc","#94a3b8","EX"]}[c.status];
-    const label={absent:"A",leave:"L",noshow:"?",partial:"-"+c.owed}[c.state];
-    const colors={absent:["#fee2e2","#b91c1c"],leave:["#ede9fe","#6d28d9"],noshow:["#fecaca","#7f1d1d"],partial:["#fef3c7","#92400e"]}[c.state];
+    const label={absent:"A",leave:"L",partial:"-"+c.owed}[c.state];
+    const colors={absent:["#fee2e2","#b91c1c"],leave:["#ede9fe","#6d28d9"],partial:["#fef3c7","#92400e"]}[c.state];
     const [bg,fg,txt]=st||[colors[0],colors[1],label];
     const ring=c.status==="Assigned"?"box-shadow:0 0 0 2px #f59e0b;":"";
     return `<span onclick="openGapModal(${c.gapIndex})" title="Click to manage" style="${base}background:${bg};color:${fg};cursor:pointer;${ring}">${txt}</span>`;
@@ -2214,8 +2213,10 @@ function renderCoverage(){
   const credited=sum(counted.filter(g=>g.status==="Credited"),"remaining");
   const covDone=sum(counted.filter(g=>g.status==="Covered"),"remaining");
   let scheduled=0,unplannedDays=0;
-  rows.forEach(r=>Object.values(r.cells).forEach(c=>{if(!["none","future"].includes(c.state))scheduled++;}));
-  counted.forEach(g=>{if(g.unplanned&&g.owed>=8)unplannedDays++;});
+  rows.forEach(r=>Object.values(r.cells).forEach(c=>{if(["present","partial","absent","leave","pending"].includes(c.state))scheduled++;}));
+  let absentDays=0,leaveDays=0;
+  counted.forEach(g=>{if(g.type==="Absent")absentDays++;else if(g.type!=="Under time")leaveDays++;});
+  unplannedDays=absentDays+leaveDays;
   const rate=scheduled?Math.round(unplannedDays/scheduled*1000)/10:0;
 
   // Per-client summary
@@ -2242,14 +2243,14 @@ function renderCoverage(){
     <div class="stat-card"><div class="label">Covered by Overflow</div><div class="value green">${r1(covered)}h</div><div class="sub">${owed?Math.round(covered/owed*100):0}% of gap hours</div></div>
     <div class="stat-card"><div class="label">Open / At Risk</div><div class="value red">${open}h</div><div class="sub">Still needs backfill</div></div>
     <div class="stat-card"><div class="label">Credited to Client</div><div class="value">${credited}h</div><div class="sub">Written off</div></div>
-    <div class="stat-card"><div class="label">Unplanned Absence</div><div class="value cyan">${rate}%</div><div class="sub">${unplannedDays} of ${scheduled} scheduled days</div></div>
+    <div class="stat-card"><div class="label">Absence Rate</div><div class="value cyan">${rate}%</div><div class="sub">${absentDays} absent · ${leaveDays} leave · of ${scheduled} days</div></div>
   </div>
   ${covDone>0?`<div style="font-size:11px;color:var(--muted);margin:-14px 0 16px;">Note: ${covDone}h on "Covered" gaps wasn't fully made up. Check hours covered on those.</div>`:""}
   <div class="card" style="padding:0;overflow:hidden;">
     <div style="padding:14px 16px 6px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;color:var(--muted);">
       <strong style="color:var(--navy);font-size:13px;margin-right:6px;">Coverage Calendar</strong>
-      <span><b style="color:#15803d">✓</b> Present</span><span><b style="color:#92400e">-2.5</b> Short hours</span><span><b style="color:#b91c1c">A</b> Absent</span>
-      <span><b style="color:#6d28d9">L</b> Leave</span><span><b style="color:#7f1d1d">?</b> No record</span><span><b style="color:#1d4ed8">✓C</b> Covered</span>
+      <span><b style="color:#15803d">✓</b> Present</span><span><b style="color:#92400e">-2.5</b> Under time</span><span><b style="color:#b91c1c">A</b> Absent</span>
+      <span><b style="color:#6d28d9">L</b> Approved leave</span><span><b style="color:#1d4ed8">✓C</b> Covered</span>
       <span><b style="color:#374151">CR</b> Credited</span><span><b style="color:#94a3b8">EX</b> Excused</span><span><b style="color:#f59e0b">◯</b> Assigned</span><span>… Hours pending</span>
     </div>
     <div class="table-wrap"><table style="min-width:${220+days.length*42}px;">
