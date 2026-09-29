@@ -2082,7 +2082,19 @@ async function saveClient(){
   btn.innerHTML="Save"; btn.disabled=false;
 }
 
-function initApp() { loadAllEntries(); }
+const EXPECTED_SCRIPT_VERSION="field-2026-09-28";
+async function checkScriptVersion(){
+  try{
+    const r=await apiPost({action:"version"});
+    if(r&&r.version===EXPECTED_SCRIPT_VERSION) return;
+    let b=document.getElementById("script-version-banner");
+    if(!b){b=document.createElement("div");b.id="script-version-banner";
+      b.style.cssText="background:#fef2f2;border-bottom:2px solid #fca5a5;color:#991b1b;padding:10px 20px;font-size:13px;font-weight:600;text-align:center;";
+      const nav=document.querySelector(".nav-tabs"); nav.parentNode.insertBefore(b,nav.nextSibling);}
+    b.innerHTML=`⚠ The Apps Script connected to this page is out of date (found: ${r&&r.version?r.version:"old version"}, needs: ${EXPECTED_SCRIPT_VERSION}). Saving clients and coverage won't work until it's updated and redeployed.`;
+  }catch(e){}
+}
+function initApp() { loadAllEntries(); checkScriptVersion(); }
 
 window.addEventListener("DOMContentLoaded", function() {
   const session = localStorage.getItem("j2hub_admin_session");
