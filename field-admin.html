@@ -372,8 +372,8 @@ tr:hover td { background: #faf8f4; }
       </div>
     </div>
     <div class="login-error" id="login-error">Incorrect password.</div>
-    <div class="field-group"><label>Admin Password</label><input type="password" id="login-password" placeholder="Enter admin password" /></div>
-    <button class="btn btn-primary btn-full" onclick="doLogin()" style="padding:13px;font-size:14px;letter-spacing:0.5px;margin-top:4px;">Sign In to J2 Hub</button>
+    <div class="field-group"><label>Admin Password</label><input type="password" id="login-password" placeholder="Enter admin password" onkeydown="if(event.key==='Enter'){event.preventDefault();doLogin();}" /></div>
+    <button class="btn btn-primary btn-full" id="btn-admin-login" onclick="doLogin()" style="padding:13px;font-size:14px;letter-spacing:0.5px;margin-top:4px;">Sign In to J2 Hub</button>
   </div>
 </div>
 
@@ -651,7 +651,18 @@ let editItemId = null;
 let resolveItemId = null;
 let payrollCutoff = 'current';
 
+let _adminLoggingIn = false;
 async function doLogin() {
+  if (_adminLoggingIn) return;
+  const btn = document.getElementById("btn-admin-login");
+  const setBusy = on => { _adminLoggingIn = on; btn.disabled = on; btn.innerHTML = on ? '<span class="spinner"></span> Signing in…' : 'Sign In to J2 Hub'; };
+  setBusy(true);
+  try { await doLoginInner(); } finally { setBusy(false); }
+}
+// Start loading the main data while the password is being checked, so the dashboard appears sooner
+function prefetchAdminData(){ ["getEntries","getMeetings","getTimesheets","getLeaves"].forEach(a=>apiPost({action:a}).catch(()=>{})); }
+async function doLoginInner() {
+  prefetchAdminData();
   const pass = document.getElementById("login-password").value;
   const errEl = document.getElementById("login-error");
   const showErr = m => { errEl.textContent = m; errEl.style.display = "block"; };
@@ -674,7 +685,7 @@ async function doLogin() {
   localStorage.setItem("j2hub_field_admin_session", Date.now().toString());
   loadAllEntries(); checkScriptVersion();
 }
-document.addEventListener("keydown", e => { if(e.key==="Enter"&&document.getElementById("login-screen").style.display!=="none") doLogin(); });
+
 function doLogout() {
   localStorage.removeItem("j2hub_field_admin_session");
   localStorage.removeItem(ADMIN_TOKEN_KEY);
@@ -742,9 +753,9 @@ async function apiPost(payload){
 async function loadAllEntries() {
   setLoading("entries",true); setLoading("disputes",true); setLoading("payroll",true);
   try {
-    const result = await apiPost({ action: "getEntries" });
+    const [result, ur] = await Promise.all([ apiPost({ action: "getEntries" }), apiPost({action:"getUsers"}).catch(()=>({})) ]);
     allEntries = (result.entries || []).sort((a,b) => b.workDate.localeCompare(a.workDate));
-    try{ const ur=await apiPost({action:"getUsers"}); allUsers=ur.users||[]; }catch(e){}
+    allUsers = ur.users||allUsers||[];
     // Load all supporting data in parallel before rendering
     try{
       const [mr,tr,lr] = await Promise.all([

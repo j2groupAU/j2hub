@@ -733,7 +733,13 @@ let lunchTaken = false;
 
 // ── API ──
 // SDRs only receive their own entries, meetings, timesheets and leave
-function apiDecorate(p){ if(currentUser&&["getEntries","getMeetings","getTimesheets","getLeaves"].includes(p.action)) p.forUser=currentUser.name; return p; }
+function apiDecorate(p){
+  if(["getEntries","getMeetings","getTimesheets","getLeaves"].includes(p.action)){
+    const n=p.forUser||(currentUser&&currentUser.name);
+    if(n) p.forUser=String(n).toLowerCase().trim();      // same key whether typed "jesse" or "Jesse", so prefetched data is reused
+  }
+  return p;
+}
 // ── API (fast + resilient) ─────────────────────────────────────────────────
 // • Reads that happen at the same moment are sent together in one request
 // • Reads are remembered for 15s and identical requests share one call
@@ -796,6 +802,9 @@ async function doLogin() {
   if (!name || !pass) { err.style.display="block"; err.textContent="Please enter your name and password."; return; }
   err.style.display="none"; loading.style.display="block"; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Signing in…';
   try {
+    // Start loading this SDR's data while the password is checked, so the portal opens faster
+    ["getEntries","getMeetings","getTimesheets","getLeaves"].forEach(a=>apiPost({action:a,forUser:name}).catch(()=>{}));
+    apiPost({action:"getAnnouncements"}).catch(()=>{});
     // Password is checked by the script, so other users' passwords never reach this browser
     let user = null;
     const lr = await apiPost({ action: "login", name, password: pass });
