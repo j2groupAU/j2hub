@@ -1817,6 +1817,29 @@ function updateLeavePreview(){
     +(dup.length?`<br><span style="color:#b45309;">Already requested, will be skipped: ${dup.map(fmt).join(", ")}</span>`:"");
 }
 
+// Google's servers sometimes reject quick back-to-back saves with an error page.
+// Retry a few times, and before each retry check whether the day actually saved (so we never duplicate it).
+async function addLeaveDayWithRetry(payload){
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  let lastErr;
+  for(let attempt=1;attempt<=4;attempt++){
+    try{
+      const r=await apiPost(payload);
+      if(r&&r.error) throw new Error(r.error);
+      return;
+    }catch(e){
+      lastErr=e;
+      await wait(1500*attempt);
+      try{
+        const lr=await apiPost({action:"getLeaves"});
+        const saved=(lr.leaves||[]).some(l=>l.sdrName===payload.sdrName&&l.leaveDate===payload.leaveDate&&l.status!=="Rejected");
+        if(saved) return;                                // it did save; the reply just got lost
+      }catch(_){}
+    }
+  }
+  throw new Error("Google's server didn't respond for "+payload.leaveDate+" after several tries. Please submit again. Days already saved will be skipped.");
+}
+
 async function submitLeave(){
   const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
   const type=document.getElementById("leave-type").value, reason=document.getElementById("leave-reason").value.trim();
@@ -1824,6 +1847,7 @@ async function submitLeave(){
   if(!from){showAlert(alert,"error","Please select a leave date.");return;}
   if(!type){showAlert(alert,"error","Please select a leave type.");return;}
   if(!reason){showAlert(alert,"error","Please provide a reason.");return;}
+  try{ const lr=await apiPost({action:"getLeaves"}); allLeaves=(lr.leaves||[]).filter(l=>l.sdrName===currentUser.name); }catch(_){}
   const all=leaveWorkdays(from,to);
   if(!all.length){showAlert(alert,"error","That range only covers a weekend. Pick at least one weekday.");return;}
   const days=all.filter(d=>!leaveAlreadyFiled(d));
@@ -1837,9 +1861,9 @@ async function submitLeave(){
     // One leave record per weekday, so each day shows individually everywhere (timesheet, admin, coverage)
     for(const d of days){
       btn.innerHTML=`<span class="spinner"></span> Submitting ${done+1} of ${days.length}…`;
-      const r=await apiPost({action:"addLeave",sdrName:currentUser.name,email:currentUser.email,leaveDate:d,leaveType:type,reason:reason+note,status:"Pending",payType:"",adminNote:""});
-      if(r&&r.error) throw new Error(r.error);
+      await addLeaveDayWithRetry({action:"addLeave",sdrName:currentUser.name,email:currentUser.email,leaveDate:d,leaveType:type,reason:reason+note,status:"Pending",payType:"",adminNote:""});
       done++;
+      if(done<days.length) await new Promise(r=>setTimeout(r,700));   // give Google a breather between saves
     }
     const skipped=all.length-days.length;
     showAlert(alert,"success",`✓ Leave request submitted for ${done} day${done===1?"":"s"}.`+(skipped?` ${skipped} day${skipped===1?" was":"s were"} already requested and skipped.`:""));
