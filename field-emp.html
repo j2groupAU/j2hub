@@ -199,6 +199,9 @@ table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: f
 th { background: linear-gradient(135deg, #EEF4FF 0%, #E4EEFF 100%); padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid rgba(77,159,255,0.15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 td { padding: 10px 10px; border-bottom: 1px solid #f0ece4; color: var(--text); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr:last-child td { border-bottom: none; }
+.pay-table td { overflow: visible; text-overflow: clip; vertical-align: top; }
+.pay-table td.pay-desc { white-space: normal; min-width: 150px; }
+.pay-table td.pay-desc div { word-break: break-word; }
 tr:hover td { background: rgba(100,160,255,0.04); }
 
 /* ── BADGES ── */
@@ -1859,14 +1862,14 @@ async function loadPay(){
         <td style="white-space:nowrap;font-size:12px;">${ts.cutoffLabel||ts.cutoffKey||"—"}</td>
         <td>${$(base)}</td>
         <td style="text-align:center;">${qty||"—"}</td>
-        <td>${inc?`<span style="color:#0369a1;font-weight:600;">${$(inc)}</span>`:"—"}${descs(g["Incentive"])}</td>
-        <td>${alw?`<span style="color:#0369a1;font-weight:600;">${$(alw)}</span>`:"—"}${descs(g["Allowance"])}</td>
-        <td>${add?`<span style="color:#0369a1;font-weight:600;">${$(add)}</span>`:"—"}${descs(g["Additional Pay"])}</td>
-        <td>${ded?`<span style="color:var(--red);font-weight:600;">−${$(ded)}</span>`:"—"}${descs(g["Deduction"])}</td>
+        <td class="pay-desc">${inc?`<span style="color:#0369a1;font-weight:600;">${$(inc)}</span>`:"—"}${descs(g["Incentive"])}</td>
+        <td class="pay-desc">${alw?`<span style="color:#0369a1;font-weight:600;">${$(alw)}</span>`:"—"}${descs(g["Allowance"])}</td>
+        <td class="pay-desc">${add?`<span style="color:#0369a1;font-weight:600;">${$(add)}</span>`:"—"}${descs(g["Additional Pay"])}</td>
+        <td class="pay-desc">${ded?`<span style="color:var(--red);font-weight:600;">−${$(ded)}</span>`:"—"}${descs(g["Deduction"])}</td>
         <td><strong style="color:#15803d;font-size:14px;">${$(pay)}</strong></td>
       </tr>`;
     }).join("");
-    wrap.innerHTML=`<table style="min-width:980px;">
+    wrap.innerHTML=`<table class="pay-table" style="min-width:1100px;">
       <thead><tr><th>Pay Date</th><th>Coverage</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive Amount</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr style="background:#f8fafc;font-weight:700;">
