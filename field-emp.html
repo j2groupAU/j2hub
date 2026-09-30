@@ -199,6 +199,8 @@ table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: f
 th { background: linear-gradient(135deg, #EEF4FF 0%, #E4EEFF 100%); padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid rgba(77,159,255,0.15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 td { padding: 10px 10px; border-bottom: 1px solid #f0ece4; color: var(--text); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr:last-child td { border-bottom: none; }
+.pay-table { table-layout: auto; }
+.pay-table th { white-space: nowrap; }
 .pay-table td { overflow: visible; text-overflow: clip; vertical-align: top; }
 .pay-table td.pay-desc { white-space: normal; min-width: 150px; }
 .pay-table td.pay-desc div { word-break: break-word; }
@@ -1859,7 +1861,7 @@ async function loadPay(){
       tot.base+=base;tot.qty+=qty;tot.inc+=inc;tot.alw+=alw;tot.add+=add;tot.ded+=ded;tot.pay+=pay;
       return `<tr>
         <td style="white-space:nowrap;"><strong>${ts.payDate?formatDate(ts.payDate):'<span style="color:var(--muted);font-weight:500;">Not set yet</span>'}</strong></td>
-        <td style="white-space:nowrap;font-size:12px;">${ts.cutoffLabel||ts.cutoffKey||"—"}</td>
+        <td style="white-space:nowrap;font-size:12px;line-height:1.5;">${(ts.cutoffLabel||ts.cutoffKey||"—").replace(" to ","<br><span style='color:var(--muted);'>to</span> ")}</td>
         <td>${$(base)}</td>
         <td style="text-align:center;">${qty||"—"}</td>
         <td class="pay-desc">${inc?`<span style="color:#0369a1;font-weight:600;">${$(inc)}</span>`:"—"}${descs(g["Incentive"])}</td>
