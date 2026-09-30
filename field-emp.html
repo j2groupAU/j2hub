@@ -640,7 +640,11 @@ tr:hover td { background: rgba(100,160,255,0.04); }
       <div class="card">
         <div class="card-title"><div class="card-icon">🏖️</div> New Leave Request</div>
         <div class="two-col">
-          <div class="field-group"><label>Leave Date</label><input type="date" id="leave-date" /></div>
+          <div class="field-group"><label>From</label><input type="date" id="leave-date" onchange="updateLeavePreview()" /></div>
+          <div class="field-group"><label>To <span style="text-transform:none;font-weight:500;">(leave blank for one day)</span></label><input type="date" id="leave-date-to" onchange="updateLeavePreview()" /></div>
+        </div>
+        <div id="leave-preview" style="display:none;font-size:12px;color:var(--muted);background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:-4px 0 14px;line-height:1.5;"></div>
+        <div class="two-col">
           <div class="field-group"><label>Leave Type</label>
             <select id="leave-type">
               <option value="">— Select —</option>
@@ -649,6 +653,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
               <option value="Half Day PM">Half Day (PM)</option>
             </select>
           </div>
+          <div></div>
         </div>
         <div class="field-group"><label>Reason</label><textarea id="leave-reason" rows="3" placeholder="Briefly describe your reason…"></textarea></div>
         <button class="btn btn-primary btn-full" onclick="submitLeave()" id="btn-submit-leave">Submit Leave Request</button>
@@ -1789,19 +1794,62 @@ function renderLeave(){
     return`<tr><td><strong>${formatDate(l.leaveDate)}</strong></td><td>${l.leaveType||"—"}</td><td style="font-size:12px;max-width:180px;">${l.reason||"—"}</td><td>${getLeaveBadge(l.status)}</td><td>${payBadge}</td><td style="font-size:12px;color:var(--muted);">${l.adminNote||"—"}</td></tr>`;
   }).join("");
 }
+// Weekdays (Mon–Fri) between two dates, inclusive
+function leaveWorkdays(from,to){
+  if(!from) return [];
+  if(!to) to=from;
+  if(to<from) [from,to]=[to,from];
+  const out=[], d=new Date(from+"T12:00:00"), end=new Date(to+"T12:00:00");
+  while(d<=end){ const w=d.getDay(); if(w!==0&&w!==6) out.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")); d.setDate(d.getDate()+1); }
+  return out;
+}
+function leaveAlreadyFiled(date){ return (allLeaves||[]).some(l=>l.leaveDate===date&&l.status!=="Rejected"); }
+function updateLeavePreview(){
+  const el=document.getElementById("leave-preview");
+  const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
+  const days=leaveWorkdays(from,to);
+  if(!from||(!to||to===from)&&days.length===1){el.style.display="none";return;}
+  el.style.display="block";
+  if(!days.length){el.innerHTML="⚠ That range only covers a weekend, so there are no leave days to request.";return;}
+  const dup=days.filter(leaveAlreadyFiled), fresh=days.filter(d=>!leaveAlreadyFiled(d));
+  const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"});
+  el.innerHTML=`This will request <strong>${fresh.length} leave day${fresh.length===1?"":"s"}</strong> (weekends skipped): ${fresh.map(fmt).join(", ")||"—"}`
+    +(dup.length?`<br><span style="color:#b45309;">Already requested, will be skipped: ${dup.map(fmt).join(", ")}</span>`:"");
+}
+
 async function submitLeave(){
-  const date=document.getElementById("leave-date").value,type=document.getElementById("leave-type").value,reason=document.getElementById("leave-reason").value.trim();
-  const alert=document.getElementById("alert-leave"),btn=document.getElementById("btn-submit-leave");
-  if(!date){showAlert(alert,"error","Please select a leave date.");return;}
+  const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
+  const type=document.getElementById("leave-type").value, reason=document.getElementById("leave-reason").value.trim();
+  const alert=document.getElementById("alert-leave"), btn=document.getElementById("btn-submit-leave");
+  if(!from){showAlert(alert,"error","Please select a leave date.");return;}
   if(!type){showAlert(alert,"error","Please select a leave type.");return;}
   if(!reason){showAlert(alert,"error","Please provide a reason.");return;}
-  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  const all=leaveWorkdays(from,to);
+  if(!all.length){showAlert(alert,"error","That range only covers a weekend. Pick at least one weekday.");return;}
+  const days=all.filter(d=>!leaveAlreadyFiled(d));
+  if(!days.length){showAlert(alert,"error","You've already requested leave for "+(all.length===1?"that day.":"all of those days."));return;}
+  const multi=all.length>1;
+  const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
+  const note=multi?` [Part of leave ${fmt(all[0])} – ${fmt(all[all.length-1])}]`:"";
+  btn.disabled=true;
+  let done=0;
   try{
-    await apiPost({action:"addLeave",sdrName:currentUser.name,email:currentUser.email,leaveDate:date,leaveType:type,reason,status:"Pending",payType:"",adminNote:""});
-    showAlert(alert,"success","✓ Leave request submitted.");
-    document.getElementById("leave-date").value=""; document.getElementById("leave-type").value=""; document.getElementById("leave-reason").value="";
+    // One leave record per weekday, so each day shows individually everywhere (timesheet, admin, coverage)
+    for(const d of days){
+      btn.innerHTML=`<span class="spinner"></span> Submitting ${done+1} of ${days.length}…`;
+      const r=await apiPost({action:"addLeave",sdrName:currentUser.name,email:currentUser.email,leaveDate:d,leaveType:type,reason:reason+note,status:"Pending",payType:"",adminNote:""});
+      if(r&&r.error) throw new Error(r.error);
+      done++;
+    }
+    const skipped=all.length-days.length;
+    showAlert(alert,"success",`✓ Leave request submitted for ${done} day${done===1?"":"s"}.`+(skipped?` ${skipped} day${skipped===1?" was":"s were"} already requested and skipped.`:""));
+    ["leave-date","leave-date-to","leave-type","leave-reason"].forEach(id=>document.getElementById(id).value="");
+    document.getElementById("leave-preview").style.display="none";
     loadLeave();
-  }catch(e){showAlert(alert,"error","Could not submit: "+e.message);}
+  }catch(e){
+    showAlert(alert,"error",`Could not submit${done?` (${done} of ${days.length} days were saved)`:""}: `+e.message);
+    if(done) loadLeave();
+  }
   btn.innerHTML="Submit Leave Request"; btn.disabled=false;
 }
 function getLeaveBadge(s){
