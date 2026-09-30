@@ -200,6 +200,10 @@ th { background: linear-gradient(135deg, #EEF4FF 0%, #E4EEFF 100%); padding: 8px
 td { padding: 10px 10px; border-bottom: 1px solid #f0ece4; color: var(--text); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr:last-child td { border-bottom: none; }
 .pay-table { table-layout: auto; }
+.ts-table { table-layout: auto; }
+.ts-table th { white-space: nowrap; overflow: visible; }
+.ts-table td { overflow: visible; text-overflow: clip; }
+.ts-table td:nth-child(5) { min-width: 180px; max-width: 260px; }
 .ann-card { position:relative; background:#fff; border-radius:16px; padding:22px 24px 20px 28px; margin-bottom:16px;
   box-shadow:0 4px 24px rgba(10,22,40,0.08); border:1.5px solid var(--ann-border); overflow:hidden; animation:annIn .35s ease; }
 .ann-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--ann-accent); }
@@ -1316,8 +1320,8 @@ function renderTimesheetGrouped() {
     + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Incentive</span><div style="font-size:18px;font-weight:800;color:#d97706;">$' + totalIncentive.toFixed(2) + '</div></div>'
     + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Total Pay</span><div style="font-size:20px;font-weight:800;">$' + totalPay.toFixed(2) + '</div></div>'
     + '</div>'
-    + '<div class="table-wrap"><table>'
-    + '<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th style="width:180px;">Admin Note</th><th>Suburb</th><th>Meeting</th><th>Time Off</th><th>SQLs</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Adjustment</th></tr></thead>'
+    + '<div class="table-wrap"><table class="ts-table" style="min-width:1250px;">'
+    + '<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>Admin Note</th><th>Suburb</th><th>Meeting</th><th>Time Off</th><th>SQLs</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Adjustment</th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '</table></div>';
 }
