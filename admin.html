@@ -671,7 +671,12 @@ async function doLogin() {
   try { r = await apiPost({ action:"adminLogin", password:pass }); }        // password is checked by the script, not in this page
   catch(e) { showErr("Could not connect. Please try again."); return; }
   if (r && r.error && r.success === undefined) { showErr("The script returned an error: " + r.error); return; }
-  if (!r || r.success === undefined) { showErr("The Apps Script is out of date. Update it to the latest version, then try again."); return; }
+  if (!r || r.success === undefined) {
+    let v = "no version number (very old)";
+    try { const vr = await apiRaw({ action:"version" }); if (vr && vr.version) v = vr.version; } catch(e) {}
+    showErr(`The script at …${API.slice(-14,-5)} reports version ${v}, which doesn't support the new admin login. It needs ${EXPECTED_SCRIPT_VERSION}.`);
+    return;
+  }
   if (!r.success) { showErr("Incorrect password."); return; }
   localStorage.setItem(ADMIN_TOKEN_KEY, r.token);
   document.getElementById("login-screen").style.display="none";
