@@ -366,6 +366,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
       <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">📅 Meetings</div>
       <div class="nav-tab" onclick="switchTab('submit')" id="tab-submit">📤 Submit Timesheet</div>
       <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">🏖️ Leave</div>
+      <div class="nav-tab" onclick="switchTab('pay')" id="tab-pay">💵 Pay</div>
     </div>
     <!-- Bell button aligned to nav bar -->
     <div style="flex-shrink:0;padding:0 6px 0 10px;display:flex;align-items:center;">
@@ -615,6 +616,19 @@ tr:hover td { background: rgba(100,160,255,0.04); }
     </div>
 
     <!-- ══ LEAVE ══ -->
+    <div class="page" id="page-pay">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div><h2>My Pay</h2><p style="color:var(--muted);font-size:13px;margin-top:4px;">All your approved timesheets and what was paid.</p></div>
+        <button class="btn btn-secondary btn-sm" onclick="loadPay()">↻ Refresh</button>
+      </div>
+      <div id="alert-pay" class="alert"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="pay-loading" class="loading-block">Loading your pay…</div>
+        <div id="pay-empty" class="empty-block" style="display:none;"><div class="eicon">💵</div><p>No approved timesheets yet.</p></div>
+        <div class="table-wrap" id="pay-table-wrap" style="display:none;"></div>
+      </div>
+    </div>
+
     <div class="page" id="page-leave">
       <div class="page-header"><div><h2>Leave</h2></div></div>
       <div id="alert-leave" class="alert"></div>
@@ -839,7 +853,7 @@ async function loadNotifications() {
     allTimesheets.forEach(t => {
       const period = t.cutoffLabel||t.cutoffKey||"period";
       if (t.status==="Approved")
-        notifs.push({type:"success", text:"✓ Timesheet approved: "+period});
+        notifs.push({type:"success", text:"✓ Timesheet approved: "+period+(t.payDate?" — pay date "+formatDate(t.payDate):"")});
       if (t.status==="Rejected")
         notifs.push({type:"red", text:"✗ Timesheet rejected: "+period+(t.adminNote?" — "+t.adminNote:"")});
       if (t.status==="Disputed")
@@ -1306,7 +1320,7 @@ function renderPayslips(timesheets) {
     const basePay=parseFloat(ts.totalPay||0);
     const incentive=parseFloat(ts.totalIncentive||0);
     const grandTotal=parseFloat(ts.grandTotal||basePay);
-    const payDate=getPayDateFromCutoffLabel(ts.cutoffLabel||ts.cutoffKey);
+    const payDate=ts.payDate?formatDate(ts.payDate):getPayDateFromCutoffLabel(ts.cutoffLabel||ts.cutoffKey);
     const incentiveItems=ts.incentives?JSON.parse(ts.incentives||"[]"):[];
     const wDays=getWorkingDaysFromKey(ts.cutoffKey);
     const monthlyRate=currentUser.rate||0; const cutoffRate=monthlyRate/2;
@@ -1802,6 +1816,66 @@ function switchTab(tab){
   if(tab==="meetings") { loadMeetings(); }
   if(tab==="submit") loadSubmitPage();
   if(tab==="leave") loadLeave();
+  if(tab==="pay") loadPay();
+}
+
+
+// ── MY PAY ─────────────────────────────────────────────────────────────────
+function parsePayItems(ts){
+  let items=[]; try{items=JSON.parse(ts.incentives||"[]");}catch(e){}
+  if(!Array.isArray(items)) items=[];
+  const g={"Incentive":[],"Allowance":[],"Additional Pay":[],"Deduction":[]};
+  let baseAdj=0;
+  items.forEach(i=>{
+    const type=i.type||"Incentive";                 // older approvals had no type = incentive
+    const total=parseFloat(i.total)||0;
+    if(type==="Base Pay Adjustment"){baseAdj+=total;return;}
+    (g[type]||g["Additional Pay"]).push({desc:i.desc||"",units:parseFloat(i.units)||0,total:Math.abs(total)});
+  });
+  return {g,baseAdj};
+}
+async function loadPay(){
+  const load=document.getElementById("pay-loading"),empty=document.getElementById("pay-empty"),wrap=document.getElementById("pay-table-wrap");
+  load.style.display="block";empty.style.display="none";wrap.style.display="none";
+  try{
+    const r=await apiPost({action:"getTimesheets"});
+    const mine=(r.timesheets||[]).filter(t=>(t.sdrName||"").toLowerCase()===currentUser.name.toLowerCase()&&(t.status==="Approved"||t.status==="Processed"));
+    load.style.display="none";
+    if(!mine.length){empty.style.display="block";return;}
+    mine.sort((a,b)=>(b.payDate||"").localeCompare(a.payDate||"")||(b.id||"").localeCompare(a.id||""));
+    const $=v=>"$"+v.toFixed(2);
+    const descs=list=>list.length?`<div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4;">${list.map(i=>`${i.desc} (${$(i.total)})`).join("<br>")}</div>`:"";
+    const sum=list=>list.reduce((s,i)=>s+i.total,0);
+    let tot={base:0,qty:0,inc:0,alw:0,add:0,ded:0,pay:0};
+    const rows=mine.map(ts=>{
+      const {g,baseAdj}=parsePayItems(ts);
+      const base=(parseFloat(ts.totalPay)||0)+baseAdj;
+      const qty=g["Incentive"].reduce((s,i)=>s+i.units,0);
+      const inc=sum(g["Incentive"]),alw=sum(g["Allowance"]),add=sum(g["Additional Pay"]),ded=sum(g["Deduction"]);
+      const pay=parseFloat(ts.grandTotal)||(base+inc+alw+add-ded);
+      tot.base+=base;tot.qty+=qty;tot.inc+=inc;tot.alw+=alw;tot.add+=add;tot.ded+=ded;tot.pay+=pay;
+      return `<tr>
+        <td style="white-space:nowrap;"><strong>${ts.payDate?formatDate(ts.payDate):'<span style="color:var(--muted);font-weight:500;">Not set yet</span>'}</strong></td>
+        <td style="white-space:nowrap;font-size:12px;">${ts.cutoffLabel||ts.cutoffKey||"—"}</td>
+        <td>${$(base)}</td>
+        <td style="text-align:center;">${qty||"—"}</td>
+        <td>${inc?`<span style="color:#0369a1;font-weight:600;">${$(inc)}</span>`:"—"}${descs(g["Incentive"])}</td>
+        <td>${alw?`<span style="color:#0369a1;font-weight:600;">${$(alw)}</span>`:"—"}${descs(g["Allowance"])}</td>
+        <td>${add?`<span style="color:#0369a1;font-weight:600;">${$(add)}</span>`:"—"}${descs(g["Additional Pay"])}</td>
+        <td>${ded?`<span style="color:var(--red);font-weight:600;">−${$(ded)}</span>`:"—"}${descs(g["Deduction"])}</td>
+        <td><strong style="color:#15803d;font-size:14px;">${$(pay)}</strong></td>
+      </tr>`;
+    }).join("");
+    wrap.innerHTML=`<table style="min-width:980px;">
+      <thead><tr><th>Pay Date</th><th>Coverage</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive Amount</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="background:#f8fafc;font-weight:700;">
+        <td colspan="2">Total (${mine.length} timesheet${mine.length===1?"":"s"})</td>
+        <td>${$(tot.base)}</td><td style="text-align:center;">${tot.qty||"—"}</td><td>${$(tot.inc)}</td><td>${$(tot.alw)}</td><td>${$(tot.add)}</td>
+        <td style="color:var(--red);">${tot.ded?"−"+$(tot.ded):"$0.00"}</td><td style="color:#15803d;">${$(tot.pay)}</td>
+      </tr></tfoot></table>`;
+    wrap.style.display="block";
+  }catch(e){load.textContent="Could not load your pay: "+e.message;}
 }
 
 // ── HELPERS ──

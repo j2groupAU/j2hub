@@ -1437,6 +1437,13 @@ function buildTsCard(t) {
     + '</div>'
     + disputeHtml
     + buildPayBox(tid, basePay)
+    + '<div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px;">'
+    +   '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:10px;">📅 Pay Date</div>'
+    +   '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+    +     '<input type="date" id="pay-date-'+tid+'" value="'+(t.payDate||"")+'" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;background:#fff;" />'
+    +     '<span style="font-size:12px;color:var(--muted);">When this pay will be paid to the SDR. Required to approve.</span>'
+    +   '</div>'
+    + '</div>'
     + '<div class="field-group" style="margin-bottom:12px;">'
     +   '<label>Admin Note (optional)</label>'
     +   '<input type="text" id="ts-note-'+tid+'" placeholder="Add a note for the SDR…" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;width:100%;outline:none;" />'
@@ -1494,7 +1501,7 @@ function renderTimesheets() {
   if(resolved.length > 0) {
     html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:20px 0 12px;">Resolved</div>`;
     html += `<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table>
-      <thead><tr><th>Employee</th><th>Period</th><th>Days</th><th>Base Pay</th><th>Additional Pay / Deductions</th><th>Total Pay</th><th>Status</th><th>Admin Note</th></tr></thead>
+      <thead><tr><th>Employee</th><th>Period</th><th>Days</th><th>Base Pay</th><th>Additional Pay / Deductions</th><th>Total Pay</th><th>Pay Date</th><th>Status</th><th>Admin Note</th></tr></thead>
       <tbody>${resolved.sort((a,b)=>(b.cutoffKey||"").localeCompare(a.cutoffKey||"")).map(t=>{
         const incentive=parseFloat(t.totalIncentive||0);
         const grand=parseFloat(t.grandTotal||t.totalPay||0);
@@ -1505,6 +1512,7 @@ function renderTimesheets() {
           <td>$${parseFloat(t.totalPay||0).toFixed(2)}</td>
           <td>${incentive!==0?`<span style="color:${incentive<0?"var(--red)":"var(--cyan)"};">${incentive<0?"−":"+"}$${Math.abs(incentive).toFixed(2)}</span>`:"—"}</td>
           <td><strong>$${grand.toFixed(2)}</strong></td>
+          <td style="white-space:nowrap;">${t.status==="Approved"?`<input type="date" value="${t.payDate||""}" title="Change pay date" onchange="savePayDate('${t.id}',this)" style="padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;" />`:(t.payDate?formatDate(t.payDate):"—")}</td>
           <td>${getTsBadge(t.status)}</td>
           <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
           <td style="white-space:nowrap;">
@@ -1535,6 +1543,8 @@ async function approveTimesheet(id, basePay) {
   if(calc.base<0||isNaN(calc.base)){ showAlert(alert,"error","Enter a valid base pay amount."); return; }
   const baseReason=(document.getElementById("base-reason-"+id)?.value||"").trim();
   if(calc.baseDiff!==0 && !baseReason){ showAlert(alert,"error","You changed the base pay. Please add a reason for the change."); document.getElementById("base-reason-"+id)?.focus(); return; }
+  const payDate=document.getElementById("pay-date-"+id)?.value||"";
+  if(!payDate){ showAlert(alert,"error","Please set the Pay Date before approving."); document.getElementById("pay-date-"+id)?.focus(); return; }
   if(calc.incomplete){ showAlert(alert,"error","One of the pay lines is missing a description, QTY or price. Complete it or clear it with ✕."); return; }
   // Stored as the same array format as before (desc/units/rate/total) plus a "type", so existing payslips still read it.
   const items = calc.items.map(i=>({type:i.type, desc:i.desc, units:i.qty, rate:i.price, total:+i.total.toFixed(2)}));
@@ -1542,14 +1552,24 @@ async function approveTimesheet(id, basePay) {
   const netAdjustments = items.reduce((s,i)=>s+i.total,0);   // everything on top of the submitted base (can be negative)
   const grandTotal = calc.grand;
   try {
-    await apiPost({action:"updateTimesheet", id, status:"Approved", adminNote:note,
+    await apiPost({action:"updateTimesheet", id, status:"Approved", adminNote:note, payDate,
       incentives: JSON.stringify(items),
       totalIncentive: netAdjustments.toFixed(2),
       grandTotal: grandTotal.toFixed(2)
     });
-    showAlert(alert,"success",`✓ Timesheet approved. Total pay: AUD $${grandTotal.toFixed(2)}`);
+    showAlert(alert,"success",`✓ Timesheet approved. Total pay: AUD $${grandTotal.toFixed(2)}, paid on ${formatDate(payDate)}.`);
     loadTimesheets();
   } catch(e){ showAlert(alert,"error","Failed: "+e.message); }
+}
+
+async function savePayDate(id, input){
+  const alert=document.getElementById("alert-timesheets");
+  try{
+    const r=await apiPost({action:"updateTimesheet",id,payDate:input.value});
+    if(r&&r.error) throw new Error(r.error);
+    const t=allTimesheets.find(x=>x.id==id); if(t) t.payDate=input.value;
+    showAlert(alert,"success",input.value?`✓ Pay date set to ${formatDate(input.value)}.`:"✓ Pay date cleared.");
+  }catch(e){showAlert(alert,"error","Could not save pay date: "+e.message);}
 }
 
 async function rejectTimesheet(id) {
@@ -2125,7 +2145,7 @@ async function saveClient(){
   btn.innerHTML="Save"; btn.disabled=false;
 }
 
-const EXPECTED_SCRIPT_VERSION="field-2026-09-28";
+const EXPECTED_SCRIPT_VERSION="field-2026-09-29";
 async function checkScriptVersion(){
   try{
     const r=await apiPost({action:"version"});
@@ -2134,7 +2154,7 @@ async function checkScriptVersion(){
     if(!b){b=document.createElement("div");b.id="script-version-banner";
       b.style.cssText="background:#fef2f2;border-bottom:2px solid #fca5a5;color:#991b1b;padding:10px 20px;font-size:13px;font-weight:600;text-align:center;";
       const nav=document.querySelector(".nav-tabs"); nav.parentNode.insertBefore(b,nav.nextSibling);}
-    b.innerHTML=`⚠ The Apps Script connected to this page is out of date (found: ${r&&r.version?r.version:"old version"}, needs: ${EXPECTED_SCRIPT_VERSION}). Saving clients and coverage won't work until it's updated and redeployed.`;
+    b.innerHTML=`⚠ The Apps Script connected to this page is out of date (found: ${r&&r.version?r.version:"old version"}, needs: ${EXPECTED_SCRIPT_VERSION}). Saving clients, coverage and pay dates won't work until it's updated and redeployed.`;
   }catch(e){}
 }
 function initApp() { loadAllEntries(); checkScriptVersion(); }
