@@ -1316,19 +1316,48 @@ function noteCellHtml(n){
   return '<div style="font-size:11px;line-height:1.4;white-space:normal;word-break:break-word;color:var(--text);">'+esc+'</div>';
 }
 
+
+// ── Which timesheet covers an entry? ───────────────────────────────────────
+// Field timesheets are saved with a label like "2026-09-18 to 2026-10-01".
+function tsDateRange(t){
+  const m=String(t.cutoffLabel||"").match(/(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/);
+  return m?[m[1],m[2]]:null;
+}
+// "approved" = in an approved timesheet · "submitted" = waiting for approval · "" = not submitted yet
+function entryTsState(e){
+  let state="";
+  (allTimesheets||[]).forEach(t=>{
+    const r=tsDateRange(t); if(!r||e.workDate<r[0]||e.workDate>r[1]) return;
+    if(t.status==="Approved"||t.status==="Processed") state="approved";
+    else if((t.status==="Pending"||t.status==="Disputed")&&state!=="approved") state="submitted";
+  });
+  return state;
+}
+let tsView="current";
+function setTsView(v){ tsView=v; renderTimesheetGrouped(); }
+function tsViewToggleHtml(counts){
+  const b=(v,label)=>`<button class="cutoff-btn${tsView===v?" active":""}" onclick="setTsView('${v}')">${label}</button>`;
+  return `<div class="cutoff-selector">${b("current",`Current (${counts.current})`)}${b("approved",`Approved (${counts.approved})`)}</div>`;
+}
+
 function renderTimesheetGrouped() {
   var loading = document.getElementById("timesheet-loading");
   var content = document.getElementById("timesheet-content");
   loading.style.display = "none";
 
-  if (!allEntries || allEntries.length === 0) {
-    content.innerHTML = '<div class="empty-block"><div class="eicon">📭</div><p>No entries yet. Clock in to get started.</p></div>';
+  var all = allEntries || [];
+  var counts = { current: all.filter(function(e){ return entryTsState(e)!=="approved"; }).length,
+                 approved: all.filter(function(e){ return entryTsState(e)==="approved"; }).length };
+  var viewEntries = all.filter(function(e){ return tsView==="approved" ? entryTsState(e)==="approved" : entryTsState(e)!=="approved"; });
+  if (viewEntries.length === 0) {
+    content.innerHTML = tsViewToggleHtml(counts) + '<div class="empty-block"><div class="eicon">📭</div><p>'
+      + (tsView==="approved" ? "No approved timesheets yet." : (all.length ? "Everything has been approved. Nothing waiting." : "No entries yet. Clock in to get started.")) + '</p></div>';
     return;
   }
 
   var SQL_INCENTIVE = 50;
   var hourlyRate = parseFloat((currentUser && currentUser.rate) || 0);
-  var sorted = allEntries.slice().sort(function(a,b){ return b.workDate > a.workDate ? 1 : -1; });
+  var sorted = viewEntries.slice().sort(function(a,b){ return b.workDate > a.workDate ? 1 : -1; });
 
   var totalSQLs = 0, totalBasePay = 0;
   sorted.forEach(function(e) {
@@ -1384,7 +1413,7 @@ function renderTimesheetGrouped() {
       : disputeBadge;
 
     return '<tr style="border-bottom:1px solid #f0ece4;">'
-      + '<td><b>' + formatDate(e.workDate) + '</b></td>'
+      + '<td><b>' + formatDate(e.workDate) + '</b>' + (entryTsState(e)==="submitted" ? '<div><span class="badge badge-amber" style="font-size:9px;">Submitted</span></div>' : '') + '</td>'
       + '<td>' + (e.clockIn||"—") + '</td>'
       + '<td>' + (e.clockOut||"—") + '</td>'
       + '<td style="font-size:12px;">' + workHoursStr + '</td>'
@@ -1400,7 +1429,7 @@ function renderTimesheetGrouped() {
       + '</tr>';
   }).join("");
 
-  content.innerHTML =
+  content.innerHTML = tsViewToggleHtml(counts) +
     '<div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;border:1px solid #E8EEF8;display:flex;gap:24px;flex-wrap:wrap;">'
     + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Total Entries</span><div style="font-size:18px;font-weight:800;">' + sorted.length + '</div></div>'
     + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Total SQLs</span><div style="font-size:18px;font-weight:800;color:#0055BB;">' + totalSQLs + '</div></div>'
@@ -1824,12 +1853,14 @@ function renderSubmitPage(){
   document.getElementById("submit-loading").style.display="none";
   const fromDate = document.getElementById("submit-from").value;
   const toDate = document.getElementById("submit-to").value;
-  const filtered = allEntries.filter(e=>e.clockIn && (!fromDate||e.workDate>=fromDate) && (!toDate||e.workDate<=toDate));
+  const inRange = allEntries.filter(e=>e.clockIn && (!fromDate||e.workDate>=fromDate) && (!toDate||e.workDate<=toDate));
+  // Only days that aren't already approved or waiting for approval can be submitted
+  const filtered = inRange.filter(e=>entryTsState(e)==="");
+  const skippedApproved = inRange.filter(e=>entryTsState(e)==="approved").length;
+  const skippedSubmitted = inRange.filter(e=>entryTsState(e)==="submitted").length;
   const hourlyRate = parseFloat(currentUser.rate||0);
   const SQL_INCENTIVE = 50;
-
-  // Check if already submitted (use any existing timesheet)
-  const existing = allTimesheets.length>0 ? allTimesheets[allTimesheets.length-1] : null;
+  const existing = null;
 
   const totalHrs = filtered.reduce((s,e)=>{
     const mH=(allMeetings||[]).filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
@@ -1841,8 +1872,14 @@ function renderSubmitPage(){
   const totalPay = totalBasePay+totalIncentive;
 
   let statusHtml="";
-  if(!existing&&filtered.length>0){
-    statusHtml=`<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+  if(skippedApproved||skippedSubmitted){
+    statusHtml+=`<div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:12px;color:var(--muted);">
+      Not included: ${skippedApproved?`<strong>${skippedApproved}</strong> day${skippedApproved===1?"":"s"} already approved`:""}${skippedApproved&&skippedSubmitted?" · ":""}${skippedSubmitted?`<strong>${skippedSubmitted}</strong> day${skippedSubmitted===1?"":"s"} already submitted and waiting for approval`:""}.</div>`;
+  }
+  if(filtered.length===0){
+    statusHtml+=`<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:14px 20px;margin-bottom:16px;font-weight:700;color:#15803d;">Nothing to submit for these dates.</div>`;
+  } else if(!existing&&filtered.length>0){
+    statusHtml+=`<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
       <div style="font-size:14px;font-weight:800;color:#15803d;margin-bottom:6px;">Ready to submit?</div>
       <p style="font-size:13px;color:#166534;margin-bottom:14px;">Review your entries below then submit for payroll processing.</p>
       <button class="btn btn-primary" onclick="submitTimesheet()" id="btn-submit-ts" style="background:#15803d;">📤 Submit Timesheet</button>
@@ -1899,7 +1936,8 @@ async function submitTimesheet(){
     const SQL_INCENTIVE=50;
     const fromDate=document.getElementById("submit-from").value;
     const toDate=document.getElementById("submit-to").value;
-    const filtered=allEntries.filter(e=>e.clockIn&&(!fromDate||e.workDate>=fromDate)&&(!toDate||e.workDate<=toDate));
+    const filtered=allEntries.filter(e=>e.clockIn&&(!fromDate||e.workDate>=fromDate)&&(!toDate||e.workDate<=toDate)&&entryTsState(e)==="");
+    if(!filtered.length) throw new Error("There are no unsubmitted days in this date range.");
     const wDays=filtered.length||1;
     const totalHrs=filtered.reduce((s,e)=>{
       const mH=(allMeetings||[]).filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
@@ -1911,7 +1949,9 @@ async function submitTimesheet(){
     const totalPay=totalBasePay+totalIncentive;
     const now=new Date();
     const cutoffKey="all-"+now.getFullYear()+"-"+now.getMonth();
-    const cutoffLabel=(fromDate&&toDate)?(fromDate+" to "+toDate):"All Entries";
+    // Label covers exactly the days being submitted
+    const days=filtered.map(e=>e.workDate).sort();
+    const cutoffLabel=days[0]+" to "+days[days.length-1];
     const r=await apiPost({action:"addTimesheet",sdrName:currentUser.name,email:currentUser.email,
       cutoffKey,cutoffLabel,totalDays:wDays,totalPay:totalBasePay.toFixed(2),
       status:"Pending",totalIncentive:totalIncentive.toFixed(2),grandTotal:totalPay.toFixed(2)});
