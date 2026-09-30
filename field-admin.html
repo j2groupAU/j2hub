@@ -620,7 +620,7 @@ tr:hover td { background: #faf8f4; }
 
 <script>
 const ADMIN_PASSWORD = "J2Field@123";
-const API = "https://script.google.com/macros/s/AKfycbyg4gKQ5qEo_-W9FOb8PKMtFvF0piN0nWUo6mrVVcaU9455lGnYRi3QgMtTjSSNLPXUnQ/exec";
+const API = "https://script.google.com/macros/s/AKfycbyOtzprM6zOorrZZ-v30phrorSs_njiH_P1IYAeGfhXzVifa7RyJ5MYEgIbDKF8lYhJoA/exec";
 const HOURLY_RATE = 2000 / 7;
 
 let allEntries = [];
@@ -1579,7 +1579,8 @@ async function savePayDate(id, input, btn){
     if(r&&r.error) throw new Error(r.error);
     // Confirm it was actually stored
     const check=((await apiPost({action:"getTimesheets"})).timesheets||[]).find(x=>x.id==id);
-    if(!check||check.payDate!==input.value) throw new Error("The sheet didn't store it. Check the Field script is on version field-2026-09-29.");
+    if(!check) throw new Error("Couldn't find this timesheet when re-checking the sheet.");
+    if(check.payDate!==input.value) throw new Error(`The sheet returned "${check.payDate===undefined?"(no Pay Date field)":check.payDate||"(blank)"}" instead of "${input.value}".`);
     const t=allTimesheets.find(x=>x.id==id); if(t) t.payDate=input.value;
     showAlert(alert,"success",`✓ Pay date set to ${formatDate(input.value)}. The SDR will see it on their Pay tab.`);
     renderTimesheets();
