@@ -1089,12 +1089,12 @@ async function renderPayroll(){
         <td style="padding:14px 16px;"><strong style="font-size:14px;">${name}</strong><div style="font-size:11px;color:var(--muted);margin-top:2px;">$${hourlyRate.toFixed(2)}/hr</div></td>
         <td style="padding:14px 16px;text-align:center;"><strong style="font-size:15px;color:var(--accent);">${totalBillable.toFixed(1)}h</strong></td>
         <td style="padding:14px 16px;text-align:center;"><strong style="font-size:15px;color:#1d4ed8;">$${isNaN(basePay)?"—":basePay.toFixed(2)}</strong><div style="font-size:10px;color:var(--muted);">base pay</div></td>
-        <td style="padding:14px 16px;text-align:center;">${incentive>0?`<strong style="color:#15803d;">+$${incentive.toFixed(2)}</strong>`:'<span style="color:var(--muted)">—</span>'}</td>
+        <td style="padding:14px 16px;text-align:center;">${incentive!==0?`<strong style="color:${incentive<0?"var(--red)":"#15803d"};">${incentive<0?"−":"+"}$${Math.abs(incentive).toFixed(2)}</strong>`:'<span style="color:var(--muted)">—</span>'}</td>
         <td style="padding:14px 16px;text-align:center;">${totalDed>0?`<span style="color:var(--red);font-weight:600;">-${totalDed.toFixed(1)}h</span>`:'<span style="color:var(--muted)">—</span>'}</td>
         <td style="padding:14px 16px;text-align:center;"><strong style="font-size:14px;color:#0055BB;">${entries.reduce((s,e)=>{const m=(e.adminNotes||'').match(/\[Leads:(\d+)\]/);return s+(m?parseInt(m[1]):0);},0)}</strong></td>
         <td style="padding:14px 16px;text-align:center;">
           <strong style="font-size:16px;color:#15803d;">$${isNaN(totalAmount)?basePay.toFixed(2):totalAmount.toFixed(2)}</strong>
-          <div style="font-size:10px;color:var(--muted);">AUD${incentive>0?` (incl. $${incentive.toFixed(2)} incentive)`:""}</div>
+          <div style="font-size:10px;color:var(--muted);">AUD${incentive!==0?` (incl. ${incentive<0?"−":"+"}$${Math.abs(incentive).toFixed(2)} adjustments)`:""}</div>
         </td>
         <td style="padding:14px 16px;text-align:center;">
           ${isProcessed
@@ -1436,25 +1436,7 @@ function buildTsCard(t) {
     +   getTsBadge(t.status)
     + '</div>'
     + disputeHtml
-    + '<div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px;">'
-    +   '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">💰 Incentives (optional)</div>'
-    +   '<div id="incentive-rows-'+tid+'">'
-    +     '<div class="incentive-row" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;">'
-    +       '<input type="text" placeholder="Description (e.g. Booked Meetings)" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;width:100%;" class="inc-desc" />'
-    +       '<input type="number" placeholder="Units" min="0" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;width:100%;" class="inc-units" oninput="updateIncentiveTotal(\'' + tid + '\')" />'
-    +       '<input type="number" placeholder="Rate (AUD)" min="0" step="0.01" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;width:100%;" class="inc-rate" oninput="updateIncentiveTotal(\'' + tid + '\')" />'
-    +       '<button onclick="removeIncentiveRow(this,\'' + tid + '\')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px;">✕</button>'
-    +     '</div>'
-    +   '</div>'
-    +   '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:8px;">'
-    +     '<button class="btn btn-secondary btn-sm" onclick="addIncentiveRow(\'' + tid + '\')">+ Add Another</button>'
-    +     '<div style="font-size:14px;font-weight:700;color:var(--navy);">Incentive Total: <span id="incentive-total-'+tid+'" style="color:var(--cyan);">AUD $0.00</span></div>'
-    +   '</div>'
-    +   '<div style="font-size:12px;font-weight:700;color:#15803d;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">'
-    +     '<span>Total Pay (Base + Incentive)</span>'
-    +     '<span id="grand-total-'+tid+'">AUD $'+basePay.toFixed(2)+'</span>'
-    +   '</div>'
-    + '</div>'
+    + buildPayBox(tid, basePay)
     + '<div class="field-group" style="margin-bottom:12px;">'
     +   '<label>Admin Note (optional)</label>'
     +   '<input type="text" id="ts-note-'+tid+'" placeholder="Add a note for the SDR…" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;width:100%;outline:none;" />'
@@ -1512,7 +1494,7 @@ function renderTimesheets() {
   if(resolved.length > 0) {
     html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:20px 0 12px;">Resolved</div>`;
     html += `<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table>
-      <thead><tr><th>Employee</th><th>Period</th><th>Days</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Status</th><th>Admin Note</th></tr></thead>
+      <thead><tr><th>Employee</th><th>Period</th><th>Days</th><th>Base Pay</th><th>Additional Pay / Deductions</th><th>Total Pay</th><th>Status</th><th>Admin Note</th></tr></thead>
       <tbody>${resolved.sort((a,b)=>(b.cutoffKey||"").localeCompare(a.cutoffKey||"")).map(t=>{
         const incentive=parseFloat(t.totalIncentive||0);
         const grand=parseFloat(t.grandTotal||t.totalPay||0);
@@ -1521,7 +1503,7 @@ function renderTimesheets() {
           <td style="font-size:12px;">${t.cutoffLabel||t.cutoffKey}</td>
           <td>${t.totalDays}</td>
           <td>$${parseFloat(t.totalPay||0).toFixed(2)}</td>
-          <td>${incentive>0?`<span style="color:var(--cyan);">+$${incentive.toFixed(2)}</span>`:"—"}</td>
+          <td>${incentive!==0?`<span style="color:${incentive<0?"var(--red)":"var(--cyan)"};">${incentive<0?"−":"+"}$${Math.abs(incentive).toFixed(2)}</span>`:"—"}</td>
           <td><strong>$${grand.toFixed(2)}</strong></td>
           <td>${getTsBadge(t.status)}</td>
           <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
@@ -1535,6 +1517,7 @@ function renderTimesheets() {
   }
 
   document.getElementById("timesheets-content").innerHTML = html;
+  pending.forEach(t=>updateIncentiveTotal(t.id));
 }
 
 function getTsBadge(status) {
@@ -1547,21 +1530,21 @@ function getTsBadge(status) {
 async function approveTimesheet(id, basePay) {
   const note = document.getElementById("ts-note-"+id)?.value||"";
   const alert = document.getElementById("alert-timesheets");
-  // Collect incentives
-  const rows = document.querySelectorAll(`#incentive-rows-${id} .incentive-row`);
-  const incentives = [];
-  rows.forEach(row => {
-    const desc = row.querySelector(".inc-desc")?.value.trim();
-    const units = parseFloat(row.querySelector(".inc-units")?.value)||0;
-    const rate = parseFloat(row.querySelector(".inc-rate")?.value)||0;
-    if(desc && units > 0 && rate > 0) incentives.push({desc, units, rate, total: units*rate});
-  });
-  const totalIncentive = incentives.reduce((s,i)=>s+i.total, 0);
-  const grandTotal = (parseFloat(basePay)||0) + totalIncentive;
+  const calc = calcPayBox(id);
+  if(!document.getElementById("base-ok-"+id)?.checked){ showAlert(alert,"error","Please tick to confirm the base pay is correct before approving."); document.getElementById("base-ok-"+id)?.scrollIntoView({block:"center"}); return; }
+  if(calc.base<0||isNaN(calc.base)){ showAlert(alert,"error","Enter a valid base pay amount."); return; }
+  const baseReason=(document.getElementById("base-reason-"+id)?.value||"").trim();
+  if(calc.baseDiff!==0 && !baseReason){ showAlert(alert,"error","You changed the base pay. Please add a reason for the change."); document.getElementById("base-reason-"+id)?.focus(); return; }
+  if(calc.incomplete){ showAlert(alert,"error","One of the pay lines is missing a description, QTY or price. Complete it or clear it with ✕."); return; }
+  // Stored as the same array format as before (desc/units/rate/total) plus a "type", so existing payslips still read it.
+  const items = calc.items.map(i=>({type:i.type, desc:i.desc, units:i.qty, rate:i.price, total:+i.total.toFixed(2)}));
+  if(calc.baseDiff!==0) items.unshift({type:"Base Pay Adjustment", desc:`Base pay adjusted from $${calc.submitted.toFixed(2)} to $${calc.base.toFixed(2)} — ${baseReason}`, units:1, rate:+calc.baseDiff.toFixed(2), total:+calc.baseDiff.toFixed(2)});
+  const netAdjustments = items.reduce((s,i)=>s+i.total,0);   // everything on top of the submitted base (can be negative)
+  const grandTotal = calc.grand;
   try {
     await apiPost({action:"updateTimesheet", id, status:"Approved", adminNote:note,
-      incentives: JSON.stringify(incentives),
-      totalIncentive: totalIncentive.toFixed(2),
+      incentives: JSON.stringify(items),
+      totalIncentive: netAdjustments.toFixed(2),
       grandTotal: grandTotal.toFixed(2)
     });
     showAlert(alert,"success",`✓ Timesheet approved. Total pay: AUD $${grandTotal.toFixed(2)}`);
@@ -1711,45 +1694,105 @@ async function deleteLeave(id, name) {
   } catch(e){showAlert(alert,"error","Delete failed: "+e.message);}
 }
 
-function addIncentiveRow(tsId) {
-  const container = document.getElementById("incentive-rows-"+tsId);
-  const row = document.createElement("div");
-  row.className = "incentive-row";
-  row.style.cssText = "display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;";
-  row.innerHTML = `
-    <input type="text" placeholder="Description (e.g. Qualified Leads)" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-desc" />
-    <input type="number" placeholder="Units" min="0" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-units" oninput="updateIncentiveTotal('${tsId}')" />
-    <input type="number" placeholder="Rate (AUD)" min="0" step="0.01" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;" class="inc-rate" oninput="updateIncentiveTotal('${tsId}')" />
-    <button onclick="removeIncentiveRow(this,'${tsId}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px;">✕</button>
-  `;
-  container.appendChild(row);
+// ── PAY BOX (timesheet approval) ───────────────────────────────────────────
+const PAY_TYPES=["Incentive","Allowance","Additional Pay","Deduction"];
+const PAY_INPUT="padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;width:100%;background:#fff;";
+const money=v=>(v<0?"−":"")+"AUD $"+Math.abs(v).toFixed(2);
+
+function payRowHtml(tsId){
+  return `<select class="pay-type" style="${PAY_INPUT}" onchange="updateIncentiveTotal('${tsId}')">${PAY_TYPES.map(t=>`<option>${t}</option>`).join("")}</select>
+    <input type="text" placeholder="Description (e.g. Booked Meetings)" class="inc-desc" style="${PAY_INPUT}" oninput="updateIncentiveTotal('${tsId}')" />
+    <input type="number" placeholder="QTY" min="0" step="1" class="inc-units" style="${PAY_INPUT}" oninput="updateIncentiveTotal('${tsId}')" />
+    <input type="number" placeholder="Price per QTY" min="0" step="0.01" class="inc-rate" style="${PAY_INPUT}" oninput="updateIncentiveTotal('${tsId}')" />
+    <div class="pay-line-total" style="font-size:13px;font-weight:700;text-align:right;color:var(--navy);white-space:nowrap;">AUD $0.00</div>
+    <button onclick="removeIncentiveRow(this,'${tsId}')" title="Remove" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px;">✕</button>`;
+}
+const PAY_GRID="display:grid;grid-template-columns:1.1fr 2fr 0.7fr 1fr 0.9fr auto;gap:8px;align-items:center;margin-bottom:8px;";
+
+function buildPayBox(tid, basePay){
+  const lbl='font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);';
+  const hdr='font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);';
+  return ''
+  // 1) Base pay confirmation
+  + '<div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px;">'
+  +   '<div style="'+lbl+'margin-bottom:12px;">🧾 Base Pay</div>'
+  +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end;">'
+  +     '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Submitted base pay</div><div style="font-size:18px;font-weight:800;color:var(--navy);">AUD $'+basePay.toFixed(2)+'</div></div>'
+  +     '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Confirmed base pay (change if needed)</div>'
+  +       '<input type="number" id="base-pay-'+tid+'" value="'+basePay.toFixed(2)+'" min="0" step="0.01" style="'+PAY_INPUT+'font-weight:700;" oninput="updateIncentiveTotal(\''+tid+'\')" /></div>'
+  +   '</div>'
+  +   '<div id="base-reason-wrap-'+tid+'" style="display:none;margin-top:10px;"><div style="font-size:11px;color:#92400e;margin-bottom:4px;font-weight:600;" id="base-diff-'+tid+'"></div>'
+  +     '<input type="text" id="base-reason-'+tid+'" placeholder="Reason for changing the base pay (required)" style="'+PAY_INPUT+'" /></div>'
+  +   '<label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;">'
+  +     '<input type="checkbox" id="base-ok-'+tid+'" style="width:16px;height:16px;" /> I\'ve checked the base pay is correct</label>'
+  + '</div>'
+  // 2) Additional pay lines
+  + '<div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px;">'
+  +   '<div style="'+lbl+'margin-bottom:10px;">💰 Additional Pay (optional)</div>'
+  +   '<div style="'+PAY_GRID+'margin-bottom:4px;"><div style="'+hdr+'">Type</div><div style="'+hdr+'">Description</div><div style="'+hdr+'">QTY</div><div style="'+hdr+'">Price per QTY</div><div style="'+hdr+'text-align:right;">Total</div><div style="width:24px;"></div></div>'
+  +   '<div id="incentive-rows-'+tid+'"><div class="incentive-row" style="'+PAY_GRID+'">'+payRowHtml(tid)+'</div></div>'
+  +   '<button class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="addIncentiveRow(\''+tid+'\')">+ Add Another</button>'
+  // 3) Summary
+  +   '<div id="pay-summary-'+tid+'" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;"></div>'
+  + '</div>';
 }
 
+function addIncentiveRow(tsId) {
+  const row=document.createElement("div");
+  row.className="incentive-row"; row.style.cssText=PAY_GRID; row.innerHTML=payRowHtml(tsId);
+  document.getElementById("incentive-rows-"+tsId).appendChild(row);
+}
 function removeIncentiveRow(btn, tsId) {
-  const rows = document.querySelectorAll(`#incentive-rows-${tsId} .incentive-row`);
-  if(rows.length > 1) { btn.closest(".incentive-row").remove(); updateIncentiveTotal(tsId); }
-  else {
-    // Clear the row instead of removing it
-    btn.closest(".incentive-row").querySelectorAll("input").forEach(i=>i.value="");
-    updateIncentiveTotal(tsId);
-  }
+  const rows=document.querySelectorAll(`#incentive-rows-${tsId} .incentive-row`);
+  const row=btn.closest(".incentive-row");
+  if(rows.length>1) row.remove();
+  else { row.querySelectorAll("input").forEach(i=>i.value=""); row.querySelector(".pay-type").value="Incentive"; }
+  updateIncentiveTotal(tsId);
+}
+
+// Reads the pay box for one timesheet and returns all the numbers
+function calcPayBox(tsId){
+  const ts=allTimesheets.find(t=>t.id==tsId);
+  const submitted=parseFloat(ts?.totalPay||0);
+  const baseEl=document.getElementById("base-pay-"+tsId);
+  const base=baseEl&&baseEl.value!==""?parseFloat(baseEl.value):submitted;
+  const baseDiff=Math.round((base-submitted)*100)/100;
+  const items=[]; let incomplete=false;
+  const sums={"Incentive":0,"Allowance":0,"Additional Pay":0,"Deduction":0};
+  document.querySelectorAll(`#incentive-rows-${tsId} .incentive-row`).forEach(row=>{
+    const type=row.querySelector(".pay-type").value;
+    const desc=row.querySelector(".inc-desc").value.trim();
+    const qty=parseFloat(row.querySelector(".inc-units").value)||0;
+    const price=parseFloat(row.querySelector(".inc-rate").value)||0;
+    const line=qty*price, signed=type==="Deduction"?-line:line;
+    const cell=row.querySelector(".pay-line-total");
+    cell.textContent=money(signed); cell.style.color=type==="Deduction"?"var(--red)":"var(--navy)";
+    const touched=desc||qty||price;
+    if(!touched) return;
+    if(!desc||qty<=0||price<=0){incomplete=true;return;}
+    sums[type]+=line; items.push({type,desc,qty,price,total:signed});
+  });
+  const grand=(isNaN(base)?0:base)+sums["Incentive"]+sums["Allowance"]+sums["Additional Pay"]-sums["Deduction"];
+  return {submitted,base,baseDiff,items,sums,grand,incomplete};
 }
 
 function updateIncentiveTotal(tsId) {
-  const rows = document.querySelectorAll(`#incentive-rows-${tsId} .incentive-row`);
-  let total = 0;
-  rows.forEach(row => {
-    const units = parseFloat(row.querySelector(".inc-units")?.value)||0;
-    const rate = parseFloat(row.querySelector(".inc-rate")?.value)||0;
-    total += units * rate;
-  });
-  const el = document.getElementById("incentive-total-"+tsId);
-  if(el) el.textContent = "AUD $"+total.toFixed(2);
-  // Update grand total
-  const ts = allTimesheets.find(t=>t.id==tsId);
-  const basePay = parseFloat(ts?.totalPay||0);
-  const grandEl = document.getElementById("grand-total-"+tsId);
-  if(grandEl) grandEl.textContent = "AUD $"+(basePay+total).toFixed(2);
+  const c=calcPayBox(tsId);
+  // Base change note
+  const wrap=document.getElementById("base-reason-wrap-"+tsId);
+  if(wrap){
+    wrap.style.display=c.baseDiff!==0?"block":"none";
+    document.getElementById("base-diff-"+tsId).textContent=c.baseDiff!==0?`Changed by ${c.baseDiff>0?"+":"−"}$${Math.abs(c.baseDiff).toFixed(2)} from the submitted amount`:"";
+  }
+  const line=(label,val,color,sign)=>val?`<div style="display:flex;justify-content:space-between;padding:3px 0;color:${color};"><span>${label}</span><span>${sign} AUD $${val.toFixed(2)}</span></div>`:"";
+  const el=document.getElementById("pay-summary-"+tsId);
+  if(el) el.innerHTML=
+      `<div style="display:flex;justify-content:space-between;padding:3px 0;color:var(--muted);"><span>Base Pay${c.baseDiff!==0?" (adjusted)":""}</span><span>AUD $${(isNaN(c.base)?0:c.base).toFixed(2)}</span></div>`
+    + line("Incentives",c.sums["Incentive"],"#0369a1","+")
+    + line("Allowances",c.sums["Allowance"],"#0369a1","+")
+    + line("Additional Pay",c.sums["Additional Pay"],"#0369a1","+")
+    + line("Deductions",c.sums["Deduction"],"var(--red)","−")
+    + `<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:15px;font-weight:800;color:#15803d;"><span>Total Pay</span><span>${money(c.grand)}</span></div>`;
 }
 
 async function deleteEntry(id, name, date) {
