@@ -1501,18 +1501,26 @@ function renderTimesheets() {
   if(resolved.length > 0) {
     html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:20px 0 12px;">Resolved</div>`;
     html += `<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table>
-      <thead><tr><th>Employee</th><th>Period</th><th>Days</th><th>Base Pay</th><th>Additional Pay / Deductions</th><th>Total Pay</th><th>Pay Date</th><th>Status</th><th>Admin Note</th></tr></thead>
+      <thead><tr><th>Employee</th><th>Period</th><th>Days</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th><th>Pay Date</th><th>Status</th><th>Admin Note</th><th></th></tr></thead>
       <tbody>${resolved.sort((a,b)=>(b.cutoffKey||"").localeCompare(a.cutoffKey||"")).map(t=>{
-        const incentive=parseFloat(t.totalIncentive||0);
         const grand=parseFloat(t.grandTotal||t.totalPay||0);
+        const {g,baseAdj}=parsePayItems(t);
+        const base=(parseFloat(t.totalPay)||0)+baseAdj;
+        const qty=g["Incentive"].reduce((s,i)=>s+i.units,0);
+        const cell=(list,neg)=>{const v=list.reduce((s,i)=>s+i.total,0);if(!v)return"—";
+          return `<span style="font-weight:600;color:${neg?"var(--red)":"#0369a1"};">${neg?"−":""}$${v.toFixed(2)}</span><div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;">${list.map(i=>`${i.desc} ($${i.total.toFixed(2)})`).join("<br>")}</div>`;};
         return`<tr>
           <td><strong>${t.sdrName}</strong></td>
           <td style="font-size:12px;">${t.cutoffLabel||t.cutoffKey}</td>
           <td>${t.totalDays}</td>
-          <td>$${parseFloat(t.totalPay||0).toFixed(2)}</td>
-          <td>${incentive!==0?`<span style="color:${incentive<0?"var(--red)":"var(--cyan)"};">${incentive<0?"−":"+"}$${Math.abs(incentive).toFixed(2)}</span>`:"—"}</td>
+          <td>$${base.toFixed(2)}${baseAdj?`<div style="font-size:10px;color:#92400e;">adjusted ${baseAdj>0?"+":"−"}$${Math.abs(baseAdj).toFixed(2)}</div>`:""}</td>
+          <td style="text-align:center;">${qty||"—"}</td>
+          <td>${cell(g["Incentive"])}</td>
+          <td>${cell(g["Allowance"])}</td>
+          <td>${cell(g["Additional Pay"])}</td>
+          <td>${cell(g["Deduction"],true)}</td>
           <td><strong>$${grand.toFixed(2)}</strong></td>
-          <td style="white-space:nowrap;">${t.status==="Approved"?`<input type="date" value="${t.payDate||""}" title="Change pay date" onchange="savePayDate('${t.id}',this)" style="padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;" />`:(t.payDate?formatDate(t.payDate):"—")}</td>
+          <td style="white-space:nowrap;">${t.status==="Approved"?`<div style="display:flex;gap:6px;align-items:center;"><input type="date" id="rpd-${t.id}" value="${t.payDate||""}" oninput="document.getElementById('rpd-btn-${t.id}').style.display='inline-block'" style="padding:4px 6px;border:1.5px solid ${t.payDate?"var(--border)":"#fca5a5"};border-radius:6px;font-size:12px;" /><button id="rpd-btn-${t.id}" class="btn btn-primary btn-sm" style="padding:4px 10px;font-size:11px;display:none;" onclick="savePayDate('${t.id}',document.getElementById('rpd-${t.id}'),this)">Save</button></div>${t.payDate?"":'<div style="font-size:10px;color:var(--red);margin-top:2px;">Not set — SDR sees "Not set yet"</div>'}`:(t.payDate?formatDate(t.payDate):"—")}</td>
           <td>${getTsBadge(t.status)}</td>
           <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
           <td style="white-space:nowrap;">
@@ -1562,14 +1570,20 @@ async function approveTimesheet(id, basePay) {
   } catch(e){ showAlert(alert,"error","Failed: "+e.message); }
 }
 
-async function savePayDate(id, input){
+async function savePayDate(id, input, btn){
   const alert=document.getElementById("alert-timesheets");
+  if(!input.value){showAlert(alert,"error","Pick a pay date first.");return;}
+  if(btn){btn.disabled=true;btn.textContent="Saving…";}
   try{
     const r=await apiPost({action:"updateTimesheet",id,payDate:input.value});
     if(r&&r.error) throw new Error(r.error);
+    // Confirm it was actually stored
+    const check=((await apiPost({action:"getTimesheets"})).timesheets||[]).find(x=>x.id==id);
+    if(!check||check.payDate!==input.value) throw new Error("The sheet didn't store it. Check the Field script is on version field-2026-09-29.");
     const t=allTimesheets.find(x=>x.id==id); if(t) t.payDate=input.value;
-    showAlert(alert,"success",input.value?`✓ Pay date set to ${formatDate(input.value)}.`:"✓ Pay date cleared.");
-  }catch(e){showAlert(alert,"error","Could not save pay date: "+e.message);}
+    showAlert(alert,"success",`✓ Pay date set to ${formatDate(input.value)}. The SDR will see it on their Pay tab.`);
+    renderTimesheets();
+  }catch(e){showAlert(alert,"error","Could not save pay date: "+e.message); if(btn){btn.disabled=false;btn.textContent="Save";}}
 }
 
 async function rejectTimesheet(id) {
@@ -1712,6 +1726,17 @@ async function deleteLeave(id, name) {
     showAlert(alert,"success","Leave record deleted.");
     renderLeave();
   } catch(e){showAlert(alert,"error","Delete failed: "+e.message);}
+}
+
+// Splits a timesheet's saved pay lines by type (older approvals without a type count as Incentive)
+function parsePayItems(ts){
+  let items=[]; try{items=JSON.parse(ts.incentives||"[]");}catch(e){}
+  if(!Array.isArray(items)) items=[];
+  const g={"Incentive":[],"Allowance":[],"Additional Pay":[],"Deduction":[]}; let baseAdj=0;
+  items.forEach(i=>{const type=i.type||"Incentive",total=parseFloat(i.total)||0;
+    if(type==="Base Pay Adjustment"){baseAdj+=total;return;}
+    (g[type]||g["Additional Pay"]).push({desc:i.desc||"",units:parseFloat(i.units)||0,total:Math.abs(total)});});
+  return {g,baseAdj};
 }
 
 // ── PAY BOX (timesheet approval) ───────────────────────────────────────────
