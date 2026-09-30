@@ -659,7 +659,7 @@ function doLogin() {
   document.getElementById("login-screen").style.display="none";
   document.getElementById("app").style.display="block";
   localStorage.setItem("j2hub_admin_session", Date.now().toString());
-  loadAllEntries();
+  loadAllEntries(); checkScriptVersion();
 }
 document.addEventListener("keydown", e => { if(e.key==="Enter"&&document.getElementById("login-screen").style.display!=="none") doLogin(); });
 function doLogout() {
@@ -2220,7 +2220,10 @@ async function loadAdminAnnouncements(){
   try{
     const [r,u]=await Promise.all([apiPost({action:"getAnnouncements"}),apiPost({action:"getUsers"})]);
     if(r.error) throw new Error(r.error);
-    if(!r.announcements) throw new Error("The Field script doesn't support announcements yet. Update it to the latest version.");
+    if(!r.announcements){
+      let v="unknown"; try{ v=(await apiPost({action:"version"})).version||"an old version (no version number)"; }catch(_){}
+      throw new Error(`The Field script this page connects to (address ending …${API.slice(-14,-5)}) reports ${v}. Announcements need field-2026-09-30.`);
+    }
     annData=r; allUsers=u.users||allUsers; renderAdminAnnouncements();
   }catch(e){ el.innerHTML=""; showAlert(document.getElementById("alert-ann"),"error",e.message); }
 }
@@ -2308,7 +2311,7 @@ window.addEventListener("DOMContentLoaded", function() {
   if (session && (Date.now() - parseInt(session)) < SESSION_TTL) {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
-    loadAllEntries();
+    loadAllEntries(); checkScriptVersion();
   } else {
     localStorage.removeItem("j2hub_admin_session");
   }
