@@ -651,7 +651,6 @@ tr:hover td { background: #faf8f4; }
 </div>
 
 <script>
-const ADMIN_PASSWORD = "J2Group@123";
 const API = "https://script.google.com/macros/s/AKfycbyzoNpKRbQi4fgtY864Q-y3g4A6uchv-CIItMh50NadyC1dPcgLQFOHH02TmjZQX-NrCQ/exec";
 const HOURLY_RATE = 2000 / 7;
 
@@ -662,10 +661,18 @@ let editItemId = null;
 let resolveItemId = null;
 let payrollCutoff = 'current';
 
-function doLogin() {
+async function doLogin() {
   const pass = document.getElementById("login-password").value;
-  if (pass !== ADMIN_PASSWORD) { document.getElementById("login-error").style.display="block"; return; }
-  document.getElementById("login-error").style.display="none";
+  const errEl = document.getElementById("login-error");
+  const showErr = m => { errEl.textContent = m; errEl.style.display = "block"; };
+  errEl.style.display = "none";
+  if (!pass) { showErr("Please enter the admin password."); return; }
+  let r;
+  try { r = await apiPost({ action:"adminLogin", password:pass }); }        // password is checked by the script, not in this page
+  catch(e) { showErr("Could not connect. Please try again."); return; }
+  if (!r || r.success === undefined) { showErr("The Apps Script is out of date. Update it to the latest version, then try again."); return; }
+  if (!r.success) { showErr("Incorrect password."); return; }
+  localStorage.setItem(ADMIN_TOKEN_KEY, r.token);
   document.getElementById("login-screen").style.display="none";
   document.getElementById("app").style.display="block";
   localStorage.setItem("j2hub_admin_session", Date.now().toString());
@@ -674,16 +681,67 @@ function doLogin() {
 document.addEventListener("keydown", e => { if(e.key==="Enter"&&document.getElementById("login-screen").style.display!=="none") doLogin(); });
 function doLogout() {
   localStorage.removeItem("j2hub_admin_session");
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
   document.getElementById("login-screen").style.display="flex";
   document.getElementById("app").style.display="none";
   document.getElementById("login-password").value="";
   allEntries=[];
 }
 
-async function apiPost(payload) {
-  const res = await fetch(API, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(payload) });
-  return await res.json();
+const ADMIN_TOKEN_KEY="j2hub_admin_token";
+// Admin requests carry the login token so the script knows it's an admin
+function apiDecorate(p){ const t=localStorage.getItem(ADMIN_TOKEN_KEY); if(t) p.adminToken=t; return p; }
+// ── API (fast + resilient) ─────────────────────────────────────────────────
+// • Reads that happen at the same moment are sent together in one request
+// • Reads are remembered for 15s and identical requests share one call
+// • Failed reads and safe saves are retried automatically
+const READ_ACTIONS=new Set(["getUsers","getEntries","getMeetings","getTimesheets","getLeaves","getCoverage","getAnnouncements","version"]);
+const _apiMem={}, _apiInflight={}; let _apiQueue=[], _apiTimer=null, _apiBatchOK=true;
+const _apiWait=ms=>new Promise(r=>setTimeout(r,ms));
+async function apiRaw(payload){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),30000);
+  try{
+    const res=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload),signal:ctl.signal});
+    const txt=await res.text();
+    try{ return JSON.parse(txt); }catch(e){ throw new Error("Google's server didn't respond properly. Please try again."); }
+  }catch(e){
+    if(e.name==="AbortError") throw new Error("The server took too long to respond. Please try again.");
+    throw e;
+  }finally{ clearTimeout(t); }
 }
+function _apiFlush(){
+  const q=_apiQueue; _apiQueue=[]; _apiTimer=null;
+  const single=it=>apiRaw(it.p).then(it.ok,it.fail);
+  if(q.length===1||!_apiBatchOK){ q.forEach(single); return; }
+  apiRaw({action:"batch",requests:q.map(it=>it.p)}).then(r=>{
+    if(r&&Array.isArray(r.results)&&r.results.length===q.length) q.forEach((it,i)=>it.ok(r.results[i]));
+    else { _apiBatchOK=false; q.forEach(single); }            // older script without batch support
+  },err=>q.forEach(it=>it.fail(err)));
+}
+function _apiQueued(p){ return new Promise((ok,fail)=>{ _apiQueue.push({p,ok,fail}); if(!_apiTimer) _apiTimer=setTimeout(_apiFlush,20); }); }
+async function _apiRetry(fn,tries){
+  let err; for(let i=0;i<tries;i++){ try{ return await fn(); }catch(e){ err=e; if(i<tries-1) await _apiWait(700*(i+1)); } } throw err;
+}
+async function apiPost(payload){
+  payload=apiDecorate({...payload});
+  if(!READ_ACTIONS.has(payload.action)){
+    // saves: retry only the ones that are safe to repeat (never "add…", which would duplicate)
+    const safe=!/^add/.test(payload.action)&&!(payload.action==="saveAnnouncement"&&!payload.id);
+    Object.keys(_apiMem).forEach(k=>delete _apiMem[k]);
+    const r=await _apiRetry(()=>apiRaw(payload),safe?3:1);
+    Object.keys(_apiMem).forEach(k=>delete _apiMem[k]);
+    return r;
+  }
+  const key=JSON.stringify(payload);
+  const hit=_apiMem[key]; if(hit&&Date.now()-hit.t<15000) return JSON.parse(hit.v);
+  if(!_apiInflight[key]){
+    _apiInflight[key]=_apiRetry(async()=>{ const r=await _apiQueued(payload); if(r&&r.error&&/busy|try again/i.test(r.error)) throw new Error(r.error); return r; },3)
+      .then(r=>{ if(r&&!r.error) _apiMem[key]={t:Date.now(),v:JSON.stringify(r)}; return JSON.stringify(r); })
+      .finally(()=>{ delete _apiInflight[key]; });
+  }
+  return JSON.parse(await _apiInflight[key]);
+}
+
 
 async function loadAllEntries() {
   setLoading("entries",true); setLoading("disputes",true); setLoading("payroll",true);
@@ -2505,7 +2563,7 @@ async function loadAdminAnnouncements(){
     if(r.error) throw new Error(r.error);
     if(!r.announcements){
       let v="unknown"; try{ v=(await apiPost({action:"version"})).version||"an old version (no version number)"; }catch(_){}
-      throw new Error(`The script this page connects to (address ending …${API.slice(-14,-5)}) reports ${v}. Announcements need 2026-09-30.`);
+      throw new Error(`The script this page connects to (address ending …${API.slice(-14,-5)}) reports ${v}. Announcements need 2026-10-01.`);
     }
     annData=r; allUsers=u.users||allUsers; renderAdminAnnouncements();
   }catch(e){ el.innerHTML=""; showAlert(document.getElementById("alert-ann"),"error",e.message); }
@@ -2574,7 +2632,7 @@ async function deleteAnn(id){
   catch(e){showAlert(document.getElementById("alert-ann"),"error","Could not delete: "+e.message);}
 }
 
-const EXPECTED_SCRIPT_VERSION="2026-09-30";
+const EXPECTED_SCRIPT_VERSION="2026-10-01";
 async function checkScriptVersion(){
   try{
     const r=await apiPost({action:"version"});
@@ -2591,7 +2649,7 @@ function initApp() { loadAllEntries(); checkScriptVersion(); }
 window.addEventListener("DOMContentLoaded", function() {
   const session = localStorage.getItem("j2hub_admin_session");
   const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 hours
-  if (session && (Date.now() - parseInt(session)) < SESSION_TTL) {
+  if (session && localStorage.getItem(ADMIN_TOKEN_KEY) && (Date.now() - parseInt(session)) < SESSION_TTL) {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
     loadAllEntries(); checkScriptVersion();

@@ -715,10 +715,59 @@ let lunchStartTime = null;
 let lunchTaken = false;
 
 // ── API ──
-async function apiPost(payload) {
-  const res = await fetch(API, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(payload) });
-  return await res.json();
+// SDRs only receive their own entries, meetings, timesheets and leave
+function apiDecorate(p){ if(currentUser&&["getEntries","getMeetings","getTimesheets","getLeaves"].includes(p.action)) p.forUser=currentUser.name; return p; }
+// ── API (fast + resilient) ─────────────────────────────────────────────────
+// • Reads that happen at the same moment are sent together in one request
+// • Reads are remembered for 15s and identical requests share one call
+// • Failed reads and safe saves are retried automatically
+const READ_ACTIONS=new Set(["getUsers","getEntries","getMeetings","getTimesheets","getLeaves","getCoverage","getAnnouncements","version"]);
+const _apiMem={}, _apiInflight={}; let _apiQueue=[], _apiTimer=null, _apiBatchOK=true;
+const _apiWait=ms=>new Promise(r=>setTimeout(r,ms));
+async function apiRaw(payload){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),30000);
+  try{
+    const res=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload),signal:ctl.signal});
+    const txt=await res.text();
+    try{ return JSON.parse(txt); }catch(e){ throw new Error("Google's server didn't respond properly. Please try again."); }
+  }catch(e){
+    if(e.name==="AbortError") throw new Error("The server took too long to respond. Please try again.");
+    throw e;
+  }finally{ clearTimeout(t); }
 }
+function _apiFlush(){
+  const q=_apiQueue; _apiQueue=[]; _apiTimer=null;
+  const single=it=>apiRaw(it.p).then(it.ok,it.fail);
+  if(q.length===1||!_apiBatchOK){ q.forEach(single); return; }
+  apiRaw({action:"batch",requests:q.map(it=>it.p)}).then(r=>{
+    if(r&&Array.isArray(r.results)&&r.results.length===q.length) q.forEach((it,i)=>it.ok(r.results[i]));
+    else { _apiBatchOK=false; q.forEach(single); }            // older script without batch support
+  },err=>q.forEach(it=>it.fail(err)));
+}
+function _apiQueued(p){ return new Promise((ok,fail)=>{ _apiQueue.push({p,ok,fail}); if(!_apiTimer) _apiTimer=setTimeout(_apiFlush,20); }); }
+async function _apiRetry(fn,tries){
+  let err; for(let i=0;i<tries;i++){ try{ return await fn(); }catch(e){ err=e; if(i<tries-1) await _apiWait(700*(i+1)); } } throw err;
+}
+async function apiPost(payload){
+  payload=apiDecorate({...payload});
+  if(!READ_ACTIONS.has(payload.action)){
+    // saves: retry only the ones that are safe to repeat (never "add…", which would duplicate)
+    const safe=!/^add/.test(payload.action)&&!(payload.action==="saveAnnouncement"&&!payload.id);
+    Object.keys(_apiMem).forEach(k=>delete _apiMem[k]);
+    const r=await _apiRetry(()=>apiRaw(payload),safe?3:1);
+    Object.keys(_apiMem).forEach(k=>delete _apiMem[k]);
+    return r;
+  }
+  const key=JSON.stringify(payload);
+  const hit=_apiMem[key]; if(hit&&Date.now()-hit.t<15000) return JSON.parse(hit.v);
+  if(!_apiInflight[key]){
+    _apiInflight[key]=_apiRetry(async()=>{ const r=await _apiQueued(payload); if(r&&r.error&&/busy|try again/i.test(r.error)) throw new Error(r.error); return r; },3)
+      .then(r=>{ if(r&&!r.error) _apiMem[key]={t:Date.now(),v:JSON.stringify(r)}; return JSON.stringify(r); })
+      .finally(()=>{ delete _apiInflight[key]; });
+  }
+  return JSON.parse(await _apiInflight[key]);
+}
+
 
 // ── AUTH ──
 async function doLogin() {
@@ -730,9 +779,14 @@ async function doLogin() {
   if (!name || !pass) { err.style.display="block"; err.textContent="Please enter your name and password."; return; }
   err.style.display="none"; loading.style.display="block"; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Signing in…';
   try {
-    const result = await apiPost({ action: "getUsers" });
-    const users = result.users || [];
-    const user = users.find(u => u.name.toLowerCase().trim() === name.toLowerCase().trim() && u.password === pass);
+    // Password is checked by the script, so other users' passwords never reach this browser
+    let user = null;
+    const lr = await apiPost({ action: "login", name, password: pass });
+    if (lr && lr.success !== undefined) user = lr.success ? lr.user : null;
+    else {                                            // older script without the login action
+      const result = await apiPost({ action: "getUsers" });
+      user = (result.users || []).find(u => u.name.toLowerCase().trim() === name.toLowerCase().trim() && u.password === pass) || null;
+    }
     if (!user) { err.style.display="block"; err.textContent="Incorrect name or password."; loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In to J2 Hub"; return; }
     currentUser = { id: user.id, name: user.name, email: user.email||"", rate: parseFloat(user.rate)||0 };
     document.getElementById("login-screen").style.display="none";
@@ -2163,9 +2217,9 @@ window.addEventListener("DOMContentLoaded", async function() {
         return;
       }
       // Re-verify user still exists
-      const result = await apiPost({ action: "getUsers" });
+      const result = await apiPost({ action: "getUsers", forUserId: user.id });
       const users = result.users || [];
-      const valid = users.find(u => u.id === user.id && u.name === user.name);
+      const valid = users.find(u => String(u.id) === String(user.id) && u.name === user.name);
       if (valid) {
         currentUser = { id: valid.id, name: valid.name, email: valid.email||"", rate: parseFloat(valid.rate)||0 };
         document.getElementById("login-screen").style.display = "none";
