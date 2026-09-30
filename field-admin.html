@@ -394,6 +394,7 @@ tr:hover td { background: #faf8f4; }
     <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">🏖️ Leave <span class="badge-count" id="leave-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">📅 Meetings <span class="badge-count" id="meeting-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('coverage')" id="tab-coverage">🗓️ Coverage</div>
+    <div class="nav-tab" onclick="switchTab('announcements')" id="tab-announcements">📢 Announcements</div>
     <div class="nav-tab" onclick="switchTab('users')" id="tab-users">👥 Users</div>
   </div>
   <div class="main" style="max-width:100%;padding:24px 32px;">
@@ -465,6 +466,28 @@ tr:hover td { background: #faf8f4; }
         <div class="field-group"><label>Client</label><select id="cov-client" onchange="renderCoverage()"><option value="">All Clients</option></select></div>
       </div>
       <div id="cov-content"></div>
+    </div>
+
+    <!-- ANNOUNCEMENTS -->
+    <div class="page" id="page-announcements">
+      <div class="page-header">
+        <div class="page-header-left"><h2>Announcements</h2><p>Post a message to all Field SDRs. It shows on their Time Management page until they confirm it.</p></div>
+        <button class="btn-refresh" onclick="loadAdminAnnouncements()">↻ Refresh</button>
+      </div>
+      <div id="alert-ann" class="alert"></div>
+      <div class="card">
+        <div class="card-title" id="ann-form-title">➕ New Announcement</div>
+        <div class="two-col">
+          <div class="field-group"><label>Title</label><input type="text" id="ann-title" maxlength="120" placeholder="e.g. Office closed on Friday" /></div>
+          <div class="field-group"><label>Type</label><select id="ann-type"><option value="Info">📢 Announcement</option><option value="Important">⭐ Important</option><option value="Urgent">🚨 Urgent</option></select></div>
+        </div>
+        <div class="field-group"><label>Message</label><textarea id="ann-message" rows="5" placeholder="Write your message… Line breaks are kept."></textarea></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btn-ann-save" onclick="saveAdminAnnouncement()">Post Announcement</button>
+          <button class="btn btn-secondary" id="btn-ann-cancel" style="display:none;" onclick="resetAnnForm()">Cancel Edit</button>
+        </div>
+      </div>
+      <div id="ann-list"></div>
     </div>
 
     <div class="page" id="page-users">
@@ -1184,6 +1207,7 @@ function switchTab(tab){
   document.getElementById("tab-"+tab).classList.add("active");
   if(tab==="users") loadUsers();
   if(tab==="coverage") loadCoverage();
+  if(tab==="announcements") loadAdminAnnouncements();
   if(tab==="leave") loadLeave();
   if(tab==="meetings") loadMeetings();
   if(tab==="timesheets") loadTimesheets();
@@ -2185,7 +2209,86 @@ async function saveClient(){
   btn.innerHTML="Save"; btn.disabled=false;
 }
 
-const EXPECTED_SCRIPT_VERSION="field-2026-09-29";
+
+// ── ANNOUNCEMENTS (admin) ──────────────────────────────────────────────────
+let annData={announcements:[],acks:[]}, annEditId=null;
+const ANN_BADGE={Info:'<span class="badge badge-blue">📢 Announcement</span>',Important:'<span class="badge badge-amber">⭐ Important</span>',Urgent:'<span class="badge badge-red">🚨 Urgent</span>'};
+const escA=t=>String(t||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function loadAdminAnnouncements(){
+  const el=document.getElementById("ann-list");
+  el.innerHTML='<div class="loading-block">Loading announcements…</div>';
+  try{
+    const [r,u]=await Promise.all([apiPost({action:"getAnnouncements"}),apiPost({action:"getUsers"})]);
+    if(r.error) throw new Error(r.error);
+    if(!r.announcements) throw new Error("The Field script doesn't support announcements yet. Update it to the latest version.");
+    annData=r; allUsers=u.users||allUsers; renderAdminAnnouncements();
+  }catch(e){ el.innerHTML=""; showAlert(document.getElementById("alert-ann"),"error",e.message); }
+}
+function renderAdminAnnouncements(){
+  const el=document.getElementById("ann-list");
+  const sdrs=(allUsers||[]).filter(u=>u.name).map(u=>u.name);
+  const list=[...annData.announcements].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+  if(!list.length){el.innerHTML='<div class="empty-block"><div class="icon">📢</div><p>No announcements yet.</p></div>';return;}
+  el.innerHTML=list.map(a=>{
+    const conf=annData.acks.filter(k=>String(k.id)===String(a.id));
+    const confNames=new Set(conf.map(k=>(k.sdrName||"").toLowerCase()));
+    const pending=sdrs.filter(n=>!confNames.has(n.toLowerCase()));
+    const when=a.createdAt?new Date(a.createdAt).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"}):"";
+    return `<div class="card" style="${a.active?"":"opacity:.65;"}">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+        <div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${ANN_BADGE[a.type]||ANN_BADGE.Info} ${a.active?'<span class="badge badge-green">Live</span>':'<span class="badge badge-gray">Hidden</span>'}</div>
+          <div style="font-size:16px;font-weight:800;color:var(--navy);margin-top:8px;">${escA(a.title)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Posted ${when}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="editAnn('${a.id}')">✏️ Edit</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleAnn('${a.id}',${!a.active})">${a.active?"🙈 Hide":"👁 Show"}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAnn('${a.id}')">🗑 Delete</button>
+        </div>
+      </div>
+      <div style="font-size:13px;line-height:1.6;white-space:pre-wrap;margin:12px 0;color:var(--text);">${escA(a.message)}</div>
+      <details><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--navy);">✓ ${conf.length} of ${sdrs.length} confirmed</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;font-size:12px;">
+          <div><div style="font-weight:700;color:#15803d;margin-bottom:4px;">Confirmed</div>${conf.length?conf.map(k=>`<div>${escA(k.sdrName)} <span style="color:var(--muted);">· ${k.confirmedAt?new Date(k.confirmedAt).toLocaleString("en-AU",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):""}</span></div>`).join(""):'<div style="color:var(--muted);">No one yet</div>'}</div>
+          <div><div style="font-weight:700;color:var(--red);margin-bottom:4px;">Not yet</div>${pending.length?pending.map(n=>`<div>${escA(n)}</div>`).join(""):'<div style="color:var(--muted);">Everyone has confirmed 🎉</div>'}</div>
+        </div></details>
+    </div>`;}).join("");
+}
+function resetAnnForm(){
+  annEditId=null; ["ann-title","ann-message"].forEach(i=>document.getElementById(i).value=""); document.getElementById("ann-type").value="Info";
+  document.getElementById("ann-form-title").textContent="➕ New Announcement";
+  document.getElementById("btn-ann-save").textContent="Post Announcement"; document.getElementById("btn-ann-cancel").style.display="none";
+}
+function editAnn(id){
+  const a=annData.announcements.find(x=>String(x.id)===String(id)); if(!a) return;
+  annEditId=id; document.getElementById("ann-title").value=a.title; document.getElementById("ann-message").value=a.message; document.getElementById("ann-type").value=a.type||"Info";
+  document.getElementById("ann-form-title").textContent="✏️ Edit Announcement";
+  document.getElementById("btn-ann-save").textContent="Save Changes"; document.getElementById("btn-ann-cancel").style.display="inline-flex";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+async function saveAdminAnnouncement(){
+  const alertEl=document.getElementById("alert-ann"), btn=document.getElementById("btn-ann-save");
+  const title=document.getElementById("ann-title").value.trim(), message=document.getElementById("ann-message").value.trim(), type=document.getElementById("ann-type").value;
+  if(!title||!message){showAlert(alertEl,"error","Please add a title and a message.");return;}
+  const label=btn.textContent; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Saving…';
+  try{
+    const r=await apiPost({action:"saveAnnouncement",id:annEditId||"",title,message,type});
+    if(!r||!r.success) throw new Error(r&&r.error?r.error:"The Field script doesn't support announcements yet. Update it to the latest version.");
+    showAlert(alertEl,"success",annEditId?"✓ Announcement updated.":"✓ Announcement posted. Field SDRs will see it on their Time Management page.");
+    resetAnnForm(); loadAdminAnnouncements();
+  }catch(e){showAlert(alertEl,"error","Could not save: "+e.message);}
+  btn.disabled=false; if(btn.textContent.includes("Saving")) btn.textContent=label;
+}
+async function toggleAnn(id,active){
+  try{ await apiPost({action:"saveAnnouncement",id,active}); loadAdminAnnouncements(); }
+  catch(e){showAlert(document.getElementById("alert-ann"),"error","Could not update: "+e.message);}
+}
+async function deleteAnn(id){
+  if(!confirm("Delete this announcement and its confirmations? This can't be undone.")) return;
+  try{ await apiPost({action:"deleteAnnouncement",id}); showAlert(document.getElementById("alert-ann"),"success","✓ Announcement deleted."); loadAdminAnnouncements(); }
+  catch(e){showAlert(document.getElementById("alert-ann"),"error","Could not delete: "+e.message);}
+}
+
+const EXPECTED_SCRIPT_VERSION="field-2026-09-30";
 async function checkScriptVersion(){
   try{
     const r=await apiPost({action:"version"});
@@ -2194,7 +2297,7 @@ async function checkScriptVersion(){
     if(!b){b=document.createElement("div");b.id="script-version-banner";
       b.style.cssText="background:#fef2f2;border-bottom:2px solid #fca5a5;color:#991b1b;padding:10px 20px;font-size:13px;font-weight:600;text-align:center;";
       const nav=document.querySelector(".nav-tabs"); nav.parentNode.insertBefore(b,nav.nextSibling);}
-    b.innerHTML=`⚠ The Apps Script connected to this page is out of date (found: ${r&&r.version?r.version:"old version"}, needs: ${EXPECTED_SCRIPT_VERSION}). Saving clients, coverage and pay dates won't work until it's updated and redeployed.`;
+    b.innerHTML=`⚠ The Apps Script connected to this page is out of date (found: ${r&&r.version?r.version:"old version"}, needs: ${EXPECTED_SCRIPT_VERSION}). Saving clients, coverage, pay dates and announcements won't work until it's updated and redeployed.`;
   }catch(e){}
 }
 function initApp() { loadAllEntries(); checkScriptVersion(); }

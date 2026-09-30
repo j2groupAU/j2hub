@@ -200,6 +200,21 @@ th { background: linear-gradient(135deg, #EEF4FF 0%, #E4EEFF 100%); padding: 8px
 td { padding: 10px 10px; border-bottom: 1px solid #f0ece4; color: var(--text); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr:last-child td { border-bottom: none; }
 .pay-table { table-layout: auto; }
+.ann-card { position:relative; background:#fff; border-radius:16px; padding:22px 24px 20px 28px; margin-bottom:16px;
+  box-shadow:0 4px 24px rgba(10,22,40,0.08); border:1.5px solid var(--ann-border); overflow:hidden; animation:annIn .35s ease; }
+.ann-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--ann-accent); }
+.ann-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+.ann-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; background:var(--ann-soft); flex-shrink:0; }
+.ann-label { font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:var(--ann-accent); }
+.ann-title { font-size:17px; font-weight:800; color:var(--navy); line-height:1.3; }
+.ann-date { margin-left:auto; font-size:11px; color:var(--muted); white-space:nowrap; }
+.ann-body { font-size:14px; color:var(--text); line-height:1.65; white-space:pre-wrap; word-break:break-word; margin:0 0 16px 52px; }
+.ann-foot { display:flex; justify-content:flex-end; }
+.ann-btn { background:var(--ann-accent); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px var(--ann-soft); }
+.ann-btn:disabled { opacity:.6; cursor:default; }
+.ann-card.ann-out { transition:all .35s ease; opacity:0; transform:translateY(-6px); }
+@keyframes annIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+@media (max-width:600px){ .ann-body{ margin-left:0; } .ann-date{ margin-left:0; width:100%; } }
 .pay-table th { white-space: nowrap; }
 .pay-table td { overflow: visible; text-overflow: clip; vertical-align: top; }
 .pay-table td.pay-desc { white-space: normal; min-width: 150px; }
@@ -450,6 +465,9 @@ tr:hover td { background: rgba(100,160,255,0.04); }
         </div>
 
       </div>
+
+      <!-- ══ ANNOUNCEMENTS ══ -->
+      <div id="announcements-area"></div>
 
             <!-- ══ FIXED NOTIFICATION PANEL ══ -->
       <div id="inline-notif-wrap" style="
@@ -745,8 +763,45 @@ function doLogout() {
   document.getElementById("login-name").value=""; document.getElementById("login-password").value="";
 }
 
+
+// ── ANNOUNCEMENTS ──────────────────────────────────────────────────────────
+const ANN_STYLE={
+  Info:     {icon:"📢", accent:"#2563eb", soft:"rgba(37,99,235,0.12)",  border:"#dbeafe", label:"Announcement"},
+  Important:{icon:"⭐", accent:"#d97706", soft:"rgba(217,119,6,0.14)",  border:"#fde68a", label:"Important"},
+  Urgent:   {icon:"🚨", accent:"#dc2626", soft:"rgba(220,38,38,0.12)",  border:"#fecaca", label:"Urgent"}
+};
+const escHtml=t=>String(t||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function loadAnnouncements(){
+  const area=document.getElementById("announcements-area"); if(!area||!currentUser) return;
+  try{
+    const r=await apiPost({action:"getAnnouncements"});
+    const me=currentUser.name.toLowerCase();
+    const acked=new Set((r.acks||[]).filter(a=>(a.sdrName||"").toLowerCase()===me).map(a=>String(a.id)));
+    const list=(r.announcements||[]).filter(a=>a.active&&!acked.has(String(a.id))).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    area.innerHTML=list.map(a=>{
+      const st=ANN_STYLE[a.type]||ANN_STYLE.Info;
+      const when=a.createdAt?new Date(a.createdAt).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}):"";
+      return `<div class="ann-card" id="ann-${a.id}" style="--ann-accent:${st.accent};--ann-soft:${st.soft};--ann-border:${st.border};">
+        <div class="ann-head"><div class="ann-icon">${st.icon}</div>
+          <div><div class="ann-label">${st.label}</div><div class="ann-title">${escHtml(a.title)}</div></div>
+          <div class="ann-date">${when}</div></div>
+        <div class="ann-body">${escHtml(a.message)}</div>
+        <div class="ann-foot"><button class="ann-btn" onclick="confirmAnnouncement('${a.id}',this)">✓ Got it, confirm</button></div>
+      </div>`;}).join("");
+  }catch(e){ area.innerHTML=""; }
+}
+async function confirmAnnouncement(id,btn){
+  btn.disabled=true; btn.textContent="Confirming…";
+  try{
+    const r=await apiPost({action:"ackAnnouncement",id,sdrName:currentUser.name});
+    if(!r||!r.success) throw new Error("not saved");
+    const card=document.getElementById("ann-"+id); card.classList.add("ann-out"); setTimeout(()=>card.remove(),350);
+  }catch(e){ btn.disabled=false; btn.textContent="✓ Got it, confirm"; alert("Couldn't confirm right now. Please try again."); }
+}
+
 // ── INIT ──
 function initApp() {
+  loadAnnouncements();
   startLiveClock();
   setTodayDate();
   checkOpenClockIn();
@@ -1894,6 +1949,7 @@ function switchTab(tab){
   if(tab==="submit") loadSubmitPage();
   if(tab==="leave") loadLeave();
   if(tab==="pay") loadPay();
+  if(tab==="time") loadAnnouncements();
 }
 
 
