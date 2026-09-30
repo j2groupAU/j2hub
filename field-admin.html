@@ -389,8 +389,8 @@ tr:hover td { background: #faf8f4; }
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('entries')" id="tab-entries">📋 All Entries</div>
     <div class="nav-tab" onclick="switchTab('disputes')" id="tab-disputes">⚠️ Request Reviews <span class="badge-count" id="dispute-count" style="display:none">0</span></div>
-    <div class="nav-tab" onclick="switchTab('payroll')" id="tab-payroll">💰 Payroll Summary</div>
-    <div class="nav-tab" onclick="switchTab('timesheets')" id="tab-timesheets">📤 Timesheets <span class="badge-count" id="ts-count" style="display:none">0</span></div>
+    <div class="nav-tab" onclick="switchTab('payroll')" id="tab-payroll" style="display:none;">💰 Payroll Summary</div>
+    <div class="nav-tab" onclick="switchTab('timesheets')" id="tab-timesheets">💰 Payroll &amp; Timesheet <span class="badge-count" id="ts-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">🏖️ Leave <span class="badge-count" id="leave-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">📅 Meetings <span class="badge-count" id="meeting-count" style="display:none">0</span></div>
     <div class="nav-tab" onclick="switchTab('coverage')" id="tab-coverage">🗓️ Coverage</div>
@@ -522,14 +522,13 @@ tr:hover td { background: #faf8f4; }
     <!-- TIMESHEETS -->
     <div class="page" id="page-timesheets">
       <div class="page-header">
-        <div class="page-header-left"><h2>Timesheet Approvals</h2><p>Review and approve Timesheet submissions per cutoff period. Only approved timesheets are included in payroll.</p></div>
+        <div class="page-header-left"><h2>Payroll &amp; Timesheet</h2><p>Approve submitted timesheets, then view approved pay by pay date.</p></div>
         <button class="btn-refresh" onclick="loadTimesheets()">↻ Refresh</button>
       </div>
       <div id="alert-timesheets" class="alert"></div>
-      <div class="cutoff-selector">
-        <button class="cutoff-btn active" onclick="selectTsCutoff('current')" id="tscobtn-current">Current Period</button>
-        <button class="cutoff-btn" onclick="selectTsCutoff('prev')" id="tscobtn-prev">Previous Period</button>
-        <button class="cutoff-btn" onclick="selectTsCutoff('all')" id="tscobtn-all">All</button>
+      <div class="filter-bar">
+        <div class="field-group" style="max-width:320px;"><label>Pay Date</label>
+          <select id="ts-paydate" onchange="renderTimesheets()"><option value="">All pay dates</option></select></div>
       </div>
       <div id="timesheets-loading" class="loading-block">Loading timesheets…</div>
       <div id="timesheets-empty" class="empty-block" style="display:none;"><div class="icon">📭</div><p>No timesheet submissions yet.</p></div>
@@ -1456,83 +1455,99 @@ function buildTsCard(t) {
 
 function renderTimesheets() {
   document.getElementById("timesheets-loading").style.display="none";
-  let filtered = allTimesheets;
+  const empty=document.getElementById("timesheets-empty"), content=document.getElementById("timesheets-content");
+  if(!allTimesheets.length){empty.style.display="block";content.style.display="none";return;}
+  empty.style.display="none"; content.style.display="block";
 
-  // Filter by cutoff if needed
-  if(tsCutoff !== "all") {
-    const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
-    const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
-    let start,end;
-    if(tsCutoff==="current"){
-      if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
-      else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
-      else{start=new Date(year,month,11);end=new Date(year,month,25);}
-    } else {
-      if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
-      else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
-      else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
-    }
-    filtered = allTimesheets.filter(t=>{
-      // match by cutoffKey containing year-month
-      const sy=start.getFullYear(), sm=start.getMonth()+1;
-      return t.cutoffKey && t.cutoffKey.startsWith(sy+"-"+sm);
-    });
-  }
+  const submitted=allTimesheets.filter(t=>t.status==="Pending"||t.status==="Disputed");
+  const approvedAll=allTimesheets.filter(t=>t.status==="Approved"||t.status==="Processed");
+  const rejected=allTimesheets.filter(t=>t.status==="Rejected");
 
-  if(filtered.length===0){
-    document.getElementById("timesheets-empty").style.display="block";
-    document.getElementById("timesheets-content").style.display="none";
-    return;
-  }
-  document.getElementById("timesheets-empty").style.display="none";
-  document.getElementById("timesheets-content").style.display="block";
+  // Pay date picker (built from approved timesheets)
+  const sel=document.getElementById("ts-paydate"), cur=sel.value;
+  const dates=[...new Set(approvedAll.map(t=>t.payDate).filter(Boolean))].sort().reverse();
+  const noDate=approvedAll.filter(t=>!t.payDate).length;
+  const count=d=>approvedAll.filter(t=>(t.payDate||"")===d).length;
+  sel.innerHTML=`<option value="">All pay dates (${approvedAll.length})</option>`
+    +dates.map(d=>`<option value="${d}" ${d===cur?"selected":""}>${formatDate(d)} (${count(d)})</option>`).join("")
+    +(noDate?`<option value="none" ${cur==="none"?"selected":""}>No pay date set (${noDate})</option>`:"");
+  const pd=sel.value;
+  const approved=approvedAll.filter(t=>!pd||(pd==="none"?!t.payDate:t.payDate===pd))
+    .sort((a,b)=>(b.payDate||"").localeCompare(a.payDate||"")||(a.sdrName||"").localeCompare(b.sdrName||""));
 
-  const pending = filtered.filter(t=>t.status==="Pending"||t.status==="Disputed");
-  const resolved = filtered.filter(t=>t.status==="Approved"||t.status==="Rejected");
+  const hdr=(txt,n,extra="")=>`<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--navy);margin:${extra}0 12px;display:flex;align-items:center;gap:8px;">${txt} <span class="badge ${n?"badge-blue":"badge-gray"}" style="font-size:11px;">${n}</span></div>`;
+  let html="";
 
-  let html = "";
+  // ── SUBMITTED ──
+  html+=hdr("📥 Submitted",submitted.length);
+  html+=submitted.length?submitted.map(t=>buildTsCard(t)).join("")
+    :`<div class="card" style="text-align:center;color:var(--muted);font-size:13px;">Nothing waiting for approval 🎉</div>`;
 
-  if(pending.length > 0) {
-    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;">Needs Action (${pending.length})</div>`;
-    html += pending.map(t => buildTsCard(t)).join("");
-  }
-
-  if(resolved.length > 0) {
-    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:20px 0 12px;">Resolved</div>`;
-    html += `<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table>
-      <thead><tr><th>Employee</th><th>Period</th><th>Days</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th><th>Pay Date</th><th>Status</th><th>Admin Note</th><th></th></tr></thead>
-      <tbody>${resolved.sort((a,b)=>(b.cutoffKey||"").localeCompare(a.cutoffKey||"")).map(t=>{
-        const grand=parseFloat(t.grandTotal||t.totalPay||0);
-        const {g,baseAdj}=parsePayItems(t);
-        const base=(parseFloat(t.totalPay)||0)+baseAdj;
-        const qty=g["Incentive"].reduce((s,i)=>s+i.units,0);
-        const cell=(list,neg)=>{const v=list.reduce((s,i)=>s+i.total,0);if(!v)return"—";
-          return `<span style="font-weight:600;color:${neg?"var(--red)":"#0369a1"};">${neg?"−":""}$${v.toFixed(2)}</span><div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;">${list.map(i=>`${i.desc} ($${i.total.toFixed(2)})`).join("<br>")}</div>`;};
-        return`<tr>
-          <td><strong>${t.sdrName}</strong></td>
-          <td style="font-size:12px;">${t.cutoffLabel||t.cutoffKey}</td>
-          <td>${t.totalDays}</td>
-          <td>$${base.toFixed(2)}${baseAdj?`<div style="font-size:10px;color:#92400e;">adjusted ${baseAdj>0?"+":"−"}$${Math.abs(baseAdj).toFixed(2)}</div>`:""}</td>
-          <td style="text-align:center;">${qty||"—"}</td>
-          <td>${cell(g["Incentive"])}</td>
-          <td>${cell(g["Allowance"])}</td>
-          <td>${cell(g["Additional Pay"])}</td>
-          <td>${cell(g["Deduction"],true)}</td>
-          <td><strong>$${grand.toFixed(2)}</strong></td>
-          <td style="white-space:nowrap;">${t.status==="Approved"?`<div style="display:flex;gap:6px;align-items:center;"><input type="date" id="rpd-${t.id}" value="${t.payDate||""}" oninput="document.getElementById('rpd-btn-${t.id}').style.display='inline-block'" style="padding:4px 6px;border:1.5px solid ${t.payDate?"var(--border)":"#fca5a5"};border-radius:6px;font-size:12px;" /><button id="rpd-btn-${t.id}" class="btn btn-primary btn-sm" style="padding:4px 10px;font-size:11px;display:none;" onclick="savePayDate('${t.id}',document.getElementById('rpd-${t.id}'),this)">Save</button></div>${t.payDate?"":'<div style="font-size:10px;color:var(--red);margin-top:2px;">Not set — SDR sees "Not set yet"</div>'}`:(t.payDate?formatDate(t.payDate):"—")}</td>
-          <td>${getTsBadge(t.status)}</td>
-          <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
-          <td style="white-space:nowrap;">
-            ${t.status==="Approved"?`<button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:6px;cursor:pointer;" onclick="reopenTimesheet('${t.id}','${t.sdrName}')">↩ Reopen</button>`:""}
-            <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;margin-left:4px;" onclick="deleteTimesheet('${t.id}','${t.sdrName}')">🗑 Delete</button>
-          </td>
-        </tr>`;
-      }).join("")}</tbody>
+  // ── APPROVED ──
+  html+=hdr("✅ Approved"+(pd?` · ${pd==="none"?"No pay date set":formatDate(pd)}`:""),approved.length,"28px ");
+  if(!approved.length){
+    html+=`<div class="card" style="text-align:center;color:var(--muted);font-size:13px;">No approved timesheets${pd?" for this pay date":""}.</div>`;
+  } else {
+    const T={base:0,qty:0,inc:0,alw:0,add:0,ded:0,pay:0};
+    const rowsHtml=approved.map(t=>{
+      const grand=parseFloat(t.grandTotal||t.totalPay||0);
+      const {g,baseAdj}=parsePayItems(t);
+      const base=(parseFloat(t.totalPay)||0)+baseAdj;
+      const qty=g["Incentive"].reduce((s,i)=>s+i.units,0);
+      const sum=l=>l.reduce((s,i)=>s+i.total,0);
+      T.base+=base;T.qty+=qty;T.inc+=sum(g["Incentive"]);T.alw+=sum(g["Allowance"]);T.add+=sum(g["Additional Pay"]);T.ded+=sum(g["Deduction"]);T.pay+=grand;
+      const cell=(list,neg)=>{const v=sum(list);if(!v)return"—";
+        return `<span style="font-weight:600;color:${neg?"var(--red)":"#0369a1"};">${neg?"−":""}$${v.toFixed(2)}</span><div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;white-space:normal;">${list.map(i=>`${i.desc} ($${i.total.toFixed(2)})`).join("<br>")}</div>`;};
+      return `<tr>
+        <td><strong>${t.sdrName}</strong></td>
+        <td style="font-size:12px;white-space:nowrap;">${(t.cutoffLabel||t.cutoffKey||"—").replace(" to ","<br>to ")}</td>
+        <td>${t.totalDays}</td>
+        <td>$${base.toFixed(2)}${baseAdj?`<div style="font-size:10px;color:#92400e;">adjusted ${baseAdj>0?"+":"−"}$${Math.abs(baseAdj).toFixed(2)}</div>`:""}</td>
+        <td style="text-align:center;">${qty||"—"}</td>
+        <td>${cell(g["Incentive"])}</td>
+        <td>${cell(g["Allowance"])}</td>
+        <td>${cell(g["Additional Pay"])}</td>
+        <td>${cell(g["Deduction"],true)}</td>
+        <td><strong>$${grand.toFixed(2)}</strong></td>
+        <td style="white-space:nowrap;"><div style="display:flex;gap:6px;align-items:center;"><input type="date" id="rpd-${t.id}" value="${t.payDate||""}" oninput="document.getElementById('rpd-btn-${t.id}').style.display='inline-block'" style="padding:4px 6px;border:1.5px solid ${t.payDate?"var(--border)":"#fca5a5"};border-radius:6px;font-size:12px;" /><button id="rpd-btn-${t.id}" class="btn btn-primary btn-sm" style="padding:4px 10px;font-size:11px;display:none;" onclick="savePayDate('${t.id}',document.getElementById('rpd-${t.id}'),this)">Save</button></div>${t.payDate?"":'<div style="font-size:10px;color:var(--red);margin-top:2px;">Not set</div>'}</td>
+        <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:6px;cursor:pointer;" onclick="reopenTimesheet('${t.id}','${t.sdrName}')">↩ Reopen</button>
+          <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;margin-left:4px;" onclick="deleteTimesheet('${t.id}','${t.sdrName}')">🗑 Delete</button>
+        </td>
+      </tr>`;
+    }).join("");
+    const f=v=>"$"+v.toFixed(2);
+    html+=`<div class="stats-grid" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="label">Timesheets</div><div class="value">${approved.length}</div></div>
+      <div class="stat-card"><div class="label">Base Pay</div><div class="value" style="font-size:20px;">${f(T.base)}</div></div>
+      <div class="stat-card"><div class="label">Incentives</div><div class="value cyan" style="font-size:20px;">${f(T.inc)}</div><div class="sub">${T.qty} qty</div></div>
+      <div class="stat-card"><div class="label">Allowances + Additional</div><div class="value cyan" style="font-size:20px;">${f(T.alw+T.add)}</div></div>
+      <div class="stat-card"><div class="label">Deductions</div><div class="value red" style="font-size:20px;">${T.ded?"−":""}${f(T.ded)}</div></div>
+      <div class="stat-card"><div class="label">Total Pay</div><div class="value green" style="font-size:20px;">${f(T.pay)}</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table style="min-width:1250px;">
+      <thead><tr><th>Employee</th><th>Coverage</th><th>Days</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th><th>Pay Date</th><th>Admin Note</th><th></th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot><tr style="background:#f8fafc;font-weight:700;">
+        <td colspan="3">Total</td><td>${f(T.base)}</td><td style="text-align:center;">${T.qty||"—"}</td><td>${f(T.inc)}</td><td>${f(T.alw)}</td><td>${f(T.add)}</td>
+        <td style="color:var(--red);">${T.ded?"−"+f(T.ded):"$0.00"}</td><td style="color:#15803d;">${f(T.pay)}</td><td colspan="3"></td>
+      </tr></tfoot>
     </table></div></div>`;
   }
 
-  document.getElementById("timesheets-content").innerHTML = html;
-  pending.forEach(t=>updateIncentiveTotal(t.id));
+  // Rejected (kept out of the way, but still reachable)
+  if(rejected.length){
+    html+=`<details style="margin-top:22px;"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);">Rejected timesheets (${rejected.length})</summary>
+      <div class="card" style="padding:0;overflow:hidden;margin-top:10px;"><div class="table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Coverage</th><th>Base Pay</th><th>Admin Note</th><th></th></tr></thead><tbody>
+      ${rejected.map(t=>`<tr><td><strong>${t.sdrName}</strong></td><td style="font-size:12px;">${t.cutoffLabel||t.cutoffKey||"—"}</td><td>$${parseFloat(t.totalPay||0).toFixed(2)}</td><td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
+        <td><button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteTimesheet('${t.id}','${t.sdrName}')">🗑 Delete</button></td></tr>`).join("")}
+      </tbody></table></div></div></details>`;
+  }
+
+  content.innerHTML=html;
+  submitted.forEach(t=>updateIncentiveTotal(t.id));
 }
 
 function getTsBadge(status) {
