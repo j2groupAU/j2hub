@@ -1212,6 +1212,18 @@ async function loadTimesheet() {
   }
 }
 
+
+// Admin note without the system tags the portal stores alongside it ([Leads:N], [Suburb:X])
+function cleanAdminNote(n){
+  return String(n||"").replace(/\[(Leads|Suburb):[^\]]*\]/g,"").replace(/\s*\|\s*(\|\s*)+/g," | ").replace(/^\s*\|\s*|\s*\|\s*$/g,"").trim();
+}
+function noteCellHtml(n){
+  const t=cleanAdminNote(n);
+  if(!t) return '<span style="color:#aaa;">—</span>';
+  const esc=t.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  return '<div style="font-size:11px;line-height:1.4;white-space:normal;word-break:break-word;color:var(--text);">'+esc+'</div>';
+}
+
 function renderTimesheetGrouped() {
   var loading = document.getElementById("timesheet-loading");
   var content = document.getElementById("timesheet-content");
@@ -1284,6 +1296,7 @@ function renderTimesheetGrouped() {
       + '<td>' + (e.clockIn||"—") + '</td>'
       + '<td>' + (e.clockOut||"—") + '</td>'
       + '<td style="font-size:12px;">' + workHoursStr + '</td>'
+      + '<td style="white-space:normal;overflow:visible;">' + noteCellHtml(e.adminNotes) + '</td>'
       + '<td>' + suburbCell + '</td>'
       + '<td>' + meetingCell + '</td>'
       + '<td>' + timeOffCell + '</td>'
@@ -1304,7 +1317,7 @@ function renderTimesheetGrouped() {
     + '<div><span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;">Total Pay</span><div style="font-size:20px;font-weight:800;">$' + totalPay.toFixed(2) + '</div></div>'
     + '</div>'
     + '<div class="table-wrap"><table>'
-    + '<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>Suburb</th><th>Meeting</th><th>Time Off</th><th>SQLs</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Adjustment</th></tr></thead>'
+    + '<thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th style="width:180px;">Admin Note</th><th>Suburb</th><th>Meeting</th><th>Time Off</th><th>SQLs</th><th>Base Pay</th><th>Incentive</th><th>Total Pay</th><th>Adjustment</th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '</table></div>';
 }
