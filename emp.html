@@ -199,6 +199,32 @@ table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: f
 th { background: linear-gradient(135deg, #EEF4FF 0%, #E4EEFF 100%); padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid rgba(77,159,255,0.15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 td { padding: 10px 10px; border-bottom: 1px solid #f0ece4; color: var(--text); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr:last-child td { border-bottom: none; }
+.pay-table { table-layout: auto; }
+/* My Timesheet and Pay use more of the screen than the other pages */
+#page-timesheet, #page-pay { width: min(1700px, calc(100vw - 40px)); margin-left: 50%; transform: translateX(-50%); }
+@media (max-width: 600px) { #page-timesheet, #page-pay { width: auto; margin-left: 0; transform: none; } }
+.ts-table { table-layout: auto; }
+.ts-table th { white-space: nowrap; overflow: visible; }
+.ts-table td { overflow: visible; text-overflow: clip; }
+.ts-table td:nth-child(5) { min-width: 180px; max-width: 260px; }
+.ann-card { position:relative; background:#fff; border-radius:16px; padding:22px 24px 20px 28px; margin-bottom:16px;
+  box-shadow:0 4px 24px rgba(10,22,40,0.08); border:1.5px solid var(--ann-border); overflow:hidden; animation:annIn .35s ease; }
+.ann-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--ann-accent); }
+.ann-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+.ann-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; background:var(--ann-soft); flex-shrink:0; }
+.ann-label { font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:var(--ann-accent); }
+.ann-title { font-size:17px; font-weight:800; color:var(--navy); line-height:1.3; }
+.ann-date { margin-left:auto; font-size:11px; color:var(--muted); white-space:nowrap; }
+.ann-body { font-size:14px; color:var(--text); line-height:1.65; white-space:pre-wrap; word-break:break-word; margin:0 0 16px 52px; }
+.ann-foot { display:flex; justify-content:flex-end; }
+.ann-btn { background:var(--ann-accent); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px var(--ann-soft); }
+.ann-btn:disabled { opacity:.6; cursor:default; }
+.ann-card.ann-out { transition:all .35s ease; opacity:0; transform:translateY(-6px); }
+.ann-popup-card { margin:0; box-shadow:0 24px 70px rgba(10,22,40,0.35); animation:annPop .3s ease; }
+@keyframes annPop { from { opacity:0; transform:scale(.96) translateY(10px); } to { opacity:1; transform:none; } }
+.pay-table td { overflow: visible; text-overflow: clip; vertical-align: top; }
+.pay-table td.pay-desc { white-space: normal; min-width: 150px; }
+.pay-table td.pay-desc div { word-break: break-word; }
 tr:hover td { background: rgba(100,160,255,0.04); }
 
 /* ── BADGES ── */
@@ -363,7 +389,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
     <div style="display:flex;align-items:center;overflow-x:auto;flex:1;">
       <div class="nav-tab active" onclick="switchTab('time')" id="tab-time">⏱ Time Management</div>
       <div class="nav-tab" onclick="switchTab('timesheet')" id="tab-timesheet">📋 My Timesheet</div>
-      <div class="nav-tab" onclick="switchTab('payslip')" id="tab-payslip">🧾 Payslip</div>
+      <div class="nav-tab" onclick="switchTab('pay')" id="tab-pay">💵 Pay</div>
       <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">📅 Meetings</div>
       <div class="nav-tab" onclick="switchTab('submit')" id="tab-submit">📤 Submit Timesheet</div>
       <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">🏖️ Leave</div>
@@ -521,21 +547,8 @@ tr:hover td { background: rgba(100,160,255,0.04); }
 
       </div><!-- end clock + meeting row -->
 
-      <!-- Current Cutoff Summary — full width of both cards combined (~978px) -->
-      <div style="width:calc(960px + 18px);max-width:100%;margin-top:18px;">
-        <div class="card">
-          <div class="card-title"><div class="card-icon">📊</div> Current Cutoff Summary</div>
-          <div id="ts-summary-loading" style="color:var(--muted);font-size:13px;">Loading…</div>
-          <div id="ts-summary-content" style="display:none;">
-            <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:12px;" id="ts-summary-period"></div>
-            <div class="mini-grid">
-              <div class="mini-card"><div class="lbl">Days</div><div class="val" id="tss-days">—</div></div>
-              <div class="mini-card"><div class="lbl">Billable Hrs</div><div class="val gold" id="tss-hrs">—</div></div>
-              <div class="mini-card"><div class="lbl">Timesheet</div><div class="val" id="tss-status">—</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- ══ ANNOUNCEMENTS ══ -->
+      <div id="announcements-area" style="width:calc(960px + 18px);max-width:100%;margin-top:18px;"></div>
 
 
 
@@ -553,7 +566,21 @@ tr:hover td { background: rgba(100,160,255,0.04); }
       <div id="timesheet-content"></div>
     </div>
 
-    <!-- ══ PAYSLIP ══ -->
+    <!-- ══ PAY ══ -->
+    <div class="page" id="page-pay">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div><h2>My Pay</h2><p style="color:var(--muted);font-size:13px;margin-top:4px;">All your approved timesheets and what was paid.</p></div>
+        <button class="btn btn-secondary btn-sm" onclick="loadPay()">↻ Refresh</button>
+      </div>
+      <div id="alert-pay" class="alert"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="pay-loading" class="loading-block">Loading your pay…</div>
+        <div id="pay-empty" class="empty-block" style="display:none;"><div class="eicon">💵</div><p>No approved timesheets yet.</p></div>
+        <div class="table-wrap" id="pay-table-wrap" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ══ PAYSLIP (retired) ══ -->
     <div class="page" id="page-payslip">
       <div class="page-header">
         <div><h2>Payslip</h2><p>Only shows approved timesheets. Downloadable as PDF.</p></div>
@@ -623,7 +650,11 @@ tr:hover td { background: rgba(100,160,255,0.04); }
       <div class="card">
         <div class="card-title"><div class="card-icon">🏖️</div> New Leave Request</div>
         <div class="two-col">
-          <div class="field-group"><label>Leave Date</label><input type="date" id="leave-date" /></div>
+          <div class="field-group"><label>From</label><input type="date" id="leave-date" onchange="updateLeavePreview()" /></div>
+          <div class="field-group"><label>To <span style="text-transform:none;font-weight:500;">(leave blank for one day)</span></label><input type="date" id="leave-date-to" onchange="updateLeavePreview()" /></div>
+        </div>
+        <div id="leave-preview" style="display:none;font-size:12px;color:var(--muted);background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:-4px 0 14px;line-height:1.5;"></div>
+        <div class="two-col">
           <div class="field-group"><label>Leave Type</label>
             <select id="leave-type">
               <option value="">— Select —</option>
@@ -632,6 +663,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
               <option value="Half Day PM">Half Day (PM)</option>
             </select>
           </div>
+          <div></div>
         </div>
         <div class="field-group"><label>Reason</label><textarea id="leave-reason" rows="3" placeholder="Briefly describe your reason…"></textarea></div>
         <button class="btn btn-primary btn-full" onclick="submitLeave()" id="btn-submit-leave">Submit Leave Request</button>
@@ -669,7 +701,7 @@ tr:hover td { background: rgba(100,160,255,0.04); }
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycby13I-n4tJRPaT47HIORmK7UvchKXfgQv0A4HlyXIatny-ucFnKdD5Kr9iXBQPIACYOJg/exec";
+const API = "https://script.google.com/macros/s/AKfycbx2Wk4GEr2WF5QpNtyhDtXiYY_6c2CFV_XJfVhlqBtHbN0lWrge-2ejuLtFPXiLoOjbsg/exec";
 let currentUser = null;
 let openClockInEntry = null;
 let allEntries = [];
@@ -724,7 +756,63 @@ function doLogout() {
 }
 
 // ── INIT ──
+// ── ANNOUNCEMENTS ──────────────────────────────────────────────────────────
+const ANN_STYLE={
+  Info:     {icon:"📢", accent:"#2563eb", soft:"rgba(37,99,235,0.12)",  border:"#dbeafe", label:"Announcement"},
+  Important:{icon:"⭐", accent:"#d97706", soft:"rgba(217,119,6,0.14)",  border:"#fde68a", label:"Important"},
+  Urgent:   {icon:"🚨", accent:"#dc2626", soft:"rgba(220,38,38,0.12)",  border:"#fecaca", label:"Urgent"}
+};
+const escHtml=t=>String(t||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let annQueue=[];
+function annCardHtml(a,popup){
+  const st=ANN_STYLE[a.type]||ANN_STYLE.Info;
+  const when=a.createdAt?new Date(a.createdAt).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}):"";
+  return `<div class="ann-card${popup?" ann-popup-card":""}" style="--ann-accent:${st.accent};--ann-soft:${st.soft};--ann-border:${st.border};">
+    <div class="ann-head"><div class="ann-icon">${st.icon}</div>
+      <div><div class="ann-label">${st.label}</div><div class="ann-title">${escHtml(a.title)}</div></div>
+      <div class="ann-date">${when}</div></div>
+    <div class="ann-body"${popup?"":' style="margin-bottom:0;"'}>${escHtml(a.message)}</div>
+    ${popup?`<div class="ann-foot"><span id="ann-popup-count" style="margin-right:auto;font-size:12px;color:var(--muted);align-self:center;"></span><button class="ann-btn" id="ann-popup-btn" onclick="confirmAnnouncement('${a.id}',this)">✓ Got it, confirm</button></div>`:""}
+  </div>`;
+}
+async function loadAnnouncements(){
+  const area=document.getElementById("announcements-area"); if(!area||!currentUser) return;
+  try{
+    const r=await apiPost({action:"getAnnouncements"});
+    const me=currentUser.name.toLowerCase();
+    const acked=new Set((r.acks||[]).filter(a=>(a.sdrName||"").toLowerCase()===me).map(a=>String(a.id)));
+    const live=(r.announcements||[]).filter(a=>a.active).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    // Time Management: every live announcement, read-only
+    area.innerHTML=live.map(a=>annCardHtml(a,false)).join("");
+    // Pop-up: only the ones this SDR hasn't confirmed yet (oldest first)
+    annQueue=live.filter(a=>!acked.has(String(a.id))).reverse();
+    showNextAnnouncement();
+  }catch(e){ area.innerHTML=""; }
+}
+function showNextAnnouncement(){
+  let ov=document.getElementById("ann-popup");
+  if(!annQueue.length){ if(ov) ov.remove(); return; }
+  if(!ov){
+    ov=document.createElement("div"); ov.id="ann-popup";
+    ov.style.cssText="position:fixed;inset:0;background:rgba(10,22,40,0.55);backdrop-filter:blur(3px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;";
+    document.body.appendChild(ov);
+  }
+  const total=annQueue.length;
+  ov.innerHTML=`<div style="width:100%;max-width:620px;max-height:90vh;overflow-y:auto;">${annCardHtml(annQueue[0],true)}</div>`;
+  const c=document.getElementById("ann-popup-count"); if(c) c.textContent=total>1?`${total} announcements to read`:"";
+}
+async function confirmAnnouncement(id,btn){
+  btn.disabled=true; btn.textContent="Confirming…";
+  try{
+    const r=await apiPost({action:"ackAnnouncement",id,sdrName:currentUser.name});
+    if(!r||!r.success) throw new Error("not saved");
+    annQueue=annQueue.filter(a=>String(a.id)!==String(id));
+    showNextAnnouncement();
+  }catch(e){ btn.disabled=false; btn.textContent="✓ Got it, confirm"; alert("Couldn't confirm right now. Please try again."); }
+}
+
 function initApp() {
+  loadAnnouncements();
   startLiveClock();
   setTodayDate();
   checkOpenClockIn();
@@ -829,7 +917,7 @@ async function loadNotifications() {
     allTimesheets.forEach(t => {
       const period = t.cutoffLabel||t.cutoffKey||"period";
       if (t.status==="Approved")
-        notifs.push({type:"success", text:"✓ Timesheet approved: "+period});
+        notifs.push({type:"success", text:"✓ Timesheet approved: "+period+(t.payDate?" — pay date "+formatDate(t.payDate):"")});
       if (t.status==="Rejected")
         notifs.push({type:"red", text:"✗ Timesheet rejected: "+period+(t.adminNote?" — "+t.adminNote:"")});
       if (t.status==="Disputed")
@@ -1075,6 +1163,7 @@ async function submitQuickMeeting() {
 async function loadTimeSummary() {
   const loading=document.getElementById("ts-summary-loading");
   const content=document.getElementById("ts-summary-content");
+  if(!loading||!content) return;   // summary card replaced by announcements
   loading.style.display="block"; content.style.display="none";
   try {
     if(allEntries.length===0) allEntries=await fetchEntries();
@@ -1170,11 +1259,11 @@ function renderTimesheetGrouped() {
         <div class="table-wrap"><table>
           <colgroup>
             <col style="width:110px"><col style="width:80px"><col style="width:85px">
-            <col style="width:95px"><col style="width:130px"><col style="width:75px">
+            <col style="width:95px"><col style="width:190px"><col style="width:130px"><col style="width:75px">
             <col style="width:90px"><col style="width:90px"><col style="width:90px">
             <col style="width:auto">
           </colgroup>
-          <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
+          <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Admin Note</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
           <tbody>${(()=>{
             // Merge work entries + leave rows, sort all by date descending
             const cutoffLeaves = allLeaves.filter(l => getCutoffLabel(l.leaveDate) === cutoffLabel);
@@ -1198,7 +1287,7 @@ function renderTimesheetGrouped() {
                   : `<span style="color:var(--muted);">—</span>`;
                 return`<tr style="background:#fffbeb;border-bottom:1px solid #fde68a;">
                   <td><strong>${formatDate(l.leaveDate)}</strong></td>
-                  <td colspan="6" style="font-size:12px;">
+                  <td colspan="7" style="font-size:12px;white-space:normal;">
                     🏖️ <strong>${l.leaveType||"Leave"}</strong>
                     <span style="color:var(--muted);margin-left:8px;">${l.reason||""}</span>
                     &nbsp;${payBadge}
@@ -1233,6 +1322,7 @@ function renderTimesheetGrouped() {
                 <td><strong>${formatDate(e.workDate)}</strong></td>
                 <td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td>
                 <td style="font-size:12px;">${workHoursStr}</td>
+                <td style="white-space:normal;overflow:visible;">${noteCellHtml(e.adminNotes)}</td>
                 <td>${lunchStr}</td>
                 <td style="font-size:11px;">${meetingCell}</td>
                 <td style="font-size:11px;">${timeOffCell}</td>
@@ -1774,19 +1864,86 @@ function renderLeave(){
     </tr>`;
   }).join("");
 }
+// Weekdays (Mon–Fri) between two dates, inclusive
+function leaveWorkdays(from,to){
+  if(!from) return [];
+  if(!to) to=from;
+  if(to<from) [from,to]=[to,from];
+  const out=[], d=new Date(from+"T12:00:00"), end=new Date(to+"T12:00:00");
+  while(d<=end){ const w=d.getDay(); if(w!==0&&w!==6) out.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")); d.setDate(d.getDate()+1); }
+  return out;
+}
+function leaveAlreadyFiled(date){ return (allLeaves||[]).some(l=>l.leaveDate===date&&l.status!=="Rejected"); }
+function updateLeavePreview(){
+  const el=document.getElementById("leave-preview");
+  const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
+  const days=leaveWorkdays(from,to);
+  if(!from||(!to||to===from)&&days.length===1){el.style.display="none";return;}
+  el.style.display="block";
+  if(!days.length){el.innerHTML="⚠ That range only covers a weekend, so there are no leave days to request.";return;}
+  const dup=days.filter(leaveAlreadyFiled), fresh=days.filter(d=>!leaveAlreadyFiled(d));
+  const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"});
+  el.innerHTML=`This will request <strong>${fresh.length} leave day${fresh.length===1?"":"s"}</strong> (weekends skipped): ${fresh.map(fmt).join(", ")||"—"}`
+    +(dup.length?`<br><span style="color:#b45309;">Already requested, will be skipped: ${dup.map(fmt).join(", ")}</span>`:"");
+}
+
+// Google's servers sometimes reject quick back-to-back saves with an error page.
+// Retry a few times, and before each retry check whether the day actually saved (so we never duplicate it).
+async function addLeaveDayWithRetry(payload){
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  let lastErr;
+  for(let attempt=1;attempt<=4;attempt++){
+    try{
+      const r=await apiPost(payload);
+      if(r&&r.error) throw new Error(r.error);
+      return;
+    }catch(e){
+      lastErr=e;
+      await wait(1500*attempt);
+      try{
+        const lr=await apiPost({action:"getLeaves"});
+        const saved=(lr.leaves||[]).some(l=>l.sdrName===payload.sdrName&&l.leaveDate===payload.leaveDate&&l.status!=="Rejected");
+        if(saved) return;                                // it did save; the reply just got lost
+      }catch(_){}
+    }
+  }
+  throw new Error("Google's server didn't respond for "+payload.leaveDate+" after several tries. Please submit again. Days already saved will be skipped.");
+}
+
 async function submitLeave(){
-  const date=document.getElementById("leave-date").value,type=document.getElementById("leave-type").value,reason=document.getElementById("leave-reason").value.trim();
-  const alert=document.getElementById("alert-leave"),btn=document.getElementById("btn-submit-leave");
-  if(!date){showAlert(alert,"error","Please select a leave date.");return;}
+  const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
+  const type=document.getElementById("leave-type").value, reason=document.getElementById("leave-reason").value.trim();
+  const alert=document.getElementById("alert-leave"), btn=document.getElementById("btn-submit-leave");
+  if(!from){showAlert(alert,"error","Please select a leave date.");return;}
   if(!type){showAlert(alert,"error","Please select a leave type.");return;}
   if(!reason){showAlert(alert,"error","Please provide a reason.");return;}
-  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try{ const lr=await apiPost({action:"getLeaves"}); allLeaves=(lr.leaves||[]).filter(l=>l.sdrName===currentUser.name); }catch(_){}
+  const all=leaveWorkdays(from,to);
+  if(!all.length){showAlert(alert,"error","That range only covers a weekend. Pick at least one weekday.");return;}
+  const days=all.filter(d=>!leaveAlreadyFiled(d));
+  if(!days.length){showAlert(alert,"error","You've already requested leave for "+(all.length===1?"that day.":"all of those days."));return;}
+  const multi=all.length>1;
+  const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
+  const note=multi?` [Part of leave ${fmt(all[0])} – ${fmt(all[all.length-1])}]`:"";
+  btn.disabled=true;
+  let done=0;
   try{
-    await apiPost({action:"addLeave",sdrName:currentUser.name,email:currentUser.email,leaveDate:date,leaveType:type,reason,status:"Pending",payType:"",adminNote:""});
-    showAlert(alert,"success","✓ Leave request submitted.");
-    document.getElementById("leave-date").value=""; document.getElementById("leave-type").value=""; document.getElementById("leave-reason").value="";
+    // One leave record per weekday, so each day shows individually everywhere (timesheet, admin, coverage)
+    for(const d of days){
+      btn.innerHTML=`<span class="spinner"></span> Submitting ${done+1} of ${days.length}…`;
+      await addLeaveDayWithRetry({action:"addLeave",sdrName:currentUser.name,email:currentUser.email,leaveDate:d,leaveType:type,reason:reason+note,status:"Pending",payType:"",adminNote:""});
+      done++;
+      if(done<days.length) await new Promise(r=>setTimeout(r,700));   // give Google a breather between saves
+    }
+    const skipped=all.length-days.length;
+    showAlert(alert,"success",`✓ Leave request submitted for ${done} day${done===1?"":"s"}.`+(skipped?` ${skipped} day${skipped===1?" was":"s were"} already requested and skipped.`:""));
+    ["leave-date","leave-date-to","leave-type","leave-reason"].forEach(id=>document.getElementById(id).value="");
+    document.getElementById("leave-preview").style.display="none";
     loadLeave();
-  }catch(e){showAlert(alert,"error","Could not submit: "+e.message);}
+  }catch(e){
+    showAlert(alert,"error",`Could not submit${done?` (${done} of ${days.length} days were saved)`:""}: `+e.message);
+    if(done) loadLeave();
+  }
   btn.innerHTML="Submit Leave Request"; btn.disabled=false;
 }
 function getLeaveHours(leaveType){
@@ -1810,9 +1967,80 @@ function switchTab(tab){
   document.getElementById("tab-"+tab).classList.add("active");
   if(tab==="timesheet") loadTimesheet();
   if(tab==="payslip") loadPayslip();
+  if(tab==="pay") loadPay();
+  if(tab==="time") loadAnnouncements();
   if(tab==="meetings") { allMeetings=[]; loadMeetings(); }
   if(tab==="submit") loadSubmitPage();
   if(tab==="leave") loadLeave();
+}
+
+// ── MY PAY ─────────────────────────────────────────────────────────────────
+function parsePayItems(ts){
+  let items=[]; try{items=JSON.parse(ts.incentives||"[]");}catch(e){}
+  if(!Array.isArray(items)) items=[];
+  const g={"Incentive":[],"Allowance":[],"Additional Pay":[],"Deduction":[]};
+  let baseAdj=0;
+  items.forEach(i=>{
+    const type=i.type||"Incentive";                 // older approvals had no type = incentive
+    const total=parseFloat(i.total)||0;
+    if(type==="Base Pay Adjustment"){baseAdj+=total;return;}
+    (g[type]||g["Additional Pay"]).push({desc:i.desc||"",units:parseFloat(i.units)||0,total:Math.abs(total)});
+  });
+  return {g,baseAdj};
+}
+async function loadPay(){
+  const load=document.getElementById("pay-loading"),empty=document.getElementById("pay-empty"),wrap=document.getElementById("pay-table-wrap");
+  load.style.display="block";empty.style.display="none";wrap.style.display="none";
+  try{
+    const r=await apiPost({action:"getTimesheets"});
+    const mine=(r.timesheets||[]).filter(t=>(t.sdrName||"").toLowerCase()===currentUser.name.toLowerCase()&&(t.status==="Approved"||t.status==="Processed"));
+    load.style.display="none";
+    if(!mine.length){empty.style.display="block";return;}
+    mine.sort((a,b)=>(b.payDate||"").localeCompare(a.payDate||"")||(b.id||"").localeCompare(a.id||""));
+    const $=v=>"$"+v.toFixed(2);
+    const descs=list=>list.length?`<div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4;">${list.map(i=>`${i.desc} (${$(i.total)})`).join("<br>")}</div>`:"";
+    const sum=list=>list.reduce((s,i)=>s+i.total,0);
+    let tot={base:0,qty:0,inc:0,alw:0,add:0,ded:0,pay:0};
+    const rows=mine.map(ts=>{
+      const {g,baseAdj}=parsePayItems(ts);
+      const base=(parseFloat(ts.totalPay)||0)+baseAdj;
+      const qty=g["Incentive"].reduce((s,i)=>s+i.units,0);
+      const inc=sum(g["Incentive"]),alw=sum(g["Allowance"]),add=sum(g["Additional Pay"]),ded=sum(g["Deduction"]);
+      const pay=parseFloat(ts.grandTotal)||(base+inc+alw+add-ded);
+      tot.base+=base;tot.qty+=qty;tot.inc+=inc;tot.alw+=alw;tot.add+=add;tot.ded+=ded;tot.pay+=pay;
+      return `<tr>
+        <td style="white-space:nowrap;"><strong>${ts.payDate?formatDate(ts.payDate):'<span style="color:var(--muted);font-weight:500;">Not set yet</span>'}</strong></td>
+        <td style="white-space:nowrap;font-size:12px;line-height:1.5;">${(ts.cutoffLabel||ts.cutoffKey||"—").replace(" to ","<br><span style='color:var(--muted);'>to</span> ")}</td>
+        <td>${$(base)}</td>
+        <td style="text-align:center;">${qty||"—"}</td>
+        <td class="pay-desc">${inc?`<span style="color:#0369a1;font-weight:600;">${$(inc)}</span>`:"—"}${descs(g["Incentive"])}</td>
+        <td class="pay-desc">${alw?`<span style="color:#0369a1;font-weight:600;">${$(alw)}</span>`:"—"}${descs(g["Allowance"])}</td>
+        <td class="pay-desc">${add?`<span style="color:#0369a1;font-weight:600;">${$(add)}</span>`:"—"}${descs(g["Additional Pay"])}</td>
+        <td class="pay-desc">${ded?`<span style="color:var(--red);font-weight:600;">−${$(ded)}</span>`:"—"}${descs(g["Deduction"])}</td>
+        <td><strong style="color:#15803d;font-size:14px;">${$(pay)}</strong></td>
+      </tr>`;
+    }).join("");
+    wrap.innerHTML=`<table class="pay-table" style="min-width:1100px;">
+      <thead><tr><th>Pay Date</th><th>Coverage</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive Amount</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="background:#f8fafc;font-weight:700;">
+        <td colspan="2">Total (${mine.length} timesheet${mine.length===1?"":"s"})</td>
+        <td>${$(tot.base)}</td><td style="text-align:center;">${tot.qty||"—"}</td><td>${$(tot.inc)}</td><td>${$(tot.alw)}</td><td>${$(tot.add)}</td>
+        <td style="color:var(--red);">${tot.ded?"−"+$(tot.ded):"$0.00"}</td><td style="color:#15803d;">${$(tot.pay)}</td>
+      </tr></tfoot></table>`;
+    wrap.style.display="block";
+  }catch(e){load.textContent="Could not load your pay: "+e.message;}
+}
+
+// Admin note without the system tags the portal stores alongside it ([Leads:N], [Suburb:X])
+function cleanAdminNote(n){
+  return String(n||"").replace(/\[(Leads|Suburb):[^\]]*\]/g,"").replace(/\s*\|\s*(\|\s*)+/g," | ").replace(/^\s*\|\s*|\s*\|\s*$/g,"").trim();
+}
+function noteCellHtml(n){
+  const t=cleanAdminNote(n);
+  if(!t) return '<span style="color:#aaa;">—</span>';
+  const esc=t.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  return '<div style="font-size:11px;line-height:1.4;white-space:normal;word-break:break-word;color:var(--text);">'+esc+'</div>';
 }
 
 // ── HELPERS ──
