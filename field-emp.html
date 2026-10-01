@@ -201,7 +201,7 @@ td { padding: 10px 10px; border-bottom: 1px solid #f0ece4; color: var(--text); v
 tr:last-child td { border-bottom: none; }
 .pay-table { table-layout: auto; }
 /* My Timesheet and Pay use more of the screen than the other pages */
-#page-timesheet, #page-pay { width: min(1700px, calc(100vw - 40px)); margin-left: 50%; transform: translateX(-50%); }
+#page-timesheet, #page-pay { width: min(1700px, calc(100vw - 40px)); margin-left: calc((100% - min(1700px, calc(100vw - 40px))) / 2); }
 @media (max-width: 600px) { #page-timesheet, #page-pay { width: auto; margin-left: 0; transform: none; } }
 .ts-table { table-layout: auto; }
 .ts-table th { white-space: nowrap; overflow: visible; }
