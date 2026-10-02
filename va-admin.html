@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J2 Hub · VA Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0C0A22;--paper:#fff;--volt:#3122D3;--cta:#3A29FF;--lav:#857DE4;--mist:#F6F9FA;--halo:#EFF8FF;
+  --mortar:#5A5E78;--abyss:#08033C;--line:#E2E5EE;--line2:#EDEFF5;
+  --ok:#11734A;--okbg:#E6F5EE;--bad:#B42318;--badbg:#FDEDEC;--warn:#8A5A00;--warnbg:#FFF3D6;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--mist);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--volt);outline-offset:2px}
+.hidden{display:none!important}
+h1,h2,h3{margin:0;font-weight:300;letter-spacing:-.025em}
+
+/* Mark */
+.mark{width:40px;height:40px;border-radius:50%;border:1.5px solid currentColor;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;flex:none}
+.mark b{font-size:13px;font-weight:600;letter-spacing:-.02em}
+.mark i{font-style:normal;font-size:5.5px;font-weight:500;letter-spacing:.22em;margin-top:2px;padding-left:.22em}
+
+/* Login */
+.login{min-height:100vh;display:flex;align-items:center;color:#fff;padding:32px;
+  background:radial-gradient(circle at 108% 50%,rgba(58,41,255,.7),transparent 46%),linear-gradient(135deg,#0C0A22 0%,#08033C 48%,#3122D3 100%)}
+.login-inner{width:100%;max-width:440px;margin-left:max(0px,calc((100vw - 1120px)/2))}
+.login .brand{display:flex;align-items:center;gap:12px;margin-bottom:56px;font-weight:500}
+.login h1{font-size:40px;line-height:1.1;margin-bottom:12px}
+.login .lede{color:rgba(255,255,255,.72);margin:0 0 32px;font-size:15px}
+.login form{display:grid;gap:14px}
+.login label{display:grid;gap:6px;font-size:13px;color:rgba(255,255,255,.8)}
+.login input{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);border-radius:8px;padding:12px 14px;color:#fff}
+.login input:focus{border-color:#fff;outline:none;background:rgba(255,255,255,.12)}
+.login .btn-primary{background:#fff;color:var(--abyss);border-color:#fff;padding:12px;font-weight:600}
+.login .btn-primary:hover{background:var(--halo)}
+.login .err{min-height:20px;margin:0;color:#FFD2CE;font-size:13px}
+
+/* Shell */
+.top{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.top-in{max-width:1320px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:28px;height:64px}
+.top .brand{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--ink)}
+.top .brand .mark{width:34px;height:34px;color:var(--ink)}
+.top .brand .mark b{font-size:11px}.top .brand .mark i{font-size:4.6px}
+.tabs{display:flex;gap:4px;height:100%;overflow-x:auto}
+.tab{background:none;border:0;padding:0 14px;height:100%;cursor:pointer;color:var(--mortar);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);border-bottom-color:var(--volt)}
+.count{background:var(--volt);color:#fff;border-radius:99px;font-size:11px;font-weight:600;padding:1px 7px;line-height:1.5}
+.top .spacer{flex:1}
+.linkbtn{background:none;border:0;color:var(--mortar);cursor:pointer;padding:6px 0}
+.linkbtn:hover{color:var(--volt)}
+main{max-width:1320px;margin:0 auto;padding:28px 24px 64px}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.page-head h1{font-size:30px;line-height:1.15}
+.page-head p{margin:4px 0 0;color:var(--mortar)}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Buttons + fields */
+.btn{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:#C8CCDA}
+.btn-primary{background:var(--volt);border-color:var(--volt);color:#fff}
+.btn-primary:hover{background:var(--cta);border-color:var(--cta)}
+.btn-danger{color:var(--bad)}
+.btn-danger:hover{border-color:var(--bad)}
+.btn-ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn[disabled]{opacity:.55;cursor:wait}
+.icon-btn{width:36px;height:36px;padding:0;justify-content:center}
+select.btn{padding-right:28px}
+.field{display:grid;gap:6px;font-size:13px;color:var(--mortar);font-weight:500}
+.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:#fff;color:var(--ink);font-weight:400;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--volt);box-shadow:0 0 0 3px rgba(49,34,211,.12)}
+.field textarea{min-height:76px;resize:vertical}
+.hint{font-size:12px;color:var(--mortar);font-weight:400}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Schedule grid */
+.week-nav{display:flex;align-items:center;gap:6px}
+.week-label{font-weight:600;min-width:190px;text-align:center}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px}
+.scroll{overflow-x:auto}
+table.grid{width:100%;min-width:1000px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.grid th,.grid td{border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);vertical-align:top;padding:8px}
+.grid thead th{font-weight:500;text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);border-top:3px solid transparent}
+.grid thead th .dow{display:block;font-size:12px;color:var(--mortar)}
+.grid thead th .dnum{display:block;font-size:16px;font-weight:300;letter-spacing:-.02em}
+.grid thead th.today{border-top-color:var(--volt)}
+.grid thead th.today .dow,.grid thead th.today .dnum{color:var(--volt)}
+.grid td.today{background:#FAFBFF}
+.grid .who{width:200px;position:sticky;left:0;background:var(--paper);z-index:2;text-align:left}
+.grid tbody .who{padding:12px}
+.grid .who .nm{display:block;font-weight:600}
+.grid .who .sub{display:block;font-size:12px;color:var(--mortar);font-weight:400}
+.grid .tot{width:84px;text-align:right;font-weight:600;border-right:0}
+.grid tbody td.tot{padding-top:14px}
+.grid tfoot th,.grid tfoot td{border-bottom:0;font-weight:600;padding:12px 10px;color:var(--mortar);background:var(--mist)}
+.grid tfoot .who{background:var(--mist)}
+.grid tfoot td.tot{color:var(--ink)}
+.grid tbody tr:last-child td,.grid tbody tr:last-child th{border-bottom:1px solid var(--line)}
+.grid td{height:76px}
+.chip{display:block;width:100%;text-align:left;border:0;border-radius:6px;padding:6px 8px;margin-bottom:6px;cursor:pointer;color:#fff;
+  background:linear-gradient(135deg,var(--volt),var(--cta))}
+.chip:hover{filter:brightness(1.08)}
+.chip .t{display:block;font-weight:600;font-size:12px}
+.chip .h{display:block;font-size:11px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot{display:block;width:100%;border:1px dashed transparent;background:none;border-radius:6px;color:transparent;cursor:pointer;height:26px;font-size:16px;line-height:1}
+td:hover .slot,.slot:focus-visible{border-color:#C9CCE0;color:var(--mortar)}
+.slot:hover{border-color:var(--volt)!important;color:var(--volt)!important;background:var(--halo)}
+td:not(:has(.chip)) .slot{height:56px}
+@media (hover:none){.slot{border-color:var(--line);color:#B7BBCC}}
+.legend{display:flex;gap:16px;align-items:center;color:var(--mortar);font-size:12px;margin-top:12px;flex-wrap:wrap}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:12px;font-weight:500;color:var(--mortar);text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:12px 14px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl tbody tr.click{cursor:pointer}
+.tbl tbody tr.click:hover{background:#FAFBFF}
+.muted{color:var(--mortar)}
+.small{font-size:12px}
+.strong{font-weight:600}
+.pos{color:var(--warn);font-weight:600}
+.neg{color:var(--bad);font-weight:600}
+.pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:600}
+.pill.Pending{background:var(--warnbg);color:var(--warn)}
+.pill.Approved{background:var(--okbg);color:var(--ok)}
+.pill.Rejected{background:var(--badbg);color:var(--bad)}
+.pill.Paid{background:var(--halo);color:var(--volt)}
+.pill.Inactive{background:#EEF0F4;color:var(--mortar)}
+.pill.Active{background:var(--okbg);color:var(--ok)}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 12px;cursor:pointer;font-weight:500;color:var(--mortar)}
+.fchip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.fchip span{opacity:.7;margin-left:4px}
+.empty{padding:56px 24px;text-align:center;color:var(--mortar)}
+.empty h3{font-size:20px;color:var(--ink);margin-bottom:6px}
+.empty .btn{margin-top:16px}
+
+/* Dialogs */
+dialog{border:0;border-radius:14px;padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 32px);color:var(--ink);box-shadow:0 24px 60px rgba(8,3,60,.28)}
+dialog.wide{width:min(780px,calc(100vw - 24px))}
+dialog::backdrop{background:rgba(12,10,34,.5)}
+dialog form,dialog .dlg{display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
+.dlg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 22px 12px}
+.dlg-head h2{font-size:22px}
+.dlg-head p{margin:2px 0 0;color:var(--mortar);font-size:13px}
+.x{background:none;border:0;font-size:22px;line-height:1;cursor:pointer;color:var(--mortar);padding:2px 6px;border-radius:6px}
+.x:hover{background:var(--mist);color:var(--ink)}
+.dlg-body{padding:8px 22px 18px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.dlg-body>*{flex-shrink:0}
+.dlg-foot{padding:14px 22px;border-top:1px solid var(--line2);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;background:var(--mist);border-radius:0 0 14px 14px}
+.dlg-foot .left{margin-right:auto}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:8px}
+legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-bottom:6px}
+.checks{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow:auto}
+.ck{position:relative}
+.ck input{position:absolute;opacity:0;inset:0}
+.ck span{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:5px 12px;cursor:pointer;user-select:none;font-size:13px}
+.ck input:checked+span{background:var(--volt);border-color:var(--volt);color:#fff}
+.ck input:focus-visible+span{outline:2px solid var(--volt);outline-offset:2px}
+.preview{margin:0;padding:10px 12px;background:var(--halo);border-radius:8px;color:var(--abyss);font-size:13px}
+.preview.err{background:var(--badbg);color:var(--bad)}
+.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;background:var(--mist);border-radius:10px;padding:14px}
+.kv div span{display:block;font-size:12px;color:var(--mortar)}
+.kv div b{font-weight:600;font-size:16px}
+.note-box{background:var(--mist);border-left:3px solid var(--lav);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;white-space:pre-wrap}
+
+/* Toast + loader */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast.bad{background:var(--bad)}
+.bar{position:fixed;top:0;left:0;height:3px;background:var(--volt);width:0;z-index:50;transition:width .3s}
+.bar.on{width:70%;transition:width 4s cubic-bezier(.1,.6,.2,1)}
+.loading-grid{opacity:.5;pointer-events:none}
+
+@media (max-width:720px){
+  .top-in{padding:0 14px;gap:14px}
+  .top .brand{display:none}
+  .tab{padding:0 10px}
+  .linkbtn{white-space:nowrap;font-size:13px}
+  #refreshBtn{display:none}
+  main{padding:20px 14px 48px}
+  .page-head h1{font-size:24px}
+  .row2,.kv{grid-template-columns:1fr 1fr}
+  .tbl.stack thead{display:none}
+  .tbl.stack tr{display:grid;grid-template-columns:1fr auto;padding:10px 4px;border-bottom:1px solid var(--line2)}
+  .tbl.stack td{border:0;padding:3px 10px}
+  .tbl.stack td.hide-m{display:none}
+  .grid .who{width:140px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+
+<!-- LOGIN -->
+<section class="login" id="loginView">
+  <div class="login-inner">
+    <div class="brand"><div class="mark"><b>J2</b><i>GROUP</i></div><span>J2 Hub · VA Admin</span></div>
+    <h1>Plan the VA week. Approve the hours.</h1>
+    <p class="lede">Schedule shifts for each virtual assistant and review the invoices they file against them.</p>
+    <form id="loginForm">
+      <label>Admin password<input type="password" id="loginPass" autocomplete="current-password" required></label>
+      <button class="btn btn-primary" id="loginBtn">Sign in</button>
+      <p class="err" id="loginErr" role="alert"></p>
+    </form>
+  </div>
+</section>
+
+<!-- APP -->
+<div id="appView" class="hidden">
+  <header class="top">
+    <div class="top-in">
+      <div class="brand"><div class="mark"><b>J2</b><i>GROUP</i></div><span>VA Hub</span></div>
+      <nav class="tabs" role="tablist">
+        <button class="tab on" data-tab="schedule">Schedule</button>
+        <button class="tab" data-tab="invoices">Invoices <span class="count hidden" id="pendingCount"></span></button>
+        <button class="tab" data-tab="vas">VAs</button>
+        <button class="tab" data-tab="settings">Settings</button>
+      </nav>
+      <div class="spacer"></div>
+      <button class="linkbtn" id="refreshBtn" title="Reload data">Refresh</button>
+      <button class="linkbtn" id="signOutBtn">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- SCHEDULE -->
+    <section data-page="schedule">
+      <div class="page-head">
+        <div>
+          <h1>Schedule</h1>
+          <p id="weekSummary">Loading…</p>
+        </div>
+        <div class="toolbar">
+          <select class="btn" id="clientFilter" aria-label="Filter by client"><option value="">All clients</option></select>
+          <div class="week-nav">
+            <button class="btn icon-btn" id="prevWeek" aria-label="Previous week">‹</button>
+            <span class="week-label" id="weekLabel"></span>
+            <button class="btn icon-btn" id="nextWeek" aria-label="Next week">›</button>
+          </div>
+          <button class="btn" id="thisWeek">This week</button>
+          <button class="btn" id="copyWeekBtn">Copy last week</button>
+          <button class="btn btn-primary" id="addShiftsBtn">Add shifts</button>
+        </div>
+      </div>
+      <div class="panel scroll" id="gridWrap"></div>
+      <p class="legend">Click an empty day to add a shift, or click a shift to change or remove it. VAs see changes as soon as they refresh.</p>
+    </section>
+
+    <!-- INVOICES -->
+    <section data-page="invoices" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Invoices</h1>
+          <p>Hours each VA has claimed, compared with what was scheduled.</p>
+        </div>
+        <div class="toolbar">
+          <div class="filters" id="invFilters"></div>
+          <button class="btn" id="exportBtn">Export CSV</button>
+        </div>
+      </div>
+      <div class="panel scroll" id="invWrap"></div>
+    </section>
+
+    <!-- VAS -->
+    <section data-page="vas" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>VAs</h1>
+          <p>Each VA signs in with their email and the password you set here.</p>
+        </div>
+        <div class="toolbar"><button class="btn btn-primary" id="addUserBtn">Add VA</button></div>
+      </div>
+      <div class="panel scroll" id="usersWrap"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section data-page="settings" class="hidden">
+      <div class="page-head"><div><h1>Settings</h1><p>Applies to the whole VA portal.</p></div></div>
+      <form class="panel" id="settingsForm" style="padding:22px;max-width:520px;display:grid;gap:16px">
+        <label class="field">Invoice currency
+          <select name="currency">
+            <option>AUD</option><option>USD</option><option>PHP</option><option>NZD</option><option>GBP</option>
+          </select>
+          <span class="hint">Shown on every invoice. Hourly rates are entered in this currency.</span>
+        </label>
+        <label class="field">New admin password<input type="password" name="newPassword" autocomplete="new-password" placeholder="Leave blank to keep the current one"></label>
+        <label class="field">Confirm new password<input type="password" name="confirm" autocomplete="new-password"></label>
+        <div><button class="btn btn-primary" id="saveSettingsBtn">Save settings</button></div>
+      </form>
+    </section>
+  </main>
+</div>
+
+<!-- ADD SHIFTS -->
+<dialog id="dlgAdd">
+  <form id="addForm" novalidate>
+    <div class="dlg-head"><div><h2>Add shifts</h2><p>Pick one or more VAs and the days they work.</p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body">
+      <fieldset><legend>VAs</legend><div class="checks" id="addUsers"></div></fieldset>
+      <div class="row2">
+        <label class="field">From<input type="date" name="from" required></label>
+        <label class="field">To<input type="date" name="to" required></label>
+      </div>
+      <fieldset><legend>Repeat on</legend><div class="checks" id="addDays"></div></fieldset>
+      <div class="row2">
+        <label class="field">Start time<input type="time" name="start" value="09:00" required></label>
+        <label class="field">End time<input type="time" name="end" value="17:00" required></label>
+      </div>
+      <label class="field">Notes<input name="notes" maxlength="300" placeholder="Optional, e.g. inbox and calendar for Client X"></label>
+      <p class="preview" id="addPreview"></p>
+    </div>
+    <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="addSave">Add shifts</button></div>
+  </form>
+</dialog>
+
+<!-- EDIT SHIFT -->
+<dialog id="dlgEdit">
+  <form id="editForm" novalidate>
+    <div class="dlg-head"><div><h2>Edit shift</h2><p id="editWho"></p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body">
+      <label class="field">Date<input type="date" name="date" required></label>
+      <div class="row2">
+        <label class="field">Start time<input type="time" name="start" required></label>
+        <label class="field">End time<input type="time" name="end" required></label>
+      </div>
+      <label class="field">Notes<input name="notes" maxlength="300"></label>
+      <p class="preview" id="editPreview"></p>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-danger left" id="delShiftBtn">Delete shift</button>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button class="btn btn-primary" id="editSave">Save shift</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- USER -->
+<dialog id="dlgUser">
+  <form id="userForm" novalidate>
+    <div class="dlg-head"><div><h2 id="userTitle">Add VA</h2></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body">
+      <label class="field">Full name<input name="name" required></label>
+      <label class="field">Email<input type="email" name="email" required autocomplete="off"></label>
+      <div class="row2">
+        <label class="field">Client<input name="client" list="clientList" placeholder="e.g. Square"></label>
+        <label class="field">Hourly rate (<span class="cur"></span>)<input type="number" name="rate" min="0" step="0.01" required></label>
+      </div>
+      <datalist id="clientList"></datalist>
+      <div class="row2">
+        <label class="field">Password<input type="text" name="password" autocomplete="off" placeholder="At least 6 characters"></label>
+        <label class="field">Status<select name="status"><option>Active</option><option>Inactive</option></select></label>
+      </div>
+      <label class="field">Admin notes<textarea name="notes" placeholder="Only visible to admins"></textarea></label>
+      <p class="hint" id="rateHint">Rate changes apply to invoices submitted from now on. Invoices already submitted keep their original rate.</p>
+    </div>
+    <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="userSave">Save VA</button></div>
+  </form>
+</dialog>
+
+<!-- INVOICE REVIEW -->
+<dialog id="dlgInv" class="wide">
+  <div class="dlg">
+    <div class="dlg-head"><div><h2 id="invTitle"></h2><p id="invSub"></p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body" id="invBody"></div>
+    <div class="dlg-foot" id="invFoot"></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ===== CONFIG ===== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbwj7sgfSEcKBSHcx7UWycQOaPqYowQTz7tfZuLn-lA-jY6Q9rlDEuPKbiZybrxkb0fM/exec';
+const TOKEN_KEY = 'j2va_admin_token';
+
+/* ===== Utils ===== */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseYmd = s => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+const todayYmd = () => ymd(new Date());
+const mondayOf = s => { const d = parseYmd(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); };
+const dow = s => (parseYmd(s).getDay() + 6) % 7; // 0 = Mon
+const fmtDate = (s, o) => s ? parseYmd(s).toLocaleDateString('en-AU', o || { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const fmtShort = s => fmtDate(s, { day: 'numeric', month: 'short' });
+const fmtStamp = iso => iso ? new Date(iso).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+const fmtTime = t => { if (!t) return ''; const [h, m] = t.split(':').map(Number); const ap = h >= 12 ? 'pm' : 'am'; const hh = h % 12 || 12; return hh + (m ? ':' + pad(m) : '') + ap; };
+const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+const hoursBetween = (a, b) => { const x = toMin(a), y = toMin(b); if (x === null || y === null || x === y) return 0; let d = y - x; if (d <= 0) d += 1440; return Math.round(d / 60 * 100) / 100; };
+const fmtH = h => (Math.round((+h || 0) * 100) / 100) + 'h';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const byName = (a, b) => a.name.localeCompare(b.name);
+const store = {
+  get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+function money(n) {
+  const c = S.settings.currency || 'AUD'; const loc = { USD: 'en-US', PHP: 'en-PH', NZD: 'en-NZ', GBP: 'en-GB' }[c] || 'en-AU';
+  try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n || 0); }
+  catch (e) { return (S.settings.currency || '') + ' ' + (+n || 0).toFixed(2); }
+}
+function weekLabel(start) {
+  const end = addDays(start, 6);
+  const a = parseYmd(start), b = parseYmd(end);
+  const sameMonth = a.getMonth() === b.getMonth();
+  return a.getDate() + (sameMonth ? '' : ' ' + a.toLocaleDateString('en-AU', { month: 'short' })) + ' to ' +
+    b.getDate() + ' ' + b.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
+}
+let toastTimer;
+function toast(msg, kind) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (kind === 'bad' ? ' bad' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = 'toast', 3600);
+}
+let busyCount = 0;
+function busy(on) { busyCount += on ? 1 : -1; $('#bar').classList.toggle('on', busyCount > 0); }
+
+/* ===== State ===== */
+const S = {
+  token: store.get(TOKEN_KEY), users: [], shifts: [], invoices: [], settings: { currency: 'AUD' },
+  weekStart: mondayOf(todayYmd()), invFilter: 'Pending', client: '', editingShift: null, editingUser: null, shiftReq: 0
+};
+const weekRange = () => ({ from: S.weekStart, to: addDays(S.weekStart, 6) });
+const userById = id => S.users.find(u => u.id === id);
+
+/* ===== API ===== */
+async function api(action, body = {}, tries = 3) {
+  if (API_URL.indexOf('PASTE_') === 0) throw new Error('API_URL is not set at the top of va-admin.html.');
+  const payload = JSON.stringify(Object.assign({ action, token: S.token }, body));
+  busy(true);
+  try {
+    for (let i = 0; i < tries; i++) {
+      let res;
+      try {
+        const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
+        res = await r.json();
+      } catch (netErr) {
+        if (i === tries - 1) throw new Error('Could not reach the server. Check your connection and try again.');
+        await sleep(600 * (i + 1));
+        continue;
+      }
+      if (!res.ok) {
+        if (res.auth) signOut(res.error);
+        throw new Error(res.error || 'Something went wrong.');
+      }
+      return res;
+    }
+  } finally { busy(false); }
+}
+function apply(d) {
+  if (d.users) S.users = d.users;
+  if (d.shifts) S.shifts = d.shifts;
+  if (d.invoices) S.invoices = d.invoices;
+  if (d.settings) S.settings = d.settings;
+}
+async function withBtn(btn, fn) {
+  if (btn.disabled) return;
+  const txt = btn.textContent; btn.disabled = true; btn.textContent = 'Saving…';
+  try { await fn(); } catch (e) { toast(e.message, 'bad'); } finally { btn.disabled = false; btn.textContent = txt; }
+}
+
+/* ===== Auth ===== */
+function showLogin(msg) {
+  $('#appView').classList.add('hidden'); $('#loginView').classList.remove('hidden');
+  $('#loginErr').textContent = msg || ''; setTimeout(() => $('#loginPass').focus(), 50);
+}
+function showApp() { $('#loginView').classList.add('hidden'); $('#appView').classList.remove('hidden'); }
+function signOut(msg) { S.token = ''; store.del(TOKEN_KEY); $$('dialog[open]').forEach(d => d.close()); showLogin(msg); }
+
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('#loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…'; $('#loginErr').textContent = '';
+  try {
+    const d = await api('login', Object.assign({ role: 'admin', password: $('#loginPass').value }, weekRange()), 2);
+    S.token = d.token; store.set(TOKEN_KEY, d.token); apply(d);
+    $('#loginPass').value = ''; showApp(); renderAll();
+  } catch (err) { $('#loginErr').textContent = err.message; }
+  finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+});
+$('#signOutBtn').onclick = () => signOut('');
+$('#refreshBtn').onclick = () => loadAll();
+
+async function loadAll() {
+  try { apply(await api('adminLoad', weekRange())); renderAll(); }
+  catch (e) { if (S.token) toast(e.message, 'bad'); }
+}
+
+/* ===== Tabs ===== */
+$$('.tab').forEach(t => t.onclick = () => {
+  $$('.tab').forEach(x => x.classList.toggle('on', x === t));
+  $$('[data-page]').forEach(p => p.classList.toggle('hidden', p.dataset.page !== t.dataset.tab));
+});
+$$('dialog [data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+
+function renderAll() {
+  renderClientFilter(); renderSchedule(); renderInvoices(); renderUsers(); renderSettings();
+}
+
+/* ===== Schedule ===== */
+function renderClientFilter() {
+  const clients = [...new Set(S.users.map(u => u.client).filter(Boolean))].sort();
+  const sel = $('#clientFilter');
+  if (S.client && !clients.includes(S.client)) S.client = '';
+  sel.innerHTML = '<option value="">All clients</option>' + clients.map(c => `<option ${c === S.client ? 'selected' : ''}>${esc(c)}</option>`).join('');
+  sel.classList.toggle('hidden', clients.length < 2);
+  $('#clientList').innerHTML = clients.map(c => `<option value="${esc(c)}">`).join('');
+}
+$('#clientFilter').onchange = e => { S.client = e.target.value; renderSchedule(); };
+
+function renderSchedule() {
+  $('#weekLabel').textContent = weekLabel(S.weekStart);
+  const wrap = $('#gridWrap');
+  const days = Array.from({ length: 7 }, (_, i) => addDays(S.weekStart, i));
+  const today = todayYmd();
+  const users = S.users.filter(u => u.status !== 'Inactive' && (!S.client || u.client === S.client)).sort(byName);
+
+  if (!S.users.length) {
+    $('#weekSummary').textContent = 'No VAs yet';
+    wrap.innerHTML = `<div class="empty"><h3>Add your first VA</h3><p>Once a VA exists you can start scheduling their hours here.</p><button class="btn btn-primary" onclick="openUser()">Add VA</button></div>`;
+    return;
+  }
+  if (!users.length) {
+    $('#weekSummary').textContent = 'No active VAs for this filter';
+    wrap.innerHTML = `<div class="empty"><h3>No active VAs</h3><p>Change the client filter or set a VA to Active.</p></div>`;
+    return;
+  }
+
+  const map = {};
+  S.shifts.forEach(s => { (map[s.userId + '|' + s.date] = map[s.userId + '|' + s.date] || []).push(s); });
+  Object.values(map).forEach(a => a.sort((x, y) => x.start.localeCompare(y.start)));
+  const dayTot = days.map(() => 0);
+  let grand = 0, shiftCount = 0;
+
+  let h = '<table class="grid"><thead><tr><th class="who">VA</th>';
+  days.forEach(d => {
+    const dd = parseYmd(d);
+    h += `<th class="${d === today ? 'today' : ''}"><span class="dow">${dd.toLocaleDateString('en-AU', { weekday: 'short' })}</span><span class="dnum">${dd.getDate()} ${dd.toLocaleDateString('en-AU', { month: 'short' })}</span></th>`;
+  });
+  h += '<th class="tot">Hours</th></tr></thead><tbody>';
+
+  users.forEach(u => {
+    let ut = 0;
+    h += `<tr><th class="who" scope="row"><span class="nm">${esc(u.name)}</span><span class="sub">${esc(u.client || 'No client set')}</span></th>`;
+    days.forEach((d, i) => {
+      const list = map[u.id + '|' + d] || [];
+      let c = '';
+      list.forEach(s => {
+        ut += +s.hours; dayTot[i] += +s.hours; shiftCount++;
+        c += `<button class="chip" data-shift="${esc(s.id)}" title="${esc(s.notes || 'Edit shift')}"><span class="t">${fmtTime(s.start)} to ${fmtTime(s.end)}</span><span class="h">${fmtH(s.hours)}${s.notes ? ', ' + esc(s.notes) : ''}</span></button>`;
+      });
+      h += `<td class="${d === today ? 'today' : ''}">${c}<button class="slot" data-user="${esc(u.id)}" data-date="${d}" aria-label="Add shift for ${esc(u.name)} on ${fmtDate(d)}">+</button></td>`;
+    });
+    grand += ut;
+    h += `<td class="tot">${ut ? fmtH(ut) : '<span class="muted">0h</span>'}</td></tr>`;
+  });
+  h += '</tbody><tfoot><tr><th class="who">Daily total</th>' + dayTot.map(t => `<td>${t ? fmtH(t) : ''}</td>`).join('') + `<td class="tot">${fmtH(grand)}</td></tr></tfoot></table>`;
+  wrap.innerHTML = h;
+  $('#weekSummary').textContent = `${fmtH(grand)} scheduled in ${shiftCount} shift${shiftCount === 1 ? '' : 's'} across ${users.length} VA${users.length === 1 ? '' : 's'}`;
+}
+
+$('#gridWrap').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (chip) return openEditShift(chip.dataset.shift);
+  const slot = e.target.closest('.slot');
+  if (slot) openAddShifts({ userId: slot.dataset.user, date: slot.dataset.date });
+});
+
+async function loadWeek() {
+  const req = ++S.shiftReq;
+  $('#gridWrap').classList.add('loading-grid');
+  renderSchedule();
+  try {
+    const d = await api('adminShifts', weekRange());
+    if (req !== S.shiftReq) return;
+    S.shifts = d.shifts; renderSchedule();
+  } catch (e) { toast(e.message, 'bad'); }
+  finally { if (req === S.shiftReq) $('#gridWrap').classList.remove('loading-grid'); }
+}
+$('#prevWeek').onclick = () => { S.weekStart = addDays(S.weekStart, -7); S.shifts = []; loadWeek(); };
+$('#nextWeek').onclick = () => { S.weekStart = addDays(S.weekStart, 7); S.shifts = []; loadWeek(); };
+$('#thisWeek').onclick = () => { S.weekStart = mondayOf(todayYmd()); S.shifts = []; loadWeek(); };
+
+$('#copyWeekBtn').onclick = async () => {
+  const from = addDays(S.weekStart, -7);
+  if (!confirm(`Copy every shift from ${weekLabel(from)} into ${weekLabel(S.weekStart)}?\n\nShifts that already exist this week are skipped.`)) return;
+  try {
+    const d = await api('adminCopyWeek', Object.assign({ fromStart: from, toStart: S.weekStart }, weekRange()));
+    S.shifts = d.shifts; renderSchedule();
+    toast(d.added ? `Copied ${d.added} shift${d.added === 1 ? '' : 's'}${d.skipped ? `, skipped ${d.skipped} already here` : ''}` : 'Nothing new to copy from last week');
+  } catch (e) { toast(e.message, 'bad'); }
+};
+
+/* Add shifts */
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function openAddShifts(pre = {}) {
+  const active = S.users.filter(u => u.status !== 'Inactive').sort(byName);
+  if (!active.length) { toast('Add an active VA first.', 'bad'); return; }
+  const f = $('#addForm');
+  $('#addUsers').innerHTML = active.map(u => `<label class="ck"><input type="checkbox" value="${esc(u.id)}" ${u.id === pre.userId || active.length === 1 ? 'checked' : ''}><span>${esc(u.name)}</span></label>`).join('');
+  const days = pre.date ? [dow(pre.date)] : [0, 1, 2, 3, 4];
+  $('#addDays').innerHTML = DAY_NAMES.map((n, i) => `<label class="ck"><input type="checkbox" value="${i}" ${days.includes(i) ? 'checked' : ''}><span>${n}</span></label>`).join('');
+  f.from.value = pre.date || S.weekStart;
+  f.to.value = pre.date || addDays(S.weekStart, 4);
+  f.start.value = '09:00'; f.end.value = '17:00'; f.notes.value = '';
+  updateAddPreview();
+  $('#dlgAdd').showModal();
+}
+$('#addShiftsBtn').onclick = () => openAddShifts();
+
+function buildAddList() {
+  const f = $('#addForm');
+  const users = $$('#addUsers input:checked').map(i => i.value);
+  const dows = $$('#addDays input:checked').map(i => +i.value);
+  const { from, to, start, end } = { from: f.from.value, to: f.to.value, start: f.start.value, end: f.end.value };
+  if (!users.length) return { err: 'Select at least one VA.' };
+  if (!from || !to || to < from) return { err: 'Choose a valid date range.' };
+  if (!dows.length) return { err: 'Select at least one day of the week.' };
+  if (!hoursBetween(start, end)) return { err: 'Set a start and end time that differ.' };
+  const list = [];
+  let n = 0;
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    if (++n > 93) return { err: 'Choose a range of 3 months or less.' };
+    if (!dows.includes(dow(d))) continue;
+    users.forEach(u => list.push({ userId: u, date: d, start, end, notes: f.notes.value.trim() }));
+  }
+  if (!list.length) return { err: 'None of the selected weekdays fall in that date range.' };
+  return { list, hours: list.length * hoursBetween(start, end) };
+}
+function updateAddPreview() {
+  const r = buildAddList(), p = $('#addPreview');
+  p.classList.toggle('err', !!r.err);
+  p.textContent = r.err || `This adds ${r.list.length} shift${r.list.length === 1 ? '' : 's'}, ${fmtH(r.hours)} in total. Exact duplicates are skipped.`;
+}
+$('#addForm').addEventListener('input', updateAddPreview);
+$('#addForm').addEventListener('change', updateAddPreview);
+$('#addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const r = buildAddList();
+  if (r.err) return toast(r.err, 'bad');
+  withBtn($('#addSave'), async () => {
+    const d = await api('adminAddShifts', Object.assign({ shifts: r.list }, weekRange()));
+    S.shifts = d.shifts; renderSchedule(); $('#dlgAdd').close();
+    toast(!d.added ? 'Those shifts are already on the schedule' : `Added ${d.added} shift${d.added === 1 ? '' : 's'}${d.skipped ? `, skipped ${d.skipped} already scheduled` : ''}`);
+  });
+});
+
+/* Edit shift */
+function openEditShift(id) {
+  const s = S.shifts.find(x => x.id === id); if (!s) return;
+  S.editingShift = s;
+  const u = userById(s.userId), f = $('#editForm');
+  $('#editWho').textContent = (u ? u.name : 'Unknown VA') + (u && u.client ? ', ' + u.client : '');
+  f.date.value = s.date; f.start.value = s.start; f.end.value = s.end; f.notes.value = s.notes || '';
+  updateEditPreview();
+  $('#dlgEdit').showModal();
+}
+function updateEditPreview() {
+  const f = $('#editForm'), h = hoursBetween(f.start.value, f.end.value);
+  const p = $('#editPreview'); p.classList.toggle('err', !h);
+  p.textContent = h ? `${fmtH(h)} on ${fmtDate(f.date.value, { weekday: 'long', day: 'numeric', month: 'long' })}${toMin(f.end.value) <= toMin(f.start.value) ? ' (finishes the next day)' : ''}` : 'Set a start and end time that differ.';
+}
+$('#editForm').addEventListener('input', updateEditPreview);
+$('#editForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = $('#editForm');
+  if (!hoursBetween(f.start.value, f.end.value) || !f.date.value) return toast('Check the date and times.', 'bad');
+  withBtn($('#editSave'), async () => {
+    const d = await api('adminUpdateShift', Object.assign({ shift: { id: S.editingShift.id, date: f.date.value, start: f.start.value, end: f.end.value, notes: f.notes.value.trim() } }, weekRange()));
+    S.shifts = d.shifts; renderSchedule(); $('#dlgEdit').close(); toast('Shift saved');
+  });
+});
+$('#delShiftBtn').onclick = () => {
+  if (!confirm('Delete this shift?')) return;
+  withBtn($('#delShiftBtn'), async () => {
+    const d = await api('adminDeleteShifts', Object.assign({ ids: [S.editingShift.id] }, weekRange()));
+    S.shifts = d.shifts; renderSchedule(); $('#dlgEdit').close(); toast('Shift deleted');
+  });
+};
+
+/* ===== Invoices ===== */
+const STATUSES = ['Pending', 'Approved', 'Paid', 'Rejected', 'All'];
+function filteredInvoices() {
+  return S.invoices.filter(i => S.invFilter === 'All' || i.status === S.invFilter)
+    .sort((a, b) => String(b.submittedAt).localeCompare(String(a.submittedAt)));
+}
+function variance(i) { return Math.round((i.hours - i.scheduledHours) * 100) / 100; }
+function varCell(v) { return v === 0 ? '<span class="muted">0h</span>' : `<span class="${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${fmtH(v)}</span>`; }
+
+function renderInvoices() {
+  const counts = {};
+  S.invoices.forEach(i => counts[i.status] = (counts[i.status] || 0) + 1);
+  counts.All = S.invoices.length;
+  const pc = $('#pendingCount'); pc.textContent = counts.Pending || ''; pc.classList.toggle('hidden', !counts.Pending);
+  $('#invFilters').innerHTML = STATUSES.map(s => `<button class="fchip ${s === S.invFilter ? 'on' : ''}" data-f="${s}">${s}<span>${counts[s] || 0}</span></button>`).join('');
+
+  const list = filteredInvoices();
+  if (!list.length) {
+    $('#invWrap').innerHTML = `<div class="empty"><h3>${S.invFilter === 'Pending' ? 'Nothing waiting for approval' : 'No invoices here'}</h3><p>${S.invFilter === 'Pending' ? 'New invoices from VAs appear here for you to review.' : 'Try another filter.'}</p></div>`;
+    return;
+  }
+  $('#invWrap').innerHTML = `<table class="tbl stack"><thead><tr>
+      <th>Invoice</th><th>VA</th><th>Period</th><th class="num">Scheduled</th><th class="num">Claimed</th><th class="num">Difference</th><th class="num">Amount</th><th>Submitted</th><th>Status</th>
+    </tr></thead><tbody>${list.map(i => `<tr class="click" data-inv="${esc(i.id)}">
+      <td class="strong">${esc(i.number)}</td>
+      <td>${esc(i.name)}</td>
+      <td>${fmtShort(i.periodStart)} to ${fmtDate(i.periodEnd)}</td>
+      <td class="num hide-m">${fmtH(i.scheduledHours)}</td>
+      <td class="num">${fmtH(i.hours)}</td>
+      <td class="num hide-m">${varCell(variance(i))}</td>
+      <td class="num strong">${money(i.amount)}</td>
+      <td class="muted small hide-m">${fmtStamp(i.submittedAt)}</td>
+      <td><span class="pill ${esc(i.status)}">${esc(i.status)}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+$('#invFilters').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { S.invFilter = b.dataset.f; renderInvoices(); } });
+$('#invWrap').addEventListener('click', e => { const r = e.target.closest('[data-inv]'); if (r) openInvoice(r.dataset.inv); });
+
+function openInvoice(id) {
+  const i = S.invoices.find(x => x.id === id); if (!i) return;
+  const u = userById(i.userId);
+  $('#invTitle').textContent = `${i.number}, ${i.name}`;
+  $('#invSub').innerHTML = `${fmtDate(i.periodStart)} to ${fmtDate(i.periodEnd)}${u && u.client ? ', ' + esc(u.client) : ''} &nbsp;<span class="pill ${esc(i.status)}">${esc(i.status)}</span>`;
+  const lines = (i.lines || []).map(l => {
+    const v = Math.round((l.hours - l.scheduled) * 100) / 100;
+    return `<tr><td>${fmtDate(l.date, { weekday: 'short', day: 'numeric', month: 'short' })}</td><td class="num">${fmtH(l.scheduled)}</td><td class="num strong">${fmtH(l.hours)}</td><td class="num">${varCell(v)}</td><td class="muted small">${esc(l.note || '')}</td></tr>`;
+  }).join('');
+  $('#invBody').innerHTML = `
+    <div class="kv">
+      <div><span>Scheduled</span><b>${fmtH(i.scheduledHours)}</b></div>
+      <div><span>Claimed</span><b>${fmtH(i.hours)}</b></div>
+      <div><span>Rate</span><b>${money(i.rate)}/h</b></div>
+      <div><span>Amount</span><b>${money(i.amount)}</b></div>
+    </div>
+    ${variance(i) ? `<p class="preview">Claimed hours are ${variance(i) > 0 ? fmtH(variance(i)) + ' over' : fmtH(-variance(i)) + ' under'} the schedule for this period.</p>` : ''}
+    <div class="scroll"><table class="tbl"><thead><tr><th>Day</th><th class="num">Scheduled</th><th class="num">Claimed</th><th class="num">Difference</th><th>VA note</th></tr></thead><tbody>${lines || '<tr><td colspan="5" class="muted">No days listed</td></tr>'}</tbody></table></div>
+    ${i.vaNote ? `<div><div class="hint" style="margin-bottom:6px">Note from ${esc(i.name.split(' ')[0])}</div><div class="note-box">${esc(i.vaNote)}</div></div>` : ''}
+    <label class="field">Note to VA<textarea id="invNote" placeholder="Required when rejecting. Shown to the VA.">${esc(i.adminNote || '')}</textarea></label>
+    <p class="hint">Submitted ${fmtStamp(i.submittedAt)}${i.reviewedAt ? `, reviewed ${fmtStamp(i.reviewedAt)}` : ''}${i.paidAt ? `, paid ${fmtStamp(i.paidAt)}` : ''}</p>`;
+
+  const acts = {
+    Pending: [['Reject', 'Rejected', 'btn-danger left'], ['Approve', 'Approved', 'btn-primary']],
+    Approved: [['Move back to pending', 'Pending', 'left'], ['Mark as paid', 'Paid', 'btn-primary']],
+    Rejected: [['Move back to pending', 'Pending', 'left']],
+    Paid: [['Undo paid', 'Approved', 'left']]
+  }[i.status] || [];
+  $('#invFoot').innerHTML = acts.map(([label, st, cls]) => `<button class="btn ${cls}" data-st="${st}">${label}</button>`).join('') + '<button class="btn" data-close-inv>Close</button>';
+  $('#dlgInv').showModal();
+
+  $('#invFoot').onclick = e => {
+    if (e.target.closest('[data-close-inv]')) return $('#dlgInv').close();
+    const b = e.target.closest('[data-st]'); if (!b) return;
+    const note = $('#invNote').value.trim();
+    if (b.dataset.st === 'Rejected' && !note) { $('#invNote').focus(); return toast('Add a note so the VA knows what to fix.', 'bad'); }
+    withBtn(b, async () => {
+      const d = await api('adminReviewInvoice', { id: i.id, status: b.dataset.st, adminNote: note });
+      S.invoices = d.invoices; renderInvoices(); $('#dlgInv').close();
+      toast({ Approved: `${i.number} approved`, Rejected: `${i.number} sent back to ${i.name.split(' ')[0]}`, Paid: `${i.number} marked as paid`, Pending: `${i.number} moved to pending` }[b.dataset.st]);
+    });
+  };
+}
+
+$('#exportBtn').onclick = () => {
+  const list = filteredInvoices();
+  if (!list.length) return toast('No invoices in this view to export.', 'bad');
+  const head = ['Invoice', 'VA', 'Email', 'Client', 'Period start', 'Period end', 'Scheduled hours', 'Claimed hours', 'Rate', 'Amount', 'Currency', 'Status', 'Submitted', 'Reviewed', 'Paid', 'Admin note'];
+  const rows = list.map(i => { const u = userById(i.userId) || {}; return [i.number, i.name, u.email || '', u.client || '', i.periodStart, i.periodEnd, i.scheduledHours, i.hours, i.rate, i.amount, S.settings.currency, i.status, i.submittedAt, i.reviewedAt, i.paidAt, i.adminNote]; });
+  const csv = [head, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `va-invoices-${S.invFilter.toLowerCase()}-${todayYmd()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+};
+
+/* ===== VAs ===== */
+function renderUsers() {
+  $$('.cur').forEach(el => el.textContent = S.settings.currency);
+  if (!S.users.length) {
+    $('#usersWrap').innerHTML = `<div class="empty"><h3>No VAs yet</h3><p>Add a VA with their email and a password, then share the portal link with them.</p><button class="btn btn-primary" onclick="openUser()">Add VA</button></div>`;
+    return;
+  }
+  const list = S.users.slice().sort((a, b) => (a.status === 'Inactive') - (b.status === 'Inactive') || byName(a, b));
+  $('#usersWrap').innerHTML = `<table class="tbl stack"><thead><tr><th>Name</th><th>Email</th><th>Client</th><th class="num">Rate</th><th>Status</th><th>Admin notes</th></tr></thead><tbody>
+    ${list.map(u => `<tr class="click" data-user="${esc(u.id)}">
+      <td class="strong">${esc(u.name)}</td><td class="muted">${esc(u.email)}</td><td>${esc(u.client || '')}</td>
+      <td class="num">${money(u.rate)}/h</td><td><span class="pill ${esc(u.status)}">${esc(u.status)}</span></td>
+      <td class="muted small hide-m">${esc(u.notes || '')}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+$('#usersWrap').addEventListener('click', e => { const r = e.target.closest('[data-user]'); if (r) openUser(r.dataset.user); });
+$('#addUserBtn').onclick = () => openUser();
+
+function openUser(id) {
+  const u = id ? userById(id) : null;
+  S.editingUser = u;
+  const f = $('#userForm');
+  $('#userTitle').textContent = u ? 'Edit ' + u.name : 'Add VA';
+  f.name.value = u ? u.name : ''; f.email.value = u ? u.email : ''; f.client.value = u ? u.client || '' : '';
+  f.rate.value = u ? u.rate : ''; f.status.value = u ? u.status : 'Active'; f.notes.value = u ? u.notes || '' : '';
+  f.password.value = ''; f.password.placeholder = u ? 'Leave blank to keep the current one' : 'At least 6 characters';
+  $('#rateHint').classList.toggle('hidden', !u);
+  $('#dlgUser').showModal();
+}
+$('#userForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = $('#userForm');
+  if (!f.name.value.trim() || !f.email.value.trim() || f.rate.value === '') return toast('Name, email and rate are required.', 'bad');
+  if (!S.editingUser && f.password.value.length < 6) return toast('Set a password with at least 6 characters.', 'bad');
+  withBtn($('#userSave'), async () => {
+    const d = await api('adminSaveUser', { user: { id: S.editingUser ? S.editingUser.id : '', name: f.name.value, email: f.email.value, client: f.client.value, rate: f.rate.value, status: f.status.value, notes: f.notes.value, password: f.password.value } });
+    S.users = d.users; renderClientFilter(); renderUsers(); renderSchedule(); $('#dlgUser').close();
+    toast(S.editingUser ? 'VA saved' : 'VA added. Share the portal link and their password with them.');
+  });
+});
+
+/* ===== Settings ===== */
+function renderSettings() { $('#settingsForm').currency.value = S.settings.currency || 'AUD'; $$('.cur').forEach(el => el.textContent = S.settings.currency); }
+$('#settingsForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  if (f.newPassword.value && f.newPassword.value !== f.confirm.value) return toast('The new passwords do not match.', 'bad');
+  withBtn($('#saveSettingsBtn'), async () => {
+    const d = await api('adminSaveSettings', { settings: { currency: f.currency.value, newPassword: f.newPassword.value } });
+    S.settings = d.settings; f.newPassword.value = ''; f.confirm.value = ''; renderAll(); toast('Settings saved');
+  });
+});
+
+/* ===== Boot ===== */
+(async function boot() {
+  if (!S.token) return showLogin();
+  showApp(); $('#weekLabel').textContent = weekLabel(S.weekStart);
+  await loadAll();
+})();
+</script>
+</body>
+</html>

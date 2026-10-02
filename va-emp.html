@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J2 Hub · VA Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0C0A22;--paper:#fff;--volt:#3122D3;--cta:#3A29FF;--lav:#857DE4;--mist:#F6F9FA;--halo:#EFF8FF;
+  --mortar:#5A5E78;--abyss:#08033C;--line:#E2E5EE;--line2:#EDEFF5;
+  --ok:#11734A;--okbg:#E6F5EE;--bad:#B42318;--badbg:#FDEDEC;--warn:#8A5A00;--warnbg:#FFF3D6;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--mist);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--volt);outline-offset:2px}
+.hidden{display:none!important}
+h1,h2,h3{margin:0;font-weight:300;letter-spacing:-.025em}
+
+/* Mark */
+.mark{width:40px;height:40px;border-radius:50%;border:1.5px solid currentColor;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;flex:none}
+.mark b{font-size:13px;font-weight:600;letter-spacing:-.02em}
+.mark i{font-style:normal;font-size:5.5px;font-weight:500;letter-spacing:.22em;margin-top:2px;padding-left:.22em}
+
+/* Login */
+.login{min-height:100vh;display:flex;align-items:center;color:#fff;padding:32px;
+  background:radial-gradient(circle at 108% 50%,rgba(58,41,255,.7),transparent 46%),linear-gradient(135deg,#0C0A22 0%,#08033C 48%,#3122D3 100%)}
+.login-inner{width:100%;max-width:440px;margin-left:max(0px,calc((100vw - 1120px)/2))}
+.login .brand{display:flex;align-items:center;gap:12px;margin-bottom:56px;font-weight:500}
+.login h1{font-size:40px;line-height:1.1;margin-bottom:12px}
+.login .lede{color:rgba(255,255,255,.72);margin:0 0 32px;font-size:15px}
+.login form{display:grid;gap:14px}
+.login label{display:grid;gap:6px;font-size:13px;color:rgba(255,255,255,.8)}
+.login input{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);border-radius:8px;padding:12px 14px;color:#fff}
+.login input:focus{border-color:#fff;outline:none;background:rgba(255,255,255,.12)}
+.login .btn-primary{background:#fff;color:var(--abyss);border-color:#fff;padding:12px;font-weight:600}
+.login .btn-primary:hover{background:var(--halo)}
+.login .err{min-height:20px;margin:0;color:#FFD2CE;font-size:13px}
+
+/* Shell */
+.top{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.top-in{max-width:1320px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:28px;height:64px}
+.top .brand{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--ink)}
+.top .brand .mark{width:34px;height:34px;color:var(--ink)}
+.top .brand .mark b{font-size:11px}.top .brand .mark i{font-size:4.6px}
+.tabs{display:flex;gap:4px;height:100%;overflow-x:auto}
+.tab{background:none;border:0;padding:0 14px;height:100%;cursor:pointer;color:var(--mortar);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);border-bottom-color:var(--volt)}
+.count{background:var(--volt);color:#fff;border-radius:99px;font-size:11px;font-weight:600;padding:1px 7px;line-height:1.5}
+.top .spacer{flex:1}
+.linkbtn{background:none;border:0;color:var(--mortar);cursor:pointer;padding:6px 0}
+.linkbtn:hover{color:var(--volt)}
+main{max-width:1320px;margin:0 auto;padding:28px 24px 64px}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.page-head h1{font-size:30px;line-height:1.15}
+.page-head p{margin:4px 0 0;color:var(--mortar)}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Buttons + fields */
+.btn{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:#C8CCDA}
+.btn-primary{background:var(--volt);border-color:var(--volt);color:#fff}
+.btn-primary:hover{background:var(--cta);border-color:var(--cta)}
+.btn-danger{color:var(--bad)}
+.btn-danger:hover{border-color:var(--bad)}
+.btn-ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn[disabled]{opacity:.55;cursor:wait}
+.icon-btn{width:36px;height:36px;padding:0;justify-content:center}
+select.btn{padding-right:28px}
+.field{display:grid;gap:6px;font-size:13px;color:var(--mortar);font-weight:500}
+.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:#fff;color:var(--ink);font-weight:400;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--volt);box-shadow:0 0 0 3px rgba(49,34,211,.12)}
+.field textarea{min-height:76px;resize:vertical}
+.hint{font-size:12px;color:var(--mortar);font-weight:400}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Schedule grid */
+.week-nav{display:flex;align-items:center;gap:6px}
+.week-label{font-weight:600;min-width:190px;text-align:center}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px}
+.scroll{overflow-x:auto}
+table.grid{width:100%;min-width:1000px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.grid th,.grid td{border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);vertical-align:top;padding:8px}
+.grid thead th{font-weight:500;text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);border-top:3px solid transparent}
+.grid thead th .dow{display:block;font-size:12px;color:var(--mortar)}
+.grid thead th .dnum{display:block;font-size:16px;font-weight:300;letter-spacing:-.02em}
+.grid thead th.today{border-top-color:var(--volt)}
+.grid thead th.today .dow,.grid thead th.today .dnum{color:var(--volt)}
+.grid td.today{background:#FAFBFF}
+.grid .who{width:200px;position:sticky;left:0;background:var(--paper);z-index:2;text-align:left}
+.grid tbody .who{padding:12px}
+.grid .who .nm{display:block;font-weight:600}
+.grid .who .sub{display:block;font-size:12px;color:var(--mortar);font-weight:400}
+.grid .tot{width:84px;text-align:right;font-weight:600;border-right:0}
+.grid tbody td.tot{padding-top:14px}
+.grid tfoot th,.grid tfoot td{border-bottom:0;font-weight:600;padding:12px 10px;color:var(--mortar);background:var(--mist)}
+.grid tfoot .who{background:var(--mist)}
+.grid tfoot td.tot{color:var(--ink)}
+.grid tbody tr:last-child td,.grid tbody tr:last-child th{border-bottom:1px solid var(--line)}
+.grid td{height:76px}
+.chip{display:block;width:100%;text-align:left;border:0;border-radius:6px;padding:6px 8px;margin-bottom:6px;cursor:pointer;color:#fff;
+  background:linear-gradient(135deg,var(--volt),var(--cta))}
+.chip:hover{filter:brightness(1.08)}
+.chip .t{display:block;font-weight:600;font-size:12px}
+.chip .h{display:block;font-size:11px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot{display:block;width:100%;border:1px dashed transparent;background:none;border-radius:6px;color:transparent;cursor:pointer;height:26px;font-size:16px;line-height:1}
+td:hover .slot,.slot:focus-visible{border-color:#C9CCE0;color:var(--mortar)}
+.slot:hover{border-color:var(--volt)!important;color:var(--volt)!important;background:var(--halo)}
+td:not(:has(.chip)) .slot{height:56px}
+@media (hover:none){.slot{border-color:var(--line);color:#B7BBCC}}
+.legend{display:flex;gap:16px;align-items:center;color:var(--mortar);font-size:12px;margin-top:12px;flex-wrap:wrap}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:12px;font-weight:500;color:var(--mortar);text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:12px 14px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl tbody tr.click{cursor:pointer}
+.tbl tbody tr.click:hover{background:#FAFBFF}
+.muted{color:var(--mortar)}
+.small{font-size:12px}
+.strong{font-weight:600}
+.pos{color:var(--warn);font-weight:600}
+.neg{color:var(--bad);font-weight:600}
+.pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:600}
+.pill.Pending{background:var(--warnbg);color:var(--warn)}
+.pill.Approved{background:var(--okbg);color:var(--ok)}
+.pill.Rejected{background:var(--badbg);color:var(--bad)}
+.pill.Paid{background:var(--halo);color:var(--volt)}
+.pill.Inactive{background:#EEF0F4;color:var(--mortar)}
+.pill.Active{background:var(--okbg);color:var(--ok)}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 12px;cursor:pointer;font-weight:500;color:var(--mortar)}
+.fchip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.fchip span{opacity:.7;margin-left:4px}
+.empty{padding:56px 24px;text-align:center;color:var(--mortar)}
+.empty h3{font-size:20px;color:var(--ink);margin-bottom:6px}
+.empty .btn{margin-top:16px}
+
+/* Dialogs */
+dialog{border:0;border-radius:14px;padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 32px);color:var(--ink);box-shadow:0 24px 60px rgba(8,3,60,.28)}
+dialog.wide{width:min(780px,calc(100vw - 24px))}
+dialog::backdrop{background:rgba(12,10,34,.5)}
+dialog form,dialog .dlg{display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
+.dlg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 22px 12px}
+.dlg-head h2{font-size:22px}
+.dlg-head p{margin:2px 0 0;color:var(--mortar);font-size:13px}
+.x{background:none;border:0;font-size:22px;line-height:1;cursor:pointer;color:var(--mortar);padding:2px 6px;border-radius:6px}
+.x:hover{background:var(--mist);color:var(--ink)}
+.dlg-body{padding:8px 22px 18px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.dlg-body>*{flex-shrink:0}
+.dlg-foot{padding:14px 22px;border-top:1px solid var(--line2);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;background:var(--mist);border-radius:0 0 14px 14px}
+.dlg-foot .left{margin-right:auto}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:8px}
+legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-bottom:6px}
+.checks{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow:auto}
+.ck{position:relative}
+.ck input{position:absolute;opacity:0;inset:0}
+.ck span{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:5px 12px;cursor:pointer;user-select:none;font-size:13px}
+.ck input:checked+span{background:var(--volt);border-color:var(--volt);color:#fff}
+.ck input:focus-visible+span{outline:2px solid var(--volt);outline-offset:2px}
+.preview{margin:0;padding:10px 12px;background:var(--halo);border-radius:8px;color:var(--abyss);font-size:13px}
+.preview.err{background:var(--badbg);color:var(--bad)}
+.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;background:var(--mist);border-radius:10px;padding:14px}
+.kv div span{display:block;font-size:12px;color:var(--mortar)}
+.kv div b{font-weight:600;font-size:16px}
+.note-box{background:var(--mist);border-left:3px solid var(--lav);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;white-space:pre-wrap}
+
+/* Toast + loader */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast.bad{background:var(--bad)}
+.bar{position:fixed;top:0;left:0;height:3px;background:var(--volt);width:0;z-index:50;transition:width .3s}
+.bar.on{width:70%;transition:width 4s cubic-bezier(.1,.6,.2,1)}
+.loading-grid{opacity:.5;pointer-events:none}
+
+@media (max-width:720px){
+  .top-in{padding:0 14px;gap:14px}
+  .top .brand{display:none}
+  .tab{padding:0 10px}
+  .linkbtn{white-space:nowrap;font-size:13px}
+  #refreshBtn{display:none}
+  main{padding:20px 14px 48px}
+  .page-head h1{font-size:24px}
+  .row2,.kv{grid-template-columns:1fr 1fr}
+  .tbl.stack thead{display:none}
+  .tbl.stack tr{display:grid;grid-template-columns:1fr auto;padding:10px 4px;border-bottom:1px solid var(--line2)}
+  .tbl.stack td{border:0;padding:3px 10px}
+  .tbl.stack td.hide-m{display:none}
+  .grid .who{width:140px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+main{max-width:920px}
+.top-in{max-width:920px}
+.next{background:radial-gradient(circle at 105% 40%,rgba(58,41,255,.65),transparent 50%),linear-gradient(135deg,#0C0A22,#08033C 55%,#3122D3);color:#fff;border-radius:14px;padding:22px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.next .lbl{font-size:13px;color:rgba(255,255,255,.7)}
+.next .when{font-size:28px;font-weight:300;letter-spacing:-.025em;line-height:1.2}
+.next .what{color:rgba(255,255,255,.85);margin-top:2px}
+.next .wk{text-align:right}
+.next .wk b{display:block;font-size:28px;font-weight:300;letter-spacing:-.025em}
+.days{display:grid}
+.day{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line2);align-items:start}
+.day:last-child{border-bottom:0}
+.day.today{background:#FAFBFF;box-shadow:inset 3px 0 0 var(--volt)}
+.day .d b{display:block;font-weight:600}
+.day .d span{font-size:13px;color:var(--mortar)}
+.day.today .d b{color:var(--volt)}
+.day.past{opacity:.6}
+.shift{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:8px;background:linear-gradient(135deg,var(--volt),var(--cta));color:#fff;margin-bottom:6px}
+.shift:last-child{margin-bottom:0}
+.shift .t{font-weight:600}
+.shift .n{font-size:12px;opacity:.85}
+.shift .h{font-weight:600;white-space:nowrap}
+.off{color:var(--mortar);padding:9px 0}
+.inv{padding:16px 20px;border-bottom:1px solid var(--line2);display:grid;grid-template-columns:1fr auto;gap:6px 16px}
+.inv:last-child{border-bottom:0}
+.inv .ttl{font-weight:600}
+.inv .meta{color:var(--mortar);font-size:13px}
+.inv .amt{text-align:right;font-weight:600}
+.inv .acts{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+.inv .note-box{grid-column:1/-1}
+.lines td{padding:8px 10px}
+.lines input{border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;background:#fff}
+.lines input[type=number]{width:80px;text-align:right}
+.lines input:focus{outline:none;border-color:var(--volt)}
+.lines .rm{background:none;border:0;color:var(--mortar);cursor:pointer;font-size:18px;padding:2px 6px}
+.lines .rm:hover{color:var(--bad)}
+.totals{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:var(--halo);border-radius:10px;flex-wrap:wrap}
+.totals b{font-size:20px;font-weight:600}
+@media (max-width:720px){
+  .day{grid-template-columns:1fr;gap:6px;padding:12px 14px}
+  .next .wk{text-align:left}
+  .lines .sched{display:none}
+}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+
+<section class="login" id="loginView">
+  <div class="login-inner">
+    <div class="brand"><div class="mark"><b>J2</b><i>GROUP</i></div><span>J2 Hub · VA Portal</span></div>
+    <h1>Your schedule and invoices in one place.</h1>
+    <p class="lede">See the hours you are booked for, then file your invoice for approval.</p>
+    <form id="loginForm">
+      <label>Email<input type="email" id="loginEmail" autocomplete="username" required></label>
+      <label>Password<input type="password" id="loginPass" autocomplete="current-password" required></label>
+      <button class="btn btn-primary" id="loginBtn">Sign in</button>
+      <p class="err" id="loginErr" role="alert"></p>
+    </form>
+  </div>
+</section>
+
+<div id="appView" class="hidden">
+  <header class="top">
+    <div class="top-in">
+      <div class="brand"><div class="mark"><b>J2</b><i>GROUP</i></div><span>VA Portal</span></div>
+      <nav class="tabs">
+        <button class="tab on" data-tab="schedule">My schedule</button>
+        <button class="tab" data-tab="invoices">Invoices</button>
+      </nav>
+      <div class="spacer"></div>
+      <button class="linkbtn" id="pwBtn">Password</button>
+      <button class="linkbtn" id="signOutBtn">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <section data-page="schedule">
+      <div id="nextCard"></div>
+      <div class="page-head">
+        <div><h1 id="hello">My schedule</h1><p id="weekSummary"></p></div>
+        <div class="toolbar">
+          <div class="week-nav">
+            <button class="btn icon-btn" id="prevWeek" aria-label="Previous week">‹</button>
+            <span class="week-label" id="weekLabel"></span>
+            <button class="btn icon-btn" id="nextWeek" aria-label="Next week">›</button>
+          </div>
+          <button class="btn" id="thisWeek">This week</button>
+        </div>
+      </div>
+      <div class="panel days" id="days"></div>
+    </section>
+
+    <section data-page="invoices" class="hidden">
+      <div class="page-head">
+        <div><h1>Invoices</h1><p>File the hours you worked. Your admin reviews each invoice against your schedule.</p></div>
+        <div class="toolbar"><button class="btn btn-primary" id="newInvBtn">New invoice</button></div>
+      </div>
+      <div class="panel" id="invList"></div>
+    </section>
+  </main>
+</div>
+
+<!-- INVOICE FORM -->
+<dialog id="dlgInv" class="wide">
+  <form id="invForm" novalidate>
+    <div class="dlg-head"><div><h2 id="invTitle">New invoice</h2><p>Days you were scheduled are filled in. Change the hours if you worked more or less.</p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body">
+      <div class="row2">
+        <label class="field">From<input type="date" name="from" required></label>
+        <label class="field">To<input type="date" name="to" required></label>
+      </div>
+      <div class="scroll">
+        <table class="tbl lines"><thead><tr><th>Day</th><th class="num sched">Scheduled</th><th class="num">Hours worked</th><th>Note</th><th></th></tr></thead><tbody id="lineRows"></tbody></table>
+      </div>
+      <div class="toolbar">
+        <input type="date" id="extraDate" class="btn" aria-label="Extra day">
+        <button type="button" class="btn" id="addDayBtn">Add a day</button>
+        <span class="hint">For days you worked that were not on your schedule.</span>
+      </div>
+      <div class="totals"><span id="totHours"></span><b id="totAmt"></b></div>
+      <label class="field">Note to admin<textarea name="note" maxlength="1000" placeholder="Optional, e.g. covered extra hours for the client launch"></textarea></label>
+    </div>
+    <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="invSave">Submit invoice</button></div>
+  </form>
+</dialog>
+
+<!-- PASSWORD -->
+<dialog id="dlgPw">
+  <form id="pwForm" novalidate>
+    <div class="dlg-head"><div><h2>Change password</h2></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body">
+      <label class="field">Current password<input type="password" name="current" autocomplete="current-password"></label>
+      <label class="field">New password<input type="password" name="next" autocomplete="new-password" placeholder="At least 6 characters"></label>
+      <label class="field">Confirm new password<input type="password" name="confirm" autocomplete="new-password"></label>
+    </div>
+    <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="pwSave">Change password</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ===== CONFIG ===== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbwj7sgfSEcKBSHcx7UWycQOaPqYowQTz7tfZuLn-lA-jY6Q9rlDEuPKbiZybrxkb0fM/exec';
+const TOKEN_KEY = 'j2va_token';
+
+/* ===== Utils ===== */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseYmd = s => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+const todayYmd = () => ymd(new Date());
+const mondayOf = s => { const d = parseYmd(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); };
+const fmtDate = (s, o) => s ? parseYmd(s).toLocaleDateString('en-AU', o || { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const fmtShort = s => fmtDate(s, { day: 'numeric', month: 'short' });
+const fmtStamp = iso => iso ? new Date(iso).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+const fmtTime = t => { if (!t) return ''; const [h, m] = t.split(':').map(Number); const ap = h >= 12 ? 'pm' : 'am'; return (h % 12 || 12) + (m ? ':' + pad(m) : '') + ap; };
+const fmtH = h => (Math.round((+h || 0) * 100) / 100) + 'h';
+const r2 = n => Math.round((+n || 0) * 100) / 100;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const store = {
+  get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+function money(n) {
+  const c = S.settings.currency || 'AUD'; const loc = { USD: 'en-US', PHP: 'en-PH', NZD: 'en-NZ', GBP: 'en-GB' }[c] || 'en-AU';
+  try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n || 0); }
+  catch (e) { return (S.settings.currency || '') + ' ' + (+n || 0).toFixed(2); }
+}
+function weekLabel(start) {
+  const a = parseYmd(start), b = parseYmd(addDays(start, 6));
+  return a.getDate() + (a.getMonth() === b.getMonth() ? '' : ' ' + a.toLocaleDateString('en-AU', { month: 'short' })) + ' to ' +
+    b.getDate() + ' ' + b.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
+}
+let toastTimer;
+function toast(msg, kind) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (kind === 'bad' ? ' bad' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = 'toast', 3600);
+}
+let busyCount = 0;
+function busy(on) { busyCount += on ? 1 : -1; $('#bar').classList.toggle('on', busyCount > 0); }
+
+/* ===== State ===== */
+const S = { token: store.get(TOKEN_KEY), user: null, shifts: [], invoices: [], settings: { currency: 'AUD' }, weekStart: mondayOf(todayYmd()), editing: null, lines: [] };
+
+/* ===== API ===== */
+async function api(action, body = {}, tries = 3) {
+  if (API_URL.indexOf('PASTE_') === 0) throw new Error('The portal is not connected yet. Ask your admin to set API_URL.');
+  const payload = JSON.stringify(Object.assign({ action, token: S.token }, body));
+  busy(true);
+  try {
+    for (let i = 0; i < tries; i++) {
+      let res;
+      try {
+        const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
+        res = await r.json();
+      } catch (netErr) {
+        if (i === tries - 1) throw new Error('Could not reach the server. Check your connection and try again.');
+        await sleep(600 * (i + 1));
+        continue;
+      }
+      if (!res.ok) { if (res.auth) signOut(res.error); throw new Error(res.error || 'Something went wrong.'); }
+      return res;
+    }
+  } finally { busy(false); }
+}
+function apply(d) {
+  if (d.user) S.user = d.user;
+  if (d.shifts) S.shifts = d.shifts.slice().sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+  if (d.invoices) S.invoices = d.invoices;
+  if (d.settings) S.settings = d.settings;
+}
+async function withBtn(btn, fn, label = 'Saving…') {
+  if (btn.disabled) return;
+  const txt = btn.textContent; btn.disabled = true; btn.textContent = label;
+  try { await fn(); } catch (e) { toast(e.message, 'bad'); } finally { btn.disabled = false; btn.textContent = txt; }
+}
+
+/* ===== Auth ===== */
+function showLogin(msg) {
+  $('#appView').classList.add('hidden'); $('#loginView').classList.remove('hidden');
+  $('#loginErr').textContent = msg || ''; setTimeout(() => ($('#loginEmail').value ? $('#loginPass') : $('#loginEmail')).focus(), 50);
+}
+function showApp() { $('#loginView').classList.add('hidden'); $('#appView').classList.remove('hidden'); }
+function signOut(msg) { S.token = ''; store.del(TOKEN_KEY); $$('dialog[open]').forEach(d => d.close()); showLogin(msg); }
+
+$('#loginEmail').value = store.get('j2va_email');
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('#loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…'; $('#loginErr').textContent = '';
+  try {
+    const email = $('#loginEmail').value.trim();
+    const d = await api('login', { role: 'va', email, password: $('#loginPass').value }, 2);
+    S.token = d.token; store.set(TOKEN_KEY, d.token); store.set('j2va_email', email); apply(d);
+    $('#loginPass').value = ''; showApp(); renderAll();
+  } catch (err) { $('#loginErr').textContent = err.message; }
+  finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+});
+$('#signOutBtn').onclick = () => signOut('');
+
+$$('.tab').forEach(t => t.onclick = () => {
+  $$('.tab').forEach(x => x.classList.toggle('on', x === t));
+  $$('[data-page]').forEach(p => p.classList.toggle('hidden', p.dataset.page !== t.dataset.tab));
+});
+$$('dialog [data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+
+function renderAll() { renderSchedule(); renderInvoices(); }
+
+/* ===== Schedule ===== */
+function renderSchedule() {
+  const today = todayYmd();
+  $('#hello').textContent = S.user ? 'Hi ' + S.user.name.split(' ')[0] : 'My schedule';
+  $('#weekLabel').textContent = weekLabel(S.weekStart);
+
+  // Next shift + this week's total
+  const now = new Date(), nowHM = pad(now.getHours()) + ':' + pad(now.getMinutes());
+  const next = S.shifts.find(s => s.date > today || (s.date === today && (s.end > nowHM || s.end <= s.start)));
+  const thisWeek = mondayOf(today);
+  const wkHours = S.shifts.filter(s => s.date >= thisWeek && s.date <= addDays(thisWeek, 6)).reduce((t, s) => t + s.hours, 0);
+  let when = '';
+  if (next) {
+    when = next.date === today ? 'Today' : next.date === addDays(today, 1) ? 'Tomorrow' : fmtDate(next.date, { weekday: 'long', day: 'numeric', month: 'short' });
+  }
+  $('#nextCard').innerHTML = `<div class="next">
+    <div>${next
+      ? `<div class="lbl">Your next shift</div><div class="when">${when}, ${fmtTime(next.start)} to ${fmtTime(next.end)}</div><div class="what">${fmtH(next.hours)}${next.notes ? ', ' + esc(next.notes) : ''}</div>`
+      : `<div class="lbl">Your next shift</div><div class="when">Nothing scheduled yet</div><div class="what">Your admin will add your hours here.</div>`}</div>
+    <div class="wk"><span class="lbl">Booked this week</span><b>${fmtH(wkHours)}</b></div>
+  </div>`;
+
+  const days = Array.from({ length: 7 }, (_, i) => addDays(S.weekStart, i));
+  let total = 0, count = 0;
+  $('#days').innerHTML = days.map(d => {
+    const list = S.shifts.filter(s => s.date === d);
+    list.forEach(s => { total += s.hours; count++; });
+    const cls = d === today ? 'today' : d < today ? 'past' : '';
+    return `<div class="day ${cls}">
+      <div class="d"><b>${fmtDate(d, { weekday: 'long' })}${d === today ? ', today' : ''}</b><span>${fmtDate(d, { day: 'numeric', month: 'long' })}</span></div>
+      <div>${list.length ? list.map(s => `<div class="shift"><div><div class="t">${fmtTime(s.start)} to ${fmtTime(s.end)}</div>${s.notes ? `<div class="n">${esc(s.notes)}</div>` : ''}</div><div class="h">${fmtH(s.hours)}</div></div>`).join('') : '<div class="off">Not scheduled</div>'}</div>
+    </div>`;
+  }).join('');
+  $('#weekSummary').textContent = count ? `${fmtH(total)} across ${count} shift${count === 1 ? '' : 's'} this week` : 'No shifts this week';
+}
+$('#prevWeek').onclick = () => { S.weekStart = addDays(S.weekStart, -7); renderSchedule(); };
+$('#nextWeek').onclick = () => { S.weekStart = addDays(S.weekStart, 7); renderSchedule(); };
+$('#thisWeek').onclick = () => { S.weekStart = mondayOf(todayYmd()); renderSchedule(); };
+
+/* ===== Invoices ===== */
+function renderInvoices() {
+  const list = S.invoices.slice().sort((a, b) => String(b.periodStart).localeCompare(String(a.periodStart)));
+  if (!list.length) {
+    $('#invList').innerHTML = `<div class="empty"><h3>No invoices yet</h3><p>When your period ends, file an invoice for the hours you worked.</p><button class="btn btn-primary" onclick="openInvoice()">New invoice</button></div>`;
+    return;
+  }
+  $('#invList').innerHTML = list.map(i => {
+    const editable = i.status === 'Pending' || i.status === 'Rejected';
+    const msg = i.status === 'Rejected' ? 'Sent back for changes' : i.status === 'Approved' ? 'Approved' + (i.reviewedAt ? ' on ' + fmtStamp(i.reviewedAt) : '') :
+      i.status === 'Paid' ? 'Paid' + (i.paidAt ? ' on ' + fmtStamp(i.paidAt) : '') : 'Waiting for approval';
+    return `<div class="inv">
+      <div><div class="ttl">${esc(i.number)}, ${fmtShort(i.periodStart)} to ${fmtDate(i.periodEnd)}</div>
+        <div class="meta">${fmtH(i.hours)} claimed, ${fmtH(i.scheduledHours)} scheduled. Submitted ${fmtStamp(i.submittedAt)}. ${msg}.</div></div>
+      <div class="amt">${money(i.amount)}<div><span class="pill ${esc(i.status)}">${esc(i.status)}</span></div></div>
+      ${i.adminNote ? `<div class="note-box"><span class="hint">Note from admin</span><br>${esc(i.adminNote)}</div>` : ''}
+      ${editable ? `<div class="acts"><button class="btn" data-edit="${esc(i.id)}">${i.status === 'Rejected' ? 'Fix and resubmit' : 'Edit'}</button><button class="btn btn-danger" data-withdraw="${esc(i.id)}">Withdraw</button></div>` : ''}
+    </div>`;
+  }).join('');
+}
+$('#invList').addEventListener('click', e => {
+  const ed = e.target.closest('[data-edit]'); if (ed) return openInvoice(ed.dataset.edit);
+  const wd = e.target.closest('[data-withdraw]');
+  if (wd) {
+    const inv = S.invoices.find(i => i.id === wd.dataset.withdraw);
+    if (!confirm(`Withdraw ${inv.number}? You can file a new invoice for these dates afterwards.`)) return;
+    withBtn(wd, async () => { apply(await api('vaWithdrawInvoice', { id: inv.id })); renderInvoices(); toast(`${inv.number} withdrawn`); }, 'Withdrawing…');
+  }
+});
+$('#newInvBtn').onclick = () => openInvoice();
+
+function scheduledFor(date) {
+  const list = S.shifts.filter(s => s.date === date);
+  return { hours: r2(list.reduce((t, s) => t + s.hours, 0)), times: list.map(s => fmtTime(s.start) + ' to ' + fmtTime(s.end)).join(', ') };
+}
+function suggestRange() {
+  const today = todayYmd();
+  const lastEnd = S.invoices.filter(i => i.status !== 'Rejected').map(i => i.periodEnd).sort().pop();
+  let from = lastEnd ? addDays(lastEnd, 1) : (S.shifts.find(s => s.date <= today) || {}).date || addDays(today, -13);
+  if (from > today) from = today;
+  return { from, to: today };
+}
+function linesFromSchedule(from, to, keep = []) {
+  const kept = {}; keep.forEach(l => kept[l.date] = l);
+  const out = [];
+  for (let d = from, n = 0; d <= to && n < 63; d = addDays(d, 1), n++) {
+    const sc = scheduledFor(d);
+    if (kept[d]) out.push(Object.assign({}, kept[d]));
+    else if (sc.hours) out.push({ date: d, hours: sc.hours, note: '' });
+  }
+  return out;
+}
+function openInvoice(id) {
+  const inv = id ? S.invoices.find(i => i.id === id) : null;
+  S.editing = inv;
+  const f = $('#invForm');
+  $('#invTitle').textContent = inv ? (inv.status === 'Rejected' ? 'Fix and resubmit ' : 'Edit ') + inv.number : 'New invoice';
+  $('#invSave').textContent = inv ? 'Resubmit invoice' : 'Submit invoice';
+  const r = inv ? { from: inv.periodStart, to: inv.periodEnd } : suggestRange();
+  f.from.value = r.from; f.to.value = r.to; f.note.value = inv ? inv.vaNote || '' : '';
+  S.lines = inv ? inv.lines.map(l => ({ date: l.date, hours: l.hours, note: l.note || '' })) : linesFromSchedule(r.from, r.to);
+  $('#extraDate').value = '';
+  renderLines();
+  $('#dlgInv').showModal();
+}
+function rangeChanged() {
+  const f = $('#invForm');
+  if (!f.from.value || !f.to.value || f.to.value < f.from.value) { S.lines = []; return renderLines(); }
+  S.lines = linesFromSchedule(f.from.value, f.to.value, S.lines.filter(l => l.date >= f.from.value && l.date <= f.to.value));
+  renderLines();
+}
+$('#invForm').from.addEventListener('change', rangeChanged);
+$('#invForm').to.addEventListener('change', rangeChanged);
+
+function renderLines() {
+  S.lines.sort((a, b) => a.date.localeCompare(b.date));
+  const body = $('#lineRows');
+  if (!S.lines.length) {
+    body.innerHTML = `<tr><td colspan="5" class="muted">No scheduled days in this range. Use "Add a day" for any day you worked.</td></tr>`;
+  } else {
+    body.innerHTML = S.lines.map((l, i) => {
+      const sc = scheduledFor(l.date);
+      return `<tr>
+        <td><b>${fmtDate(l.date, { weekday: 'short', day: 'numeric', month: 'short' })}</b>${sc.times ? `<div class="hint">${esc(sc.times)}</div>` : '<div class="hint">Not scheduled</div>'}</td>
+        <td class="num sched muted">${fmtH(sc.hours)}</td>
+        <td class="num"><input type="number" min="0" max="24" step="0.25" value="${l.hours}" data-i="${i}" data-k="hours" aria-label="Hours worked"></td>
+        <td><input value="${esc(l.note)}" maxlength="300" data-i="${i}" data-k="note" placeholder="Optional" aria-label="Note"></td>
+        <td><button type="button" class="rm" data-rm="${i}" aria-label="Remove day">×</button></td>
+      </tr>`;
+    }).join('');
+  }
+  updateTotals();
+}
+$('#lineRows').addEventListener('input', e => {
+  const el = e.target; if (!el.dataset.k) return;
+  const l = S.lines[+el.dataset.i];
+  l[el.dataset.k] = el.value;
+  updateTotals();
+});
+$('#lineRows').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { S.lines.splice(+b.dataset.rm, 1); renderLines(); } });
+$('#addDayBtn').onclick = () => {
+  const f = $('#invForm'), d = $('#extraDate').value;
+  if (!d) return toast('Pick the day you want to add.', 'bad');
+  if (d < f.from.value || d > f.to.value) return toast('That day is outside the invoice dates.', 'bad');
+  if (S.lines.some(l => l.date === d)) return toast('That day is already on the invoice.', 'bad');
+  S.lines.push({ date: d, hours: scheduledFor(d).hours || '', note: '' }); $('#extraDate').value = ''; renderLines();
+};
+function updateTotals() {
+  const f = $('#invForm');
+  const hours = r2(S.lines.reduce((t, l) => t + (+l.hours || 0), 0));
+  let sched = 0;
+  for (let d = f.from.value, n = 0; d && f.to.value && d <= f.to.value && n < 63; d = addDays(d, 1), n++) sched += scheduledFor(d).hours;
+  const rate = S.user ? S.user.rate : 0;
+  $('#totHours').textContent = `${fmtH(hours)} worked of ${fmtH(r2(sched))} scheduled, at ${money(rate)}/h`;
+  $('#totAmt').textContent = money(r2(hours * rate));
+  $('#extraDate').min = f.from.value; $('#extraDate').max = f.to.value;
+}
+$('#invForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = $('#invForm');
+  if (!f.from.value || !f.to.value || f.to.value < f.from.value) return toast('Choose a valid date range.', 'bad');
+  const lines = S.lines.filter(l => l.hours !== '' && !isNaN(+l.hours)).map(l => ({ date: l.date, hours: +l.hours, note: l.note }));
+  if (lines.some(l => l.hours < 0 || l.hours > 24)) return toast('Hours for a day must be between 0 and 24.', 'bad');
+  if (!lines.some(l => l.hours > 0)) return toast('Add at least one day with hours worked.', 'bad');
+  withBtn($('#invSave'), async () => {
+    const d = await api('vaSubmitInvoice', { invoice: { id: S.editing ? S.editing.id : '', periodStart: f.from.value, periodEnd: f.to.value, lines, note: f.note.value } });
+    apply(d); renderInvoices(); $('#dlgInv').close();
+    toast(S.editing ? 'Invoice resubmitted for approval' : 'Invoice submitted for approval');
+  }, 'Submitting…');
+});
+
+/* ===== Password ===== */
+$('#pwBtn').onclick = () => { $('#pwForm').reset(); $('#dlgPw').showModal(); };
+$('#pwForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  if (f.next.value.length < 6) return toast('Your new password needs at least 6 characters.', 'bad');
+  if (f.next.value !== f.confirm.value) return toast('The new passwords do not match.', 'bad');
+  withBtn($('#pwSave'), async () => { await api('vaChangePassword', { current: f.current.value, next: f.next.value }); $('#dlgPw').close(); toast('Password changed'); });
+});
+
+/* ===== Boot ===== */
+(async function boot() {
+  if (!S.token) return showLogin();
+  showApp(); $('#weekLabel').textContent = weekLabel(S.weekStart);
+  try { apply(await api('vaLoad')); renderAll(); }
+  catch (e) { if (S.token) toast(e.message, 'bad'); }
+})();
+// Refresh when the VA comes back to the tab, so new shifts show up
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !S.token || $('dialog[open]')) return;
+  try { apply(await api('vaLoad', {}, 1)); renderAll(); } catch (e) {}
+});
+</script>
+</body>
+</html>
