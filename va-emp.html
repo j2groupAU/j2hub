@@ -392,12 +392,22 @@ async function api(action, body = {}, tries = 3) {
   busy(true);
   try {
     for (let i = 0; i < tries; i++) {
-      let res;
+      let res, r, text = '';
       try {
-        const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
-        res = await r.json();
+        r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
       } catch (netErr) {
-        if (i === tries - 1) throw new Error('Could not reach the server. Check your connection and try again.');
+        console.error('[VA Hub] fetch failed', netErr);
+        if (i === tries - 1) throw new Error('Could not reach the server (blocked request). This usually means the Apps Script deployment is not set to "Who has access: Anyone".');
+        await sleep(600 * (i + 1));
+        continue;
+      }
+      try { text = await r.text(); res = JSON.parse(text); }
+      catch (parseErr) {
+        console.error('[VA Hub] non-JSON response', r.status, r.url, text.slice(0, 500));
+        const sign = /accounts\.google|ServiceLogin|Sign in/i.test(text + r.url);
+        if (i === tries - 1) throw new Error(sign
+          ? 'The server asked for a Google sign-in. Set the deployment to "Who has access: Anyone".'
+          : 'The server returned an error page (HTTP ' + r.status + '): ' + text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160));
         await sleep(600 * (i + 1));
         continue;
       }
