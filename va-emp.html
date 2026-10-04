@@ -204,6 +204,23 @@ main{max-width:920px}
 .next .what{color:rgba(255,255,255,.85);margin-top:2px}
 .next .wk{text-align:right}
 .next .wk b{display:block;font-size:28px;font-weight:300;letter-spacing:-.025em}
+.next .wk .lbl{display:block}
+.next .wk div+div{margin-top:10px}
+.clock-row{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
+.btn-start{background:#fff;color:var(--abyss);border:0;border-radius:10px;padding:12px 26px;font-weight:600;font-size:15px;cursor:pointer}
+.btn-start:hover{background:var(--halo)}
+.btn-stop{background:#FF5A4E;color:#fff;border:0;border-radius:10px;padding:12px 26px;font-weight:600;font-size:15px;cursor:pointer}
+.btn-stop:hover{background:#E8473C}
+.btn-start[disabled],.btn-stop[disabled]{opacity:.6;cursor:wait}
+.timer{font-size:40px;font-weight:300;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.live{display:inline-flex;align-items:center;gap:6px}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:#5BE49B;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.clock-sub{font-size:13px;color:rgba(255,255,255,.75)}
+.warn-forgot{margin-top:10px;font-size:13px;background:rgba(255,255,255,.12);border-radius:8px;padding:8px 10px}
+.worked{font-size:13px;color:var(--mortar);margin-top:6px}
+.worked b{color:var(--ink);font-weight:600}
+.worked .run{color:var(--ok);font-weight:600}
 .days{display:grid}
 .day{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line2);align-items:start}
 .day:last-child{border-bottom:0}
@@ -301,14 +318,14 @@ main{max-width:920px}
 <!-- INVOICE FORM -->
 <dialog id="dlgInv" class="wide">
   <form id="invForm" novalidate>
-    <div class="dlg-head"><div><h2 id="invTitle">New invoice</h2><p>Days you were scheduled are filled in. Change the hours if you worked more or less.</p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-head"><div><h2 id="invTitle">New invoice</h2><p>Hours are filled in from your timer, or from your schedule if you did not use it. Change them if needed.</p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
     <div class="dlg-body">
       <div class="row2">
         <label class="field">From<input type="date" name="from" required></label>
         <label class="field">To<input type="date" name="to" required></label>
       </div>
       <div class="scroll">
-        <table class="tbl lines"><thead><tr><th>Day</th><th class="num sched">Scheduled</th><th class="num">Hours worked</th><th>Note</th><th></th></tr></thead><tbody id="lineRows"></tbody></table>
+        <table class="tbl lines"><thead><tr><th>Day</th><th class="num sched">Scheduled</th><th class="num sched">Logged</th><th class="num">Hours worked</th><th>Note</th><th></th></tr></thead><tbody id="lineRows"></tbody></table>
       </div>
       <div class="toolbar">
         <input type="date" id="extraDate" class="btn" aria-label="Extra day">
@@ -383,7 +400,7 @@ let busyCount = 0;
 function busy(on) { busyCount += on ? 1 : -1; $('#bar').classList.toggle('on', busyCount > 0); }
 
 /* ===== State ===== */
-const S = { token: store.get(TOKEN_KEY), user: null, shifts: [], invoices: [], settings: { currency: 'AUD' }, weekStart: mondayOf(todayYmd()), editing: null, lines: [] };
+const S = { token: store.get(TOKEN_KEY), user: null, shifts: [], invoices: [], settings: { currency: 'AUD' }, weekStart: mondayOf(todayYmd()), editing: null, lines: [], logs: [] };
 
 /* ===== API ===== */
 async function api(action, body = {}, tries = 3) {
@@ -420,6 +437,7 @@ function apply(d) {
   if (d.user) S.user = d.user;
   if (d.shifts) S.shifts = d.shifts.slice().sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   if (d.invoices) S.invoices = d.invoices;
+  if (d.logs) S.logs = d.logs;
   if (d.settings) S.settings = d.settings;
 }
 async function withBtn(btn, fn, label = 'Saving…') {
@@ -459,6 +477,16 @@ $$('dialog [data-close]').forEach(b => b.onclick = () => b.closest('dialog').clo
 function renderAll() { renderSchedule(); renderInvoices(); }
 
 /* ===== Schedule ===== */
+/* ===== Time logs ===== */
+const fmtMins = m => { m = Math.max(0, Math.round(m || 0)); const h = Math.floor(m / 60), mm = m % 60; return h ? h + 'h ' + mm + 'm' : mm + 'm'; };
+const clockOf = iso => new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }).replace(' ', '').toLowerCase();
+const openLog = () => S.logs.find(l => !l.endAt);
+const runMins = l => Math.max(0, (Date.now() - Date.parse(l.startAt)) / 60000);
+function loggedMins(date, includeRunning) {
+  return S.logs.filter(l => l.date === date && (l.endAt || includeRunning)).reduce((t, l) => t + (l.endAt ? l.minutes : runMins(l)), 0);
+}
+function hms(ms) { const s = Math.max(0, Math.floor(ms / 1000)); return Math.floor(s / 3600) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60); }
+
 function renderSchedule() {
   const today = todayYmd();
   $('#hello').textContent = S.user ? 'Hi ' + S.user.name.split(' ')[0] : 'My schedule';
@@ -466,18 +494,32 @@ function renderSchedule() {
 
   // Next shift + this week's total
   const now = new Date(), nowHM = pad(now.getHours()) + ':' + pad(now.getMinutes());
-  const next = S.shifts.find(s => s.date > today || (s.date === today && (s.end > nowHM || s.end <= s.start)));
+  const upcoming = S.shifts.find(s => s.date > today || (s.date === today && (s.end > nowHM || s.end <= s.start)));
+  const next = S.shifts.find(s => s.date === today) || upcoming;
+  const nextLabel = next && next.date === today ? 'Today\'s shift' : 'Your next shift';
   const thisWeek = mondayOf(today);
   const wkHours = S.shifts.filter(s => s.date >= thisWeek && s.date <= addDays(thisWeek, 6)).reduce((t, s) => t + s.hours, 0);
   let when = '';
   if (next) {
     when = next.date === today ? 'Today' : next.date === addDays(today, 1) ? 'Tomorrow' : fmtDate(next.date, { weekday: 'long', day: 'numeric', month: 'short' });
   }
+  const run = openLog();
+  let wkMins = 0;
+  for (let d = thisWeek; d <= addDays(thisWeek, 6); d = addDays(d, 1)) wkMins += loggedMins(d, true);
+  const todayMins = loggedMins(today, false);
+  const left = run
+    ? `<div class="lbl live">Working now</div>
+       <div class="timer" id="timer">${hms(Date.now() - Date.parse(run.startAt))}</div>
+       <div class="clock-sub">Started ${clockOf(run.startAt)}${run.date !== today ? ' on ' + fmtDate(run.date, { weekday: 'short', day: 'numeric', month: 'short' }) : ''}</div>
+       ${runMins(run) > 720 ? '<div class="warn-forgot">This timer has been running for over 12 hours. If you forgot to stop it, stop it now and adjust your hours on your invoice.</div>' : ''}
+       <div class="clock-row"><button class="btn-stop" id="stopBtn">Stop</button></div>`
+    : `${next
+        ? `<div class="lbl">${nextLabel}</div><div class="when">${when}, ${fmtTime(next.start)} to ${fmtTime(next.end)}</div><div class="what">${fmtH(next.hours)}${next.notes ? ', ' + esc(next.notes) : ''}</div>`
+        : `<div class="lbl">Your next shift</div><div class="when">Nothing scheduled yet</div><div class="what">Your admin will add your hours here.</div>`}
+       <div class="clock-row"><button class="btn-start" id="startBtn">Start</button><span class="clock-sub">${todayMins ? 'Worked today: ' + fmtMins(todayMins) : 'Press Start when you begin working'}</span></div>`;
   $('#nextCard').innerHTML = `<div class="next">
-    <div>${next
-      ? `<div class="lbl">Your next shift</div><div class="when">${when}, ${fmtTime(next.start)} to ${fmtTime(next.end)}</div><div class="what">${fmtH(next.hours)}${next.notes ? ', ' + esc(next.notes) : ''}</div>`
-      : `<div class="lbl">Your next shift</div><div class="when">Nothing scheduled yet</div><div class="what">Your admin will add your hours here.</div>`}</div>
-    <div class="wk"><span class="lbl">Booked this week</span><b>${fmtH(wkHours)}</b></div>
+    <div>${left}</div>
+    <div class="wk"><div><span class="lbl">Booked this week</span><b>${fmtH(wkHours)}</b></div><div><span class="lbl">Worked this week</span><b>${fmtMins(wkMins)}</b></div></div>
   </div>`;
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(S.weekStart, i));
@@ -488,11 +530,31 @@ function renderSchedule() {
     const cls = d === today ? 'today' : d < today ? 'past' : '';
     return `<div class="day ${cls}">
       <div class="d"><b>${fmtDate(d, { weekday: 'long' })}${d === today ? ', today' : ''}</b><span>${fmtDate(d, { day: 'numeric', month: 'long' })}</span></div>
-      <div>${list.length ? list.map(s => `<div class="shift"><div><div class="t">${fmtTime(s.start)} to ${fmtTime(s.end)}</div>${s.notes ? `<div class="n">${esc(s.notes)}</div>` : ''}</div><div class="h">${fmtH(s.hours)}</div></div>`).join('') : '<div class="off">Not scheduled</div>'}</div>
+      <div>${list.length ? list.map(s => `<div class="shift"><div><div class="t">${fmtTime(s.start)} to ${fmtTime(s.end)}</div>${s.notes ? `<div class="n">${esc(s.notes)}</div>` : ''}</div><div class="h">${fmtH(s.hours)}</div></div>`).join('') : '<div class="off">Not scheduled</div>'}${workedLine(d)}</div>
     </div>`;
   }).join('');
   $('#weekSummary').textContent = count ? `${fmtH(total)} across ${count} shift${count === 1 ? '' : 's'} this week` : 'No shifts this week';
 }
+function workedLine(d) {
+  const logs = S.logs.filter(l => l.date === d).sort((a, b) => a.startAt.localeCompare(b.startAt));
+  if (!logs.length) return '';
+  const parts = logs.map(l => l.endAt ? `${clockOf(l.startAt)} to ${clockOf(l.endAt)}` : `${clockOf(l.startAt)} to <span class="run">now</span>`).join(', ');
+  return `<div class="worked">Worked <b>${fmtMins(loggedMins(d, true))}</b> (${parts})</div>`;
+}
+
+$('#nextCard').addEventListener('click', e => {
+  const st = e.target.closest('#startBtn'), sp = e.target.closest('#stopBtn');
+  if (st) withBtn(st, async () => { apply(await api('vaClockStart', { date: todayYmd() })); renderSchedule(); toast('Timer started'); }, 'Starting…');
+  if (sp) {
+    const l = openLog();
+    withBtn(sp, async () => { apply(await api('vaClockStop')); renderSchedule(); if (l) toast('Stopped. You worked ' + fmtMins(runMins(l))); }, 'Stopping…');
+  }
+});
+setInterval(() => {
+  const l = openLog(), t = $('#timer');
+  if (l && t) t.textContent = hms(Date.now() - Date.parse(l.startAt));
+}, 1000);
+
 $('#prevWeek').onclick = () => { S.weekStart = addDays(S.weekStart, -7); renderSchedule(); };
 $('#nextWeek').onclick = () => { S.weekStart = addDays(S.weekStart, 7); renderSchedule(); };
 $('#thisWeek').onclick = () => { S.weekStart = mondayOf(todayYmd()); renderSchedule(); };
@@ -539,12 +601,16 @@ function suggestRange() {
   if (from > today) from = today;
   return { from, to: today };
 }
+// Logged time rounded to the nearest quarter hour, used to pre-fill invoices
+function loggedHours(date) { return Math.round(loggedMins(date, false) / 15) / 4; }
 function linesFromSchedule(from, to, keep = []) {
   const kept = {}; keep.forEach(l => kept[l.date] = l);
   const out = [];
   for (let d = from, n = 0; d <= to && n < 63; d = addDays(d, 1), n++) {
     const sc = scheduledFor(d);
+    const lg = loggedHours(d);
     if (kept[d]) out.push(Object.assign({}, kept[d]));
+    else if (lg) out.push({ date: d, hours: lg, note: '' });
     else if (sc.hours) out.push({ date: d, hours: sc.hours, note: '' });
   }
   return out;
@@ -575,13 +641,14 @@ function renderLines() {
   S.lines.sort((a, b) => a.date.localeCompare(b.date));
   const body = $('#lineRows');
   if (!S.lines.length) {
-    body.innerHTML = `<tr><td colspan="5" class="muted">No scheduled days in this range. Use "Add a day" for any day you worked.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="6" class="muted">No scheduled days in this range. Use "Add a day" for any day you worked.</td></tr>`;
   } else {
     body.innerHTML = S.lines.map((l, i) => {
       const sc = scheduledFor(l.date);
       return `<tr>
         <td><b>${fmtDate(l.date, { weekday: 'short', day: 'numeric', month: 'short' })}</b>${sc.times ? `<div class="hint">${esc(sc.times)}</div>` : '<div class="hint">Not scheduled</div>'}</td>
         <td class="num sched muted">${fmtH(sc.hours)}</td>
+        <td class="num sched muted">${loggedMins(l.date, false) ? fmtMins(loggedMins(l.date, false)) : '<span class="hint">None</span>'}</td>
         <td class="num"><input type="number" min="0" max="24" step="0.25" value="${l.hours}" data-i="${i}" data-k="hours" aria-label="Hours worked"></td>
         <td><input value="${esc(l.note)}" maxlength="300" data-i="${i}" data-k="note" placeholder="Optional" aria-label="Note"></td>
         <td><button type="button" class="rm" data-rm="${i}" aria-label="Remove day">×</button></td>
@@ -602,7 +669,7 @@ $('#addDayBtn').onclick = () => {
   if (!d) return toast('Pick the day you want to add.', 'bad');
   if (d < f.from.value || d > f.to.value) return toast('That day is outside the invoice dates.', 'bad');
   if (S.lines.some(l => l.date === d)) return toast('That day is already on the invoice.', 'bad');
-  S.lines.push({ date: d, hours: scheduledFor(d).hours || '', note: '' }); $('#extraDate').value = ''; renderLines();
+  S.lines.push({ date: d, hours: loggedHours(d) || scheduledFor(d).hours || '', note: '' }); $('#extraDate').value = ''; renderLines();
 };
 function updateTotals() {
   const f = $('#invForm');

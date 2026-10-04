@@ -743,9 +743,11 @@ function openInvoice(id) {
   const u = userById(i.userId);
   $('#invTitle').textContent = `${i.number}, ${i.name}`;
   $('#invSub').innerHTML = `${fmtDate(i.periodStart)} to ${fmtDate(i.periodEnd)}${u && u.client ? ', ' + esc(u.client) : ''} &nbsp;<span class="pill ${esc(i.status)}">${esc(i.status)}</span>`;
+  const hasLog = (i.lines || []).some(l => l.logged !== undefined);
+  const fmtLog = h => { const m = Math.round((+h || 0) * 60); return m ? (Math.floor(m / 60) ? Math.floor(m / 60) + 'h ' : '') + (m % 60) + 'm' : '<span class="muted">None</span>'; };
   const lines = (i.lines || []).map(l => {
     const v = Math.round((l.hours - l.scheduled) * 100) / 100;
-    return `<tr><td>${fmtDate(l.date, { weekday: 'short', day: 'numeric', month: 'short' })}</td><td class="num">${fmtH(l.scheduled)}</td><td class="num strong">${fmtH(l.hours)}</td><td class="num">${varCell(v)}</td><td class="muted small">${esc(l.note || '')}</td></tr>`;
+    return `<tr><td>${fmtDate(l.date, { weekday: 'short', day: 'numeric', month: 'short' })}</td><td class="num">${fmtH(l.scheduled)}</td>${hasLog ? `<td class="num">${fmtLog(l.logged)}</td>` : ''}<td class="num strong">${fmtH(l.hours)}</td><td class="num">${varCell(v)}</td><td class="muted small">${esc(l.note || '')}</td></tr>`;
   }).join('');
   $('#invBody').innerHTML = `
     <div class="kv">
@@ -755,7 +757,7 @@ function openInvoice(id) {
       <div><span>Amount</span><b>${money(i.amount)}</b></div>
     </div>
     ${variance(i) ? `<p class="preview">Claimed hours are ${variance(i) > 0 ? fmtH(variance(i)) + ' over' : fmtH(-variance(i)) + ' under'} the schedule for this period.</p>` : ''}
-    <div class="scroll"><table class="tbl"><thead><tr><th>Day</th><th class="num">Scheduled</th><th class="num">Claimed</th><th class="num">Difference</th><th>VA note</th></tr></thead><tbody>${lines || '<tr><td colspan="5" class="muted">No days listed</td></tr>'}</tbody></table></div>
+    <div class="scroll"><table class="tbl"><thead><tr><th>Day</th><th class="num">Scheduled</th>${hasLog ? '<th class="num">Timer</th>' : ''}<th class="num">Claimed</th><th class="num">Difference</th><th>VA note</th></tr></thead><tbody>${lines || '<tr><td colspan="6" class="muted">No days listed</td></tr>'}</tbody></table></div>
     ${i.vaNote ? `<div><div class="hint" style="margin-bottom:6px">Note from ${esc(i.name.split(' ')[0])}</div><div class="note-box">${esc(i.vaNote)}</div></div>` : ''}
     <label class="field">Note to VA<textarea id="invNote" placeholder="Required when rejecting. Shown to the VA.">${esc(i.adminNote || '')}</textarea></label>
     <p class="hint">Submitted ${fmtStamp(i.submittedAt)}${i.reviewedAt ? `, reviewed ${fmtStamp(i.reviewedAt)}` : ''}${i.paidAt ? `, paid ${fmtStamp(i.paidAt)}` : ''}</p>`;
