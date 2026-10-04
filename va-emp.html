@@ -568,12 +568,15 @@ function renderInvoices() {
   }
   $('#invList').innerHTML = list.map(i => {
     const editable = i.status === 'Pending' || i.status === 'Rejected';
+    const monthlyInv = i.payType === 'Monthly';
+    const label = i.status === 'Paid' && monthlyInv ? 'Processed' : i.status;
+    const amt = !monthlyInv ? money(i.amount) : (i.status === 'Approved' || i.status === 'Paid') ? money(i.amount) + '<div class="hint">Pay this period</div>' : '<span class="hint">Pay set on approval</span>';
     const msg = i.status === 'Rejected' ? 'Sent back for changes' : i.status === 'Approved' ? 'Approved' + (i.reviewedAt ? ' on ' + fmtStamp(i.reviewedAt) : '') :
-      i.status === 'Paid' ? 'Paid' + (i.paidAt ? ' on ' + fmtStamp(i.paidAt) : '') : 'Waiting for approval';
+      i.status === 'Paid' ? (monthlyInv ? 'Processed' : 'Paid') + (i.paidAt ? ' on ' + fmtStamp(i.paidAt) : '') : 'Waiting for approval';
     return `<div class="inv">
       <div><div class="ttl">${esc(i.number)}, ${fmtShort(i.periodStart)} to ${fmtDate(i.periodEnd)}</div>
         <div class="meta">${fmtH(i.hours)} claimed, ${fmtH(i.scheduledHours)} scheduled. Submitted ${fmtStamp(i.submittedAt)}. ${msg}.</div></div>
-      <div class="amt">${money(i.amount)}<div><span class="pill ${esc(i.status)}">${esc(i.status)}</span></div></div>
+      <div class="amt">${amt}<div><span class="pill ${esc(i.status)}">${esc(label)}</span></div></div>
       ${i.adminNote ? `<div class="note-box"><span class="hint">Note from admin</span><br>${esc(i.adminNote)}</div>` : ''}
       ${editable ? `<div class="acts"><button class="btn" data-edit="${esc(i.id)}">${i.status === 'Rejected' ? 'Fix and resubmit' : 'Edit'}</button><button class="btn btn-danger" data-withdraw="${esc(i.id)}">Withdraw</button></div>` : ''}
     </div>`;
@@ -677,8 +680,13 @@ function updateTotals() {
   let sched = 0;
   for (let d = f.from.value, n = 0; d && f.to.value && d <= f.to.value && n < 63; d = addDays(d, 1), n++) sched += scheduledFor(d).hours;
   const rate = S.user ? S.user.rate : 0;
-  $('#totHours').textContent = `${fmtH(hours)} worked of ${fmtH(r2(sched))} scheduled, at ${money(rate)}/h`;
-  $('#totAmt').textContent = money(r2(hours * rate));
+  if (S.user && S.user.payType === 'Monthly') {
+    $('#totHours').textContent = `${fmtH(r2(sched))} scheduled in this period`;
+    $('#totAmt').textContent = `${fmtH(hours)} worked`;
+  } else {
+    $('#totHours').textContent = `${fmtH(hours)} worked of ${fmtH(r2(sched))} scheduled, at ${money(rate)}/h`;
+    $('#totAmt').textContent = money(r2(hours * rate));
+  }
   $('#extraDate').min = f.from.value; $('#extraDate').max = f.to.value;
 }
 $('#invForm').addEventListener('submit', e => {

@@ -135,6 +135,9 @@ td:not(:has(.chip)) .slot{height:56px}
 .pill.Paid{background:var(--halo);color:var(--volt)}
 .pill.Inactive{background:#EEF0F4;color:var(--mortar)}
 .pill.Active{background:var(--okbg);color:var(--ok)}
+.tag{display:inline-block;font-size:11px;font-weight:600;color:var(--volt);background:var(--halo);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.pay-box{background:var(--halo);border-radius:10px;padding:14px;display:grid;gap:8px}
+.pay-box .field input{max-width:220px;font-size:16px;font-weight:600}
 .filters{display:flex;gap:6px;flex-wrap:wrap}
 .fchip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 12px;cursor:pointer;font-weight:500;color:var(--mortar)}
 .fchip.on{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -249,6 +252,7 @@ legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-botto
           </div>
           <button class="btn" id="thisWeek">This week</button>
           <button class="btn" id="copyWeekBtn">Copy last week</button>
+          <button class="btn" id="stdBtn">Fill standard schedule</button>
           <button class="btn btn-primary" id="addShiftsBtn">Add shifts</button>
         </div>
       </div>
@@ -344,6 +348,23 @@ legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-botto
   </form>
 </dialog>
 
+<!-- FILL STANDARD -->
+<dialog id="dlgStd">
+  <form id="stdForm" novalidate>
+    <div class="dlg-head"><div><h2>Fill standard schedule</h2><p>Adds Monday to Friday shifts using each fixed monthly VA's standard hours.</p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body">
+      <fieldset><legend>Fixed monthly VAs</legend><div class="checks" id="stdUsers"></div></fieldset>
+      <div class="row2">
+        <label class="field">From<input type="date" name="from" required></label>
+        <label class="field">To<input type="date" name="to" required></label>
+      </div>
+      <div class="toolbar"><button type="button" class="btn" id="stdWeek">This week</button><button type="button" class="btn" id="stdMonth">Whole month</button></div>
+      <p class="preview" id="stdPreview"></p>
+    </div>
+    <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="stdSave">Add shifts</button></div>
+  </form>
+</dialog>
+
 <!-- USER -->
 <dialog id="dlgUser">
   <form id="userForm" novalidate>
@@ -353,7 +374,15 @@ legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-botto
       <label class="field">Email<input type="email" name="email" required autocomplete="off"></label>
       <div class="row2">
         <label class="field">Client<input name="client" list="clientList" placeholder="e.g. Square"></label>
-        <label class="field">Hourly rate (<span class="cur"></span>)<input type="number" name="rate" min="0" step="0.01" required></label>
+        <label class="field">Pay type<select name="payType"><option value="Hourly">Hourly</option><option value="Monthly">Fixed monthly</option></select></label>
+      </div>
+      <label class="field" id="rateField">Hourly rate (<span class="cur"></span>)<input type="number" name="rate" min="0" step="0.01"></label>
+      <div id="stdFields" class="hidden">
+        <div class="row2">
+          <label class="field">Standard start<input type="time" name="stdStart" value="09:00"></label>
+          <label class="field">Standard end<input type="time" name="stdEnd" value="17:00"></label>
+        </div>
+        <p class="hint" style="margin:6px 0 0">Used by "Fill standard schedule" for Monday to Friday. Pay is not calculated; you enter it when approving each invoice.</p>
       </div>
       <datalist id="clientList"></datalist>
       <div class="row2">
@@ -563,7 +592,7 @@ function renderSchedule() {
 
   users.forEach(u => {
     let ut = 0;
-    h += `<tr><th class="who" scope="row"><span class="nm">${esc(u.name)}</span><span class="sub">${esc(u.client || 'No client set')}</span></th>`;
+    h += `<tr><th class="who" scope="row"><span class="nm">${esc(u.name)}${u.payType === 'Monthly' ? '<span class="tag">Monthly</span>' : ''}</span><span class="sub">${esc(u.client || 'No client set')}</span></th>`;
     days.forEach((d, i) => {
       const list = map[u.id + '|' + d] || [];
       let c = '';
@@ -702,6 +731,9 @@ $('#delShiftBtn').onclick = () => {
 
 /* ===== Invoices ===== */
 const STATUSES = ['Pending', 'Approved', 'Paid', 'Rejected', 'All'];
+const isMonthly = i => i.payType === 'Monthly';
+const statusLabel = i => i.status === 'Paid' && isMonthly(i) ? 'Processed' : i.status;
+const amountCell = i => isMonthly(i) ? ((i.status === 'Approved' || i.status === 'Paid') ? money(i.amount) : '<span class="muted small">Set on approval</span>') : money(i.amount);
 function filteredInvoices() {
   return S.invoices.filter(i => S.invFilter === 'All' || i.status === S.invFilter)
     .sort((a, b) => String(b.submittedAt).localeCompare(String(a.submittedAt)));
@@ -714,7 +746,7 @@ function renderInvoices() {
   S.invoices.forEach(i => counts[i.status] = (counts[i.status] || 0) + 1);
   counts.All = S.invoices.length;
   const pc = $('#pendingCount'); pc.textContent = counts.Pending || ''; pc.classList.toggle('hidden', !counts.Pending);
-  $('#invFilters').innerHTML = STATUSES.map(s => `<button class="fchip ${s === S.invFilter ? 'on' : ''}" data-f="${s}">${s}<span>${counts[s] || 0}</span></button>`).join('');
+  $('#invFilters').innerHTML = STATUSES.map(s => `<button class="fchip ${s === S.invFilter ? 'on' : ''}" data-f="${s}">${s === 'Paid' ? 'Paid / processed' : s}<span>${counts[s] || 0}</span></button>`).join('');
 
   const list = filteredInvoices();
   if (!list.length) {
@@ -725,14 +757,14 @@ function renderInvoices() {
       <th>Invoice</th><th>VA</th><th>Period</th><th class="num">Scheduled</th><th class="num">Claimed</th><th class="num">Difference</th><th class="num">Amount</th><th>Submitted</th><th>Status</th>
     </tr></thead><tbody>${list.map(i => `<tr class="click" data-inv="${esc(i.id)}">
       <td class="strong">${esc(i.number)}</td>
-      <td>${esc(i.name)}</td>
+      <td>${esc(i.name)}${isMonthly(i) ? '<span class="tag">Monthly</span>' : ''}</td>
       <td>${fmtShort(i.periodStart)} to ${fmtDate(i.periodEnd)}</td>
       <td class="num hide-m">${fmtH(i.scheduledHours)}</td>
       <td class="num">${fmtH(i.hours)}</td>
       <td class="num hide-m">${varCell(variance(i))}</td>
-      <td class="num strong">${money(i.amount)}</td>
+      <td class="num strong">${amountCell(i)}</td>
       <td class="muted small hide-m">${fmtStamp(i.submittedAt)}</td>
-      <td><span class="pill ${esc(i.status)}">${esc(i.status)}</span></td>
+      <td><span class="pill ${esc(i.status)}">${esc(statusLabel(i))}</span></td>
     </tr>`).join('')}</tbody></table>`;
 }
 $('#invFilters').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { S.invFilter = b.dataset.f; renderInvoices(); } });
@@ -742,7 +774,7 @@ function openInvoice(id) {
   const i = S.invoices.find(x => x.id === id); if (!i) return;
   const u = userById(i.userId);
   $('#invTitle').textContent = `${i.number}, ${i.name}`;
-  $('#invSub').innerHTML = `${fmtDate(i.periodStart)} to ${fmtDate(i.periodEnd)}${u && u.client ? ', ' + esc(u.client) : ''} &nbsp;<span class="pill ${esc(i.status)}">${esc(i.status)}</span>`;
+  $('#invSub').innerHTML = `${fmtDate(i.periodStart)} to ${fmtDate(i.periodEnd)}${u && u.client ? ', ' + esc(u.client) : ''} &nbsp;<span class="pill ${esc(i.status)}">${esc(statusLabel(i))}</span>${isMonthly(i) ? '<span class="tag">Fixed monthly</span>' : ''}`;
   const hasLog = (i.lines || []).some(l => l.logged !== undefined);
   const fmtLog = h => { const m = Math.round((+h || 0) * 60); return m ? (Math.floor(m / 60) ? Math.floor(m / 60) + 'h ' : '') + (m % 60) + 'm' : '<span class="muted">None</span>'; };
   const lines = (i.lines || []).map(l => {
@@ -753,9 +785,11 @@ function openInvoice(id) {
     <div class="kv">
       <div><span>Scheduled</span><b>${fmtH(i.scheduledHours)}</b></div>
       <div><span>Claimed</span><b>${fmtH(i.hours)}</b></div>
-      <div><span>Rate</span><b>${money(i.rate)}/h</b></div>
-      <div><span>Amount</span><b>${money(i.amount)}</b></div>
+      ${isMonthly(i)
+        ? `<div><span>Pay type</span><b>Fixed monthly</b></div><div><span>Pay this period</span><b>${i.status === 'Approved' || i.status === 'Paid' ? money(i.amount) : 'Not set'}</b></div>`
+        : `<div><span>Rate</span><b>${money(i.rate)}/h</b></div><div><span>Amount</span><b>${money(i.amount)}</b></div>`}
     </div>
+    ${isMonthly(i) && i.status === 'Pending' ? `<div class="pay-box"><label class="field">Pay for this period (${esc(S.settings.currency)})<input type="number" id="invAmount" min="0" step="0.01" placeholder="0.00" value="${i.amount ? i.amount : ''}"></label><span class="hint">Required to approve. ${esc(i.name.split(' ')[0])} sees this amount once approved.</span></div>` : ''}
     ${variance(i) ? `<p class="preview">Claimed hours are ${variance(i) > 0 ? fmtH(variance(i)) + ' over' : fmtH(-variance(i)) + ' under'} the schedule for this period.</p>` : ''}
     <div class="scroll"><table class="tbl"><thead><tr><th>Day</th><th class="num">Scheduled</th>${hasLog ? '<th class="num">Timer</th>' : ''}<th class="num">Claimed</th><th class="num">Difference</th><th>VA note</th></tr></thead><tbody>${lines || '<tr><td colspan="6" class="muted">No days listed</td></tr>'}</tbody></table></div>
     ${i.vaNote ? `<div><div class="hint" style="margin-bottom:6px">Note from ${esc(i.name.split(' ')[0])}</div><div class="note-box">${esc(i.vaNote)}</div></div>` : ''}
@@ -764,9 +798,9 @@ function openInvoice(id) {
 
   const acts = {
     Pending: [['Reject', 'Rejected', 'btn-danger left'], ['Approve', 'Approved', 'btn-primary']],
-    Approved: [['Move back to pending', 'Pending', 'left'], ['Mark as paid', 'Paid', 'btn-primary']],
+    Approved: [['Move back to pending', 'Pending', 'left'], [isMonthly(i) ? 'Mark as processed' : 'Mark as paid', 'Paid', 'btn-primary']],
     Rejected: [['Move back to pending', 'Pending', 'left']],
-    Paid: [['Undo paid', 'Approved', 'left']]
+    Paid: [[isMonthly(i) ? 'Undo processed' : 'Undo paid', 'Approved', 'left']]
   }[i.status] || [];
   $('#invFoot').innerHTML = acts.map(([label, st, cls]) => `<button class="btn ${cls}" data-st="${st}">${label}</button>`).join('') + '<button class="btn" data-close-inv>Close</button>';
   $('#dlgInv').showModal();
@@ -776,10 +810,16 @@ function openInvoice(id) {
     const b = e.target.closest('[data-st]'); if (!b) return;
     const note = $('#invNote').value.trim();
     if (b.dataset.st === 'Rejected' && !note) { $('#invNote').focus(); return toast('Add a note so the VA knows what to fix.', 'bad'); }
+    const amtEl = $('#invAmount');
+    let amount = i.amount;
+    if (amtEl && b.dataset.st === 'Approved') {
+      if (amtEl.value === '' || +amtEl.value < 0) { amtEl.focus(); return toast('Enter the pay for this period before approving.', 'bad'); }
+      amount = +amtEl.value;
+    }
     withBtn(b, async () => {
-      const d = await api('adminReviewInvoice', { id: i.id, status: b.dataset.st, adminNote: note });
+      const d = await api('adminReviewInvoice', { id: i.id, status: b.dataset.st, adminNote: note, amount });
       S.invoices = d.invoices; renderInvoices(); $('#dlgInv').close();
-      toast({ Approved: `${i.number} approved`, Rejected: `${i.number} sent back to ${i.name.split(' ')[0]}`, Paid: `${i.number} marked as paid`, Pending: `${i.number} moved to pending` }[b.dataset.st]);
+      toast({ Approved: `${i.number} approved`, Rejected: `${i.number} sent back to ${i.name.split(' ')[0]}`, Paid: `${i.number} marked as ${isMonthly(i) ? 'processed' : 'paid'}`, Pending: `${i.number} moved to pending` }[b.dataset.st]);
     });
   };
 }
@@ -787,8 +827,8 @@ function openInvoice(id) {
 $('#exportBtn').onclick = () => {
   const list = filteredInvoices();
   if (!list.length) return toast('No invoices in this view to export.', 'bad');
-  const head = ['Invoice', 'VA', 'Email', 'Client', 'Period start', 'Period end', 'Scheduled hours', 'Claimed hours', 'Rate', 'Amount', 'Currency', 'Status', 'Submitted', 'Reviewed', 'Paid', 'Admin note'];
-  const rows = list.map(i => { const u = userById(i.userId) || {}; return [i.number, i.name, u.email || '', u.client || '', i.periodStart, i.periodEnd, i.scheduledHours, i.hours, i.rate, i.amount, S.settings.currency, i.status, i.submittedAt, i.reviewedAt, i.paidAt, i.adminNote]; });
+  const head = ['Invoice', 'VA', 'Email', 'Client', 'Period start', 'Period end', 'Pay type', 'Scheduled hours', 'Claimed hours', 'Rate', 'Amount', 'Currency', 'Status', 'Submitted', 'Reviewed', 'Paid', 'Admin note'];
+  const rows = list.map(i => { const u = userById(i.userId) || {}; return [i.number, i.name, u.email || '', u.client || '', i.periodStart, i.periodEnd, i.payType, i.scheduledHours, i.hours, isMonthly(i) ? '' : i.rate, (isMonthly(i) && i.status !== 'Approved' && i.status !== 'Paid') ? '' : i.amount, S.settings.currency, statusLabel(i), i.submittedAt, i.reviewedAt, i.paidAt, i.adminNote]; });
   const csv = [head, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
@@ -804,15 +844,73 @@ function renderUsers() {
     return;
   }
   const list = S.users.slice().sort((a, b) => (a.status === 'Inactive') - (b.status === 'Inactive') || byName(a, b));
-  $('#usersWrap').innerHTML = `<table class="tbl stack"><thead><tr><th>Name</th><th>Email</th><th>Client</th><th class="num">Rate</th><th>Status</th><th>Admin notes</th></tr></thead><tbody>
+  $('#usersWrap').innerHTML = `<table class="tbl stack"><thead><tr><th>Name</th><th>Email</th><th>Client</th><th class="num">Pay</th><th>Status</th><th>Admin notes</th></tr></thead><tbody>
     ${list.map(u => `<tr class="click" data-user="${esc(u.id)}">
       <td class="strong">${esc(u.name)}</td><td class="muted">${esc(u.email)}</td><td>${esc(u.client || '')}</td>
-      <td class="num">${money(u.rate)}/h</td><td><span class="pill ${esc(u.status)}">${esc(u.status)}</span></td>
+      <td class="num">${u.payType === 'Monthly' ? `Monthly<div class="hint">${fmtTime(u.stdStart)} to ${fmtTime(u.stdEnd)}, Mon to Fri</div>` : money(u.rate) + '/h'}</td><td><span class="pill ${esc(u.status)}">${esc(u.status)}</span></td>
       <td class="muted small hide-m">${esc(u.notes || '')}</td></tr>`).join('')}
   </tbody></table>`;
 }
 $('#usersWrap').addEventListener('click', e => { const r = e.target.closest('[data-user]'); if (r) openUser(r.dataset.user); });
 $('#addUserBtn').onclick = () => openUser();
+
+function togglePayFields() {
+  const monthly = $('#userForm').payType.value === 'Monthly';
+  $('#rateField').classList.toggle('hidden', monthly);
+  $('#stdFields').classList.toggle('hidden', !monthly);
+  $('#rateHint').classList.toggle('hidden', monthly || !S.editingUser);
+}
+$('#userForm').payType.addEventListener('change', togglePayFields);
+
+/* ===== Fill standard schedule ===== */
+const stdUsers = () => S.users.filter(u => u.status !== 'Inactive' && u.payType === 'Monthly' && u.stdStart && u.stdEnd).sort(byName);
+function openStd() {
+  const list = stdUsers();
+  if (!list.length) return toast('No active fixed monthly VAs yet. Set a VA\'s pay type to Fixed monthly first.', 'bad');
+  $('#stdUsers').innerHTML = list.map(u => `<label class="ck"><input type="checkbox" value="${esc(u.id)}" checked><span>${esc(u.name)}, ${fmtTime(u.stdStart)} to ${fmtTime(u.stdEnd)}</span></label>`).join('');
+  setStdRange('week');
+  $('#dlgStd').showModal();
+}
+function setStdRange(kind) {
+  const f = $('#stdForm');
+  if (kind === 'week') { f.from.value = S.weekStart; f.to.value = addDays(S.weekStart, 4); }
+  else { const t = todayYmd(), inWeek = t >= S.weekStart && t <= addDays(S.weekStart, 6); const d = parseYmd(inWeek ? t : addDays(S.weekStart, 3)); f.from.value = ymd(new Date(d.getFullYear(), d.getMonth(), 1)); f.to.value = ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0)); }
+  updateStdPreview();
+}
+function buildStdList() {
+  const f = $('#stdForm');
+  const ids = $$('#stdUsers input:checked').map(i => i.value);
+  if (!ids.length) return { err: 'Select at least one VA.' };
+  if (!f.from.value || !f.to.value || f.to.value < f.from.value) return { err: 'Choose a valid date range.' };
+  const list = []; let n = 0, hours = 0;
+  for (let d = f.from.value; d <= f.to.value; d = addDays(d, 1)) {
+    if (++n > 93) return { err: 'Choose a range of 3 months or less.' };
+    if (dow(d) > 4) continue;
+    ids.forEach(id => { const u = userById(id); list.push({ userId: id, date: d, start: u.stdStart, end: u.stdEnd, notes: '' }); hours += hoursBetween(u.stdStart, u.stdEnd); });
+  }
+  if (!list.length) return { err: 'There are no weekdays in that range.' };
+  return { list, hours };
+}
+function updateStdPreview() {
+  const r = buildStdList(), p = $('#stdPreview');
+  p.classList.toggle('err', !!r.err);
+  p.textContent = r.err || `This adds up to ${r.list.length} shift${r.list.length === 1 ? '' : 's'} (${fmtH(r.hours)}). Days that already have the same shift are skipped.`;
+}
+$('#stdBtn').onclick = openStd;
+$('#stdWeek').onclick = () => setStdRange('week');
+$('#stdMonth').onclick = () => setStdRange('month');
+$('#stdForm').addEventListener('input', updateStdPreview);
+$('#stdForm').addEventListener('change', updateStdPreview);
+$('#stdForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const r = buildStdList();
+  if (r.err) return toast(r.err, 'bad');
+  withBtn($('#stdSave'), async () => {
+    const d = await api('adminAddShifts', Object.assign({ shifts: r.list }, weekRange()));
+    S.shifts = d.shifts; renderSchedule(); $('#dlgStd').close();
+    toast(!d.added ? 'The standard schedule is already filled for those dates' : `Added ${d.added} shift${d.added === 1 ? '' : 's'}${d.skipped ? `, skipped ${d.skipped} already scheduled` : ''}`);
+  });
+});
 
 function openUser(id) {
   const u = id ? userById(id) : null;
@@ -820,18 +918,24 @@ function openUser(id) {
   const f = $('#userForm');
   $('#userTitle').textContent = u ? 'Edit ' + u.name : 'Add VA';
   f.name.value = u ? u.name : ''; f.email.value = u ? u.email : ''; f.client.value = u ? u.client || '' : '';
-  f.rate.value = u ? u.rate : ''; f.status.value = u ? u.status : 'Active'; f.notes.value = u ? u.notes || '' : '';
+  f.payType.value = u ? u.payType || 'Hourly' : 'Hourly';
+  f.stdStart.value = u && u.stdStart ? u.stdStart : '09:00'; f.stdEnd.value = u && u.stdEnd ? u.stdEnd : '17:00';
+  f.rate.value = u && u.payType !== 'Monthly' ? u.rate : '';
+  togglePayFields(); f.status.value = u ? u.status : 'Active'; f.notes.value = u ? u.notes || '' : '';
   f.password.value = ''; f.password.placeholder = u ? 'Leave blank to keep the current one' : 'At least 6 characters';
-  $('#rateHint').classList.toggle('hidden', !u);
+  $('#rateHint').classList.toggle('hidden', !u || f.payType.value === 'Monthly');
   $('#dlgUser').showModal();
 }
 $('#userForm').addEventListener('submit', e => {
   e.preventDefault();
   const f = $('#userForm');
-  if (!f.name.value.trim() || !f.email.value.trim() || f.rate.value === '') return toast('Name, email and rate are required.', 'bad');
+  const monthly = f.payType.value === 'Monthly';
+  if (!f.name.value.trim() || !f.email.value.trim()) return toast('Name and email are required.', 'bad');
+  if (!monthly && f.rate.value === '') return toast('Enter an hourly rate.', 'bad');
+  if (monthly && (!f.stdStart.value || !f.stdEnd.value || f.stdStart.value === f.stdEnd.value)) return toast('Set standard start and end times.', 'bad');
   if (!S.editingUser && f.password.value.length < 6) return toast('Set a password with at least 6 characters.', 'bad');
   withBtn($('#userSave'), async () => {
-    const d = await api('adminSaveUser', { user: { id: S.editingUser ? S.editingUser.id : '', name: f.name.value, email: f.email.value, client: f.client.value, rate: f.rate.value, status: f.status.value, notes: f.notes.value, password: f.password.value } });
+    const d = await api('adminSaveUser', { user: { id: S.editingUser ? S.editingUser.id : '', name: f.name.value, email: f.email.value, client: f.client.value, rate: monthly ? 0 : f.rate.value, payType: f.payType.value, stdStart: f.stdStart.value, stdEnd: f.stdEnd.value, status: f.status.value, notes: f.notes.value, password: f.password.value } });
     S.users = d.users; renderClientFilter(); renderUsers(); renderSchedule(); $('#dlgUser').close();
     toast(S.editingUser ? 'VA saved' : 'VA added. Share the portal link and their password with them.');
   });
