@@ -113,6 +113,15 @@ td:hover .slot,.slot:focus-visible{border-color:#C9CCE0;color:var(--mortar)}
 .slot:hover{border-color:var(--volt)!important;color:var(--volt)!important;background:var(--halo)}
 td:not(:has(.chip)) .slot{height:56px}
 @media (hover:none){.slot{border-color:var(--line);color:#B7BBCC}}
+.wl{font-size:11.5px;color:var(--mortar);line-height:1.35;margin:2px 2px 6px}
+.wl b{color:var(--ink);font-weight:600}
+.wl.short b{color:var(--warn)}
+.wl.short{color:var(--warn)}
+.wl .live,.now-tag{color:var(--ok);font-weight:600}
+.wl .live::before,.now-tag::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#2DBE74;margin-right:5px;vertical-align:1px;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.now-tag{display:block;font-size:11.5px;margin-top:2px}
+.grid .wk{display:block;font-size:11.5px;font-weight:500;color:var(--mortar)}
 .legend{display:flex;gap:16px;align-items:center;color:var(--mortar);font-size:12px;margin-top:12px;flex-wrap:wrap}
 
 /* Tables */
@@ -257,7 +266,7 @@ legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-botto
         </div>
       </div>
       <div class="panel scroll" id="gridWrap"></div>
-      <p class="legend">Click an empty day to add a shift, or click a shift to change or remove it. VAs see changes as soon as they refresh.</p>
+      <p class="legend">Click an empty day to add a shift, or click a shift to change or remove it. The grey line under a shift is the time the VA logged with their timer; it turns amber when a past day is more than 30 minutes short. Updates every 2 minutes.</p>
     </section>
 
     <!-- INVOICES -->
@@ -460,7 +469,7 @@ function busy(on) { busyCount += on ? 1 : -1; $('#bar').classList.toggle('on', b
 /* ===== State ===== */
 const S = {
   token: store.get(TOKEN_KEY), users: [], shifts: [], invoices: [], settings: { currency: 'AUD' },
-  weekStart: mondayOf(todayYmd()), invFilter: 'Pending', client: '', editingShift: null, editingUser: null, shiftReq: 0
+  weekStart: mondayOf(todayYmd()), invFilter: 'Pending', client: '', editingShift: null, editingUser: null, shiftReq: 0, logs: []
 };
 const weekRange = () => ({ from: S.weekStart, to: addDays(S.weekStart, 6) });
 const userById = id => S.users.find(u => u.id === id);
@@ -502,6 +511,7 @@ async function api(action, body = {}, tries = 3) {
 function apply(d) {
   if (d.users) S.users = d.users;
   if (d.shifts) S.shifts = d.shifts;
+  if (d.logs) S.logs = d.logs;
   if (d.invoices) S.invoices = d.invoices;
   if (d.settings) S.settings = d.settings;
 }
@@ -559,6 +569,20 @@ function renderClientFilter() {
 }
 $('#clientFilter').onchange = e => { S.client = e.target.value; renderSchedule(); };
 
+/* Worked time from VA timers */
+const logMins = l => l.endAt ? l.minutes : Math.max(0, (Date.now() - Date.parse(l.startAt)) / 60000);
+const fmtMins = m => { m = Math.round(m || 0); const h = Math.floor(m / 60); return (h ? h + 'h ' : '') + (m % 60) + 'm'; };
+const clockOf = iso => new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }).replace(/\s/g, '').toLowerCase();
+function workedCell(logs, schedH, date, today) {
+  if (!logs.length) return '';
+  logs = logs.slice().sort((a, b) => a.startAt.localeCompare(b.startAt));
+  const mins = logs.reduce((t, l) => t + logMins(l), 0);
+  const running = logs.some(l => !l.endAt);
+  const ranges = logs.map(l => l.endAt ? `${clockOf(l.startAt)} to ${clockOf(l.endAt)}` : `<span class="live">since ${clockOf(l.startAt)}</span>`).join(', ');
+  const short = !running && date < today && schedH > 0 && mins < schedH * 60 - 30;
+  return `<div class="wl${short ? ' short' : ''}" title="Logged with the VA's timer">Worked <b>${fmtMins(mins)}</b><br>${ranges}</div>`;
+}
+
 function renderSchedule() {
   $('#weekLabel').textContent = weekLabel(S.weekStart);
   const wrap = $('#gridWrap');
@@ -580,6 +604,9 @@ function renderSchedule() {
   const map = {};
   S.shifts.forEach(s => { (map[s.userId + '|' + s.date] = map[s.userId + '|' + s.date] || []).push(s); });
   Object.values(map).forEach(a => a.sort((x, y) => x.start.localeCompare(y.start)));
+  const lmap = {};
+  S.logs.forEach(l => { (lmap[l.userId + '|' + l.date] = lmap[l.userId + '|' + l.date] || []).push(l); });
+  const dayWk = days.map(() => 0);
   const dayTot = days.map(() => 0);
   let grand = 0, shiftCount = 0;
 
@@ -591,8 +618,9 @@ function renderSchedule() {
   h += '<th class="tot">Hours</th></tr></thead><tbody>';
 
   users.forEach(u => {
-    let ut = 0;
-    h += `<tr><th class="who" scope="row"><span class="nm">${esc(u.name)}${u.payType === 'Monthly' ? '<span class="tag">Monthly</span>' : ''}</span><span class="sub">${esc(u.client || 'No client set')}</span></th>`;
+    let ut = 0, uw = 0;
+    const workingNow = S.logs.some(l => l.userId === u.id && !l.endAt);
+    h += `<tr><th class="who" scope="row"><span class="nm">${esc(u.name)}${u.payType === 'Monthly' ? '<span class="tag">Monthly</span>' : ''}</span><span class="sub">${esc(u.client || 'No client set')}</span>${workingNow ? '<span class="now-tag">Working now</span>' : ''}</th>`;
     days.forEach((d, i) => {
       const list = map[u.id + '|' + d] || [];
       let c = '';
@@ -600,12 +628,17 @@ function renderSchedule() {
         ut += +s.hours; dayTot[i] += +s.hours; shiftCount++;
         c += `<button class="chip" data-shift="${esc(s.id)}" title="${esc(s.notes || 'Edit shift')}"><span class="t">${fmtTime(s.start)} to ${fmtTime(s.end)}</span><span class="h">${fmtH(s.hours)}${s.notes ? ', ' + esc(s.notes) : ''}</span></button>`;
       });
+      const logs = lmap[u.id + '|' + d] || [];
+      const wm = logs.reduce((t, l) => t + logMins(l), 0);
+      uw += wm; dayWk[i] += wm;
+      const schedH = list.reduce((t, s) => t + (+s.hours), 0);
+      c += workedCell(logs, schedH, d, today);
       h += `<td class="${d === today ? 'today' : ''}">${c}<button class="slot" data-user="${esc(u.id)}" data-date="${d}" aria-label="Add shift for ${esc(u.name)} on ${fmtDate(d)}">+</button></td>`;
     });
     grand += ut;
-    h += `<td class="tot">${ut ? fmtH(ut) : '<span class="muted">0h</span>'}</td></tr>`;
+    h += `<td class="tot">${ut ? fmtH(ut) : '<span class="muted">0h</span>'}${uw ? `<span class="wk">${fmtMins(uw)} worked</span>` : ''}</td></tr>`;
   });
-  h += '</tbody><tfoot><tr><th class="who">Daily total</th>' + dayTot.map(t => `<td>${t ? fmtH(t) : ''}</td>`).join('') + `<td class="tot">${fmtH(grand)}</td></tr></tfoot></table>`;
+  h += '</tbody><tfoot><tr><th class="who">Daily total</th>' + dayTot.map((t, i) => `<td>${t ? fmtH(t) : ''}${dayWk[i] ? `<span class="wk">${fmtMins(dayWk[i])} worked</span>` : ''}</td>`).join('') + `<td class="tot">${fmtH(grand)}${dayWk.some(Boolean) ? `<span class="wk">${fmtMins(dayWk.reduce((a, b) => a + b, 0))} worked</span>` : ''}</td></tr></tfoot></table>`;
   wrap.innerHTML = h;
   $('#weekSummary').textContent = `${fmtH(grand)} scheduled in ${shiftCount} shift${shiftCount === 1 ? '' : 's'} across ${users.length} VA${users.length === 1 ? '' : 's'}`;
 }
@@ -624,13 +657,13 @@ async function loadWeek() {
   try {
     const d = await api('adminShifts', weekRange());
     if (req !== S.shiftReq) return;
-    S.shifts = d.shifts; renderSchedule();
+    S.shifts = d.shifts; S.logs = d.logs || []; renderSchedule();
   } catch (e) { toast(e.message, 'bad'); }
   finally { if (req === S.shiftReq) $('#gridWrap').classList.remove('loading-grid'); }
 }
-$('#prevWeek').onclick = () => { S.weekStart = addDays(S.weekStart, -7); S.shifts = []; loadWeek(); };
-$('#nextWeek').onclick = () => { S.weekStart = addDays(S.weekStart, 7); S.shifts = []; loadWeek(); };
-$('#thisWeek').onclick = () => { S.weekStart = mondayOf(todayYmd()); S.shifts = []; loadWeek(); };
+$('#prevWeek').onclick = () => { S.weekStart = addDays(S.weekStart, -7); S.shifts = []; S.logs = []; loadWeek(); };
+$('#nextWeek').onclick = () => { S.weekStart = addDays(S.weekStart, 7); S.shifts = []; S.logs = []; loadWeek(); };
+$('#thisWeek').onclick = () => { S.weekStart = mondayOf(todayYmd()); S.shifts = []; S.logs = []; loadWeek(); };
 
 $('#copyWeekBtn').onclick = async () => {
   const from = addDays(S.weekStart, -7);
@@ -952,6 +985,14 @@ $('#settingsForm').addEventListener('submit', e => {
     S.settings = d.settings; f.newPassword.value = ''; f.confirm.value = ''; renderAll(); toast('Settings saved');
   });
 });
+
+/* Keep worked time fresh while the schedule is open */
+setInterval(() => {
+  if (!S.token || document.visibilityState !== 'visible' || $('dialog[open]')) return;
+  if ($('[data-page=schedule]').classList.contains('hidden')) return;
+  api('adminShifts', weekRange(), 1).then(d => { S.shifts = d.shifts; S.logs = d.logs || []; renderSchedule(); }).catch(() => {});
+}, 120000);
+setInterval(() => { if (S.logs.some(l => !l.endAt) && !$('dialog[open]')) renderSchedule(); }, 60000);
 
 /* ===== Boot ===== */
 (async function boot() {
