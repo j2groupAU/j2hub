@@ -1,0 +1,2464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J2 Hub · SDR</title>
+<style>
+:root {
+  --navy: #0C0A22;
+  --navy2: #0C0A22;
+  --navy3: #08033C;
+  --navy4: #08033C;
+  --accent: #3122D3;
+  --accent2: #3A29FF;
+  --accent3: #3122D3;
+  --white: #FFFFFF;
+  --off-white: #F6F9FA;
+  --soft: #EFF8FF;
+  --muted: #5A5E78;
+  --text: #0C0A22;
+  --border: rgba(49,34,211,0.15);
+  --border-light: #E2E5EE;
+  --card: #FFFFFF;
+  --radius: 12px;
+  --shadow: 0 8px 32px rgba(49,34,211,0.12), 0 2px 8px rgba(49,34,211,0.08);
+  --shadow-lg: 0 16px 48px rgba(49,34,211,0.18), 0 4px 16px rgba(49,34,211,0.10);
+  --green: #00D68F;
+  --red: #FF4D6A;
+  --amber: #FFB800;
+  --blue: #857DE4;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: linear-gradient(160deg, #F6F9FA 0%, #F6F9FA 40%, #E2E5EE 70%, #F6F9FA 100%); min-height: 100vh; color: var(--text); }
+
+/* ── LOGIN ── */
+#login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #E2E5EE 0%, #A8C8FF 30%, #8AB4FF 60%, #6E9EFF 100%);
+  padding: 20px; position: relative; overflow: hidden;
+}
+#login-screen::before {
+  content:''; position:absolute; top:-150px; right:-150px; width:500px; height:500px;
+  border-radius:50%; pointer-events:none;
+  background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 40%, transparent 70%);
+}
+#login-screen::after {
+  content:''; position:absolute; bottom:-100px; left:-100px; width:400px; height:400px;
+  border-radius:50%; pointer-events:none;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+}
+.login-card {
+  background: #FFFFFF;
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 48px 40px 40px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 20px 60px rgba(12,10,34,0.20), 0 4px 16px rgba(12,10,34,0.10), 0 0 0 1px rgba(255,255,255,0.6);
+  position: relative; z-index: 1;
+}
+.login-logo { text-align: center; margin-bottom: 32px; }
+.login-logo .logo-mark {
+  width: 64px; height: 64px; background: var(--navy); border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px; font-size: 24px; font-weight:700; color: var(--gold);
+  letter-spacing: -1px; font-family: Georgia, serif;
+}
+.login-logo h1 { font-size: 26px; font-weight:600; color: #0C0A22; letter-spacing: -0.5px; }
+.login-logo .sub { font-size: 12px; color: #5A5E78; margin-top: 4px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+.field-group { margin-bottom: 18px; }
+.field-group label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.field-group input, .field-group select, .field-group textarea {
+  width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+  border-radius: var(--radius); font-size: 14px; font-family: inherit;
+  color: var(--text); background: var(--off-white); transition: border-color 0.2s; outline: none;
+}
+.field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); background: var(--white); }
+/* Dark form fields inside login card */
+#login-screen .field-group label { color: #0C0A22; font-weight:600; }
+#login-screen .field-group input {
+  background: rgba(255,255,255,0.07); border-color: rgba(133,125,228,0.2);
+  color: #0C0A22;
+}
+#login-screen .field-group input::placeholder { color: rgba(255,255,255,0.25); }
+#login-screen .field-group input:focus { border-color: var(--accent); background: rgba(255,255,255,0.1); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 22px; border-radius: var(--radius); font-size: 13px; font-weight: 700;
+  cursor: pointer; border: none; transition: all 0.18s; font-family: inherit; white-space: nowrap;
+}
+.btn-primary { background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%); color: #0C0A22; border: none; }
+.btn-primary:hover { background: linear-gradient(135deg, #857DE4 0%, #9B7AF7 100%); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-secondary { background: var(--soft); color: var(--navy); border: 1.5px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: #fef2f2; color: var(--red); border: 1.5px solid #fecaca; }
+.btn-danger:hover { background: #fee2e2; }
+.btn-success { background: #f0fdf4; color: #15803d; border: 1.5px solid #bbf7d0; }
+.btn-success:hover { background: #dcfce7; }
+.btn-full { width: 100%; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.login-error { background: rgba(255,77,106,0.12); border: 1px solid rgba(255,77,106,0.25); color: #CC1A35; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+
+/* ── APP ── */
+#app { display: none; }
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  background: linear-gradient(135deg, #0C0A22 0%, #0C0A22 50%, #08033C 100%);
+  padding: 0 24px; height: 62px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid rgba(49,34,211,0.2);
+  box-shadow: 0 4px 20px rgba(12,10,34,0.25);
+}
+.topbar-brand { display: flex; align-items: center; gap: 12px; }
+.topbar-mark { width: 34px; height: 34px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight:700; font-size: 13px; color: var(--navy); font-family: Georgia, serif; }
+.topbar-name { font-size: 16px; font-weight:600; color: #0C0A22; letter-spacing: -0.3px; }
+.topbar-name span { color: var(--accent); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.user-chip { background: rgba(133,125,228,0.1); border: 1px solid rgba(133,125,228,0.25); border-radius: 20px; padding: 5px 14px; font-size: 13px; color: var(--accent); font-weight: 700; }
+.logout-btn { background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.logout-btn:hover { border-color: rgba(255,255,255,0.5); color: #0C0A22; }
+
+/* ── NOTIFICATION BAR ── */
+#notif-bar { display: none !important; }
+.notif-inner { display: flex; gap: 10px; padding: 8px 0; overflow-x: auto; flex-wrap: nowrap; }
+.notif-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+  border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  cursor: pointer; transition: opacity 0.15s; flex-shrink: 0;
+}
+.notif-pill:hover { opacity: 0.85; }
+.notif-success { background: rgba(34,165,94,0.15); border: 1px solid rgba(34,165,94,0.3); color: #4ade80; }
+.notif-warning { background: rgba(229,169,58,0.15); border: 1px solid rgba(229,169,58,0.3); color: var(--gold); }
+.notif-info { background: rgba(46,125,209,0.15); border: 1px solid rgba(46,125,209,0.3); color: #60a5fa; }
+.notif-red { background: rgba(224,62,62,0.15); border: 1px solid rgba(224,62,62,0.3); color: #f87171; }
+.notif-dismiss { margin-left: 4px; opacity: 0.6; font-size: 10px; }
+
+/* ── TABS ── */
+.nav-tabs { position: sticky; top: 62px; z-index: 199; background: linear-gradient(135deg, #0C0A22 0%, #08033C 100%); border-bottom: 1px solid rgba(49,34,211,0.2); display: flex; align-items:center; justify-content:space-between; padding: 0 20px; overflow-x: auto; gap: 0; box-shadow: 0 4px 16px rgba(12,10,34,0.15); }
+.nav-tab { padding: 13px 18px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.2px; }
+.nav-tab:hover { color: rgba(255,255,255,0.8); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── MAIN ── */
+.main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+.page { display: none; }
+.page.active { display: block; }
+
+.page-header { margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.page-header h2 { font-size: 20px; font-weight:600; margin-bottom: 3px; background: linear-gradient(135deg, #0C0A22 0%, #3122D3 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.page-header p { font-size: 13px; color: var(--muted); }
+
+/* ── CARDS ── */
+.card {
+  background: white;
+  border-radius: 16px;
+  border: none;
+  padding: 22px;
+  box-shadow: 0 8px 32px rgba(12,10,34,0.10), 0 2px 8px rgba(12,10,34,0.06), 0 0 0 1px rgba(49,34,211,0.08);
+  margin-bottom: 18px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card:hover {
+  box-shadow: 0 12px 40px rgba(12,10,34,0.14), 0 4px 12px rgba(12,10,34,0.08), 0 0 0 1px rgba(49,34,211,0.12);
+  transform: translateY(-1px);
+}
+.card-title { font-size: 12px; font-weight:600; color: var(--navy); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.8px; }
+.card-icon { width: 30px; height: 30px; background: linear-gradient(135deg, rgba(133,125,228,0.15) 0%, rgba(49,34,211,0.15) 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 8px rgba(49,34,211,0.12); }
+.section-divider { border: none; border-top: 1.5px solid var(--border); margin: 16px 0; }
+
+/* ── CLOCK STATUS ── */
+.clock-status { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+.clocked-out { background: linear-gradient(135deg, #F6F9FA 0%, #E0ECFF 100%); border: none; color: var(--muted); box-shadow: 0 4px 16px rgba(12,10,34,0.08); }
+.clocked-in { background: linear-gradient(135deg, #E8FFF5 0%, #D0F5E8 100%); border: none; color: #0A8050; box-shadow: 0 4px 16px rgba(0,180,100,0.12); }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.clocked-out .status-dot { background: var(--muted); }
+.clocked-in .status-dot { background: var(--green); box-shadow: 0 0 0 3px rgba(34,165,94,0.2); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(34,165,94,0.2);}50%{box-shadow:0 0 0 6px rgba(34,165,94,0.1);} }
+
+/* ── SUMMARY MINI CARDS ── */
+.mini-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 12px; margin-bottom: 16px; }
+.mini-card {
+  background: linear-gradient(145deg, #ffffff 0%, #F6F9FA 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(12,10,34,0.10), 0 1px 4px rgba(12,10,34,0.06), 0 0 0 1px rgba(49,34,211,0.10);
+}
+.mini-card .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; }
+.mini-card .val { font-size: 18px; font-weight:600; color: var(--navy); }
+.mini-card .val.gold { color: var(--accent); }
+.mini-card .val.green { color: var(--green); }
+.mini-card .val.red { color: var(--red); }
+.mini-card .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; border-radius: 8px; width: 100%; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+th { background: linear-gradient(135deg, #F6F9FA 0%, #F6F9FA 100%); padding: 8px 10px; text-align: left; font-size: 10px; font-weight:600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid rgba(49,34,211,0.15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+td { padding: 10px 10px; border-bottom: 1px solid #EDEFF5; color: var(--text); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+tr:last-child td { border-bottom: none; }
+.pay-table { table-layout: auto; }
+/* My Timesheet and Pay use more of the screen than the other pages */
+#page-timesheet, #page-pay { width: min(1700px, calc(100vw - 40px)); margin-left: 50%; transform: translateX(-50%); }
+@media (max-width: 600px) { #page-timesheet, #page-pay { width: auto; margin-left: 0; transform: none; } }
+.ts-table { table-layout: auto; }
+.ts-table th { white-space: nowrap; overflow: visible; }
+.ts-table td { overflow: visible; text-overflow: clip; }
+.ts-table td:nth-child(5) { min-width: 180px; max-width: 260px; }
+.ann-card { position:relative; background:#fff; border-radius:16px; padding:22px 24px 20px 28px; margin-bottom:16px;
+  box-shadow:0 4px 24px rgba(12,10,34,0.08); border:1.5px solid var(--ann-border); overflow:hidden; animation:annIn .35s ease; }
+.ann-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--ann-accent); }
+.ann-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+.ann-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; background:var(--ann-soft); flex-shrink:0; }
+.ann-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ann-accent); }
+.ann-title { font-size:17px; font-weight:600; color:var(--navy); line-height:1.3; }
+.ann-date { margin-left:auto; font-size:11px; color:var(--muted); white-space:nowrap; }
+.ann-body { font-size:14px; color:var(--text); line-height:1.65; white-space:pre-wrap; word-break:break-word; margin:0 0 16px 52px; }
+.ann-foot { display:flex; justify-content:flex-end; }
+.ann-btn { background:var(--ann-accent); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px var(--ann-soft); }
+.ann-btn:disabled { opacity:.6; cursor:default; }
+.ann-card.ann-out { transition:all .35s ease; opacity:0; transform:translateY(-6px); }
+.ann-popup-card { margin:0; box-shadow:0 24px 70px rgba(12,10,34,0.35); animation:annPop .3s ease; }
+@keyframes annPop { from { opacity:0; transform:scale(.96) translateY(10px); } to { opacity:1; transform:none; } }
+.pay-table td { overflow: visible; text-overflow: clip; vertical-align: top; }
+.pay-table td.pay-desc { white-space: normal; min-width: 150px; }
+.pay-table td.pay-desc div { word-break: break-word; }
+tr:hover td { background: rgba(100,160,255,0.04); }
+
+/* ── BADGES ── */
+.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-green { background: #dcfce7; color: #15803d; }
+.badge-amber { background: #fef9c3; color: #92400e; }
+.badge-red { background: #fee2e2; color: #b91c1c; }
+.badge-blue { background: #EFF8FF; color: #3122D3; }
+.badge-gray { background: #F6F9FA; color: #5A5E78; }
+.badge-gold { background: rgba(200,146,42,0.12); color: var(--gold-dim); }
+
+/* ── CUTOFF GROUP ── */
+.cutoff-group { margin-bottom: 24px; }
+.cutoff-group-header {
+  background: linear-gradient(135deg, #0C0A22 0%, #0C0A22 60%, #08033C 100%);
+  border-top: none;
+  color: #0C0A22; padding: 12px 18px; border-radius: 12px 12px 0 0;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+  box-shadow: 0 4px 16px rgba(12,10,34,0.2);
+}
+.cutoff-group-header .title { font-size: 13px; font-weight:600; letter-spacing: 0.3px; }
+.cutoff-group-header .meta { font-size: 11px; color: rgba(255,255,255,0.6); }
+.cutoff-group-body { border: none; border-radius: 0 0 12px 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(12,10,34,0.10), 0 0 0 1px rgba(49,34,211,0.08); }
+
+/* ── PAY STATS ── */
+.pay-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; margin-bottom: 18px; }
+.pay-stat {
+  background: linear-gradient(145deg, #ffffff 0%, #F6F9FA 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(12,10,34,0.10), 0 1px 4px rgba(12,10,34,0.06), 0 0 0 1px rgba(49,34,211,0.10);
+}
+.pay-stat .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 5px; }
+.pay-stat .value { font-size: 22px; font-weight:600; color: var(--navy); }
+.pay-stat .value.gold { color: var(--accent); }
+.pay-stat .value.green { color: var(--green); }
+.pay-stat .value.red { color: var(--red); }
+.pay-stat .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── CUTOFF SELECTOR ── */
+.cutoff-selector { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.cutoff-btn { padding: 7px 16px; border-radius: 8px; border: none; background: white; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); transition: all 0.15s; box-shadow: 0 2px 8px rgba(12,10,34,0.10), 0 0 0 1px rgba(49,34,211,0.12); }
+.cutoff-btn.active { border: none; color: #0C0A22; background: linear-gradient(135deg, #3122D3 0%, #857DE4 100%); box-shadow: 0 4px 14px rgba(49,34,211,0.35); }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(12,10,34,0.6); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: 18px; padding: 28px; width: 100%; max-width: 500px; box-shadow: 0 20px 60px rgba(12,10,34,0.20), 0 0 0 1px rgba(49,34,211,0.10); max-height: 90vh; overflow-y: auto; }
+.modal-title { font-size: 16px; font-weight:600; color: var(--navy); margin-bottom: 4px; }
+.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+
+/* ── ALERTS ── */
+.alert { padding: 11px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: none; }
+.alert.show { display: block; }
+.alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+.alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+.alert-info { background: #EFF8FF; border: 1px solid #E2E5EE; color: #3122D3; }
+.alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+
+/* ── SPINNER ── */
+.spinner { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #0C0A22; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-block { text-align: center; padding: 36px; color: var(--muted); font-size: 14px; }
+.empty-block { text-align: center; padding: 40px; color: var(--muted); }
+.empty-block .eicon { font-size: 32px; margin-bottom: 10px; }
+
+/* ── TIME DISPLAY ── */
+.time-display { font-size: 32px; font-weight:600; color: var(--navy); font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+.time-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* ── PAYSLIP ── */
+.payslip-wrap { background: white; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
+.payslip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 3px solid var(--navy); flex-wrap: wrap; gap: 16px; }
+.payslip-logo-area .co-name { font-size: 20px; font-weight:700; color: var(--navy); }
+.payslip-logo-area .co-name span { color: var(--gold); }
+.payslip-logo-area .doc-type { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-top: 3px; }
+.payslip-meta { text-align: right; }
+.payslip-meta .pm-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.payslip-meta .pm-value { font-size: 14px; font-weight: 700; color: var(--navy); }
+.payslip-meta .pm-pay { font-size: 14px; font-weight: 700; color: var(--gold); margin-top: 2px; }
+.ps-section-title { font-size: 10px; font-weight:600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 10px; }
+.ps-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+.ps-net { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: linear-gradient(135deg, #0C0A22 0%, #0C0A22 100%); border: none; border-radius: 12px; margin-top: 14px; box-shadow: 0 8px 24px rgba(12,10,34,0.25); }
+.ps-net .nl { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); }
+.ps-net .nv { font-size: 22px; font-weight:700; color: var(--accent); }
+
+/* ── TWO COL ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } .topbar { padding: 0 14px; } .main { padding: 16px 14px; } .nav-tab { padding: 12px 12px; font-size: 11px; } .login-card {
+  background: #FFFFFF;
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 48px 40px 40px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 20px 60px rgba(12,10,34,0.20), 0 4px 16px rgba(12,10,34,0.10), 0 0 0 1px rgba(255,255,255,0.6);
+  position: relative; z-index: 1;
+} }
+
+  /* FORCE LOGIN OVERRIDES */
+  #login-screen * { color: #0C0A22; }
+  #login-screen h1 span:first-child { color: #0C0A22 !important; }
+  #login-screen h1 span:last-child { color: #3122D3 !important; }
+  #login-screen input { background: #ffffff !important; color: #0C0A22 !important; -webkit-text-fill-color: #0C0A22 !important; }
+  #login-screen input::placeholder { color: #5A5E78 !important; -webkit-text-fill-color: #5A5E78 !important; }
+  #login-screen .field-group label { color: #0C0A22 !important; }
+  #login-screen .login-error { color: #CC1A35 !important; }
+  #login-screen p { color: #5A5E78 !important; }
+
+.btn-refresh {
+  background: linear-gradient(135deg, #3122D3 0%, #3122D3 100%);
+  color: white; border: none; border-radius: 12px;
+  padding: 10px 22px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(49,34,211,0.35);
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-refresh:hover {
+  background: linear-gradient(135deg, #3A29FF 0%, #3122D3 100%);
+  box-shadow: 0 6px 20px rgba(49,34,211,0.45);
+  transform: translateY(-1px);
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="v2-login">
+    <div class="v2-brand"><div class="v2-mark"><b>J2</b><i>GROUP</i></div><span>J2 Hub · SDR</span></div>
+    <h1>Your time, pay and leave in one place.</h1>
+    <p class="v2-lede">Clock in, track your hours and submit your timesheet.</p>
+    <div id="login-loading" style="display:none;margin-bottom:12px;">Verifying credentials…</div>
+    <div class="login-error" id="login-error">Incorrect name or password.</div>
+    <div class="field-group"><label>Your name</label><input type="text" id="login-name" placeholder="e.g. James Mitchell" autocomplete="name" /></div>
+    <div class="field-group"><label>Password</label><input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" /></div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()" id="btn-login">Sign In to J2 Hub</button>
+    <p class="v2-foot" style="margin-top:16px;">Contact your admin if you need access.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="v2-brand"><div class="v2-mark"><b>J2</b><i>GROUP</i></div><span class="v2-name">J2 Hub</span><span class="v2-role">SDR</span></div>
+    <div class="topbar-right">
+      <div class="user-chip" id="user-chip">—</div>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <div style="display:flex;align-items:center;overflow-x:auto;flex:1;">
+      <div class="nav-tab active" onclick="switchTab('time')" id="tab-time">Time Management</div>
+      <div class="nav-tab" onclick="switchTab('timesheet')" id="tab-timesheet">My Timesheet</div>
+      <div class="nav-tab" onclick="switchTab('pay')" id="tab-pay">Pay</div>
+      <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">Meetings</div>
+      <div class="nav-tab" onclick="switchTab('submit')" id="tab-submit">Submit Timesheet</div>
+      <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">Leave</div>
+    </div>
+    <!-- Bell button aligned to nav bar -->
+    <div style="flex-shrink:0;padding:0 6px 0 10px;display:flex;align-items:center;">
+      <button id="notif-bell-btn" class="v2-bell" onclick="toggleNotifPanel()" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Notifications</span><span id="notif-count-badge" style="display:none;background:#3122D3;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:600;min-width:18px;text-align:center;"></span></button>
+    </div>
+  </div>
+
+  <!-- ══ FIXED NOTIFICATION PANEL (outside all pages so it's always accessible) ══ -->
+  <div id="inline-notif-wrap" style="
+      position:fixed;
+      top:112px;
+      right:20px;
+      width:340px;
+      max-height:calc(100vh - 130px);
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 8px 40px rgba(12,10,34,0.18), 0 2px 12px rgba(12,10,34,0.10);
+      border:1.5px solid rgba(133,125,228,0.25);
+      z-index:1200;
+      display:none;
+      flex-direction:column;
+      overflow:hidden;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px 18px;border-bottom:1px solid #F6F9FA;background:linear-gradient(135deg,#F6F9FA,#F6F9FA);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;"></span>
+        <span style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:#0C0A22;">Notifications</span>
+        <span id="notif-count-badge-panel" style="display:none;background:#E53935;color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;min-width:18px;text-align:center;"></span>
+      </div>
+      <button onclick="toggleNotifPanel()" title="Close" style="background:none;border:none;cursor:pointer;font-size:18px;color:#5A5E78;padding:2px 4px;line-height:1;border-radius:6px;"
+        onmouseover="this.style.background='#F6F9FA';" onmouseout="this.style.background='none';"></button>
+    </div>
+    <!-- Scrollable body -->
+    <div id="inline-notif-inner" style="
+        flex:1;
+        overflow-y:auto;
+        padding:12px 14px;
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        max-height:calc(100vh - 200px);
+        scrollbar-width:thin;
+        scrollbar-color:#E2E5EE transparent;">
+    </div>
+    <!-- Footer: clear all -->
+    <div id="notif-footer" style="display:none;padding:10px 14px;border-top:1px solid #F6F9FA;text-align:center;flex-shrink:0;">
+      <button onclick="clearAllNotifs()" style="background:none;border:1px solid #E2E5EE;color:#5A5E78;border-radius:8px;padding:5px 18px;font-size:11px;font-weight:700;cursor:pointer;"
+        onmouseover="this.style.background='#F6F9FA';" onmouseout="this.style.background='none';">Clear all</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ══ TIME MANAGEMENT ══ -->
+    <div class="page active" id="page-time">
+      <div class="page-header">
+        <div><h2>Time Management</h2><p>Clock in, clock out, log meetings, and track your current cutoff.</p></div>
+      </div>
+
+      <!-- Clock Status -->
+      <div id="clock-status-block" class="clock-status clocked-out" style="width:calc(960px + 18px);max-width:100%;">
+        <div class="status-dot"></div><span id="clock-status-text">You are currently clocked out.</span>
+      </div>
+      <div id="alert-clock" class="alert"></div>
+
+
+
+      <!-- Clock In/Out + Log Meeting — side by side row -->
+      <div style="display:flex;gap:18px;align-items:stretch;flex-wrap:wrap;margin-bottom:0;">
+        <!-- Clock In/Out Card — ~5 inches wide -->
+        <div style="width:480px;max-width:100%;flex-shrink:0;display:flex;flex-direction:column;">
+        <div class="card" id="clock-card-in" style="flex:1;display:flex;flex-direction:column;">
+          <div class="card-title"><div class="card-icon"></div> Clock In</div>
+          <div class="field-group"><label>Date</label><input type="date" id="clock-in-date" /></div>
+          <div style="margin-bottom:16px;">
+            <div class="time-display" id="live-time">--:--:--</div>
+            <div class="time-sub">Current AEST time — recorded on clock in</div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="submitClockIn()" id="btn-clock-in" style="margin-top:auto;">Clock In Now</button>
+        </div>
+        <div class="card" id="clock-card-out" style="display:none;flex:1;flex-direction:column;">
+          <div class="card-title"><div class="card-icon"></div> Clock Out</div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Clocked in at</div>
+            <div style="font-size:16px;font-weight:600;color:var(--navy);" id="clock-in-time-display">—</div>
+          </div>
+          <div style="margin-bottom:16px;">
+            <div class="time-display" id="live-time-2">--:--:--</div>
+            <div class="time-sub">Current AEST time — recorded on clock out</div>
+          </div>
+          <!-- LUNCH BUTTON -->
+          <div id="lunch-section" style="margin-bottom:14px;">
+            <div id="lunch-not-started">
+              <button class="btn btn-full" onclick="startLunch()" id="btn-start-lunch"
+                style="background:linear-gradient(135deg,#FF8C00,#FFA500);color:white;margin-bottom:8px;">
+                Start Lunch Break
+              </button>
+            </div>
+            <div id="lunch-in-progress" style="display:none;">
+              <div style="background:linear-gradient(135deg,#FFF8EC,#FFEECC);border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid #FFA500;">
+                <div style="font-size:11px;color:#996600;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">On Lunch Break since</div>
+                <div style="font-size:15px;font-weight:600;color:#664400;" id="lunch-start-display">—</div>
+              </div>
+              <button class="btn btn-full" onclick="endLunch()" id="btn-end-lunch"
+                style="background:linear-gradient(135deg,#FFA500,#FF8C00);color:white;margin-bottom:8px;">
+                End Lunch Break
+              </button>
+            </div>
+            <div id="lunch-done" style="display:none;">
+              <div style="background:linear-gradient(135deg,#E8FFF5,#D0F5E8);border-radius:10px;padding:10px 14px;border-left:3px solid #00D68F;">
+                <span style="font-size:12px;font-weight:700;color:#0A8050;">Lunch taken</span>
+                <span style="font-size:11px;color:#15803d;margin-left:8px;" id="lunch-time-display">—</span>
+                <span style="font-size:10px;color:#0A8050;margin-left:8px;">1hr paid </span>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-full" onclick="submitClockOut()" id="btn-clock-out" style="margin-top:auto;">Clock Out Now</button>
+        </div>
+
+        </div><!-- end clock card width wrapper -->
+
+        <!-- Log Meeting — 480px (~5 inches), same as clock card -->
+        <div style="width:480px;max-width:100%;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="card" id="quick-meeting-card" style="flex:1;display:flex;flex-direction:column;">
+            <div class="card-title"><div class="card-icon"></div> Log Meeting</div>
+            <div class="two-col">
+              <div class="field-group">
+                <label>Start Time</label><input type="time" id="qm-start" />
+              </div>
+              <div class="field-group">
+                <label>End Time</label><input type="time" id="qm-end" />
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Meeting Type</label>
+              <select id="qm-type">
+                <option value="">— Select type —</option>
+                <option value="Coaching">Coaching</option>
+                <option value="Team Huddle">Team Huddle</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" onclick="submitQuickMeeting()" id="btn-qm" style="margin-top:auto;">Submit for Approval</button>
+          </div>
+        </div>
+
+      </div><!-- end clock + meeting row -->
+
+      <!-- ══ ANNOUNCEMENTS ══ -->
+      <div id="announcements-area" style="width:calc(960px + 18px);max-width:100%;margin-top:18px;"></div>
+
+
+
+
+    </div>
+
+    <!-- ══ MY TIMESHEET ══ -->
+    <div class="page" id="page-timesheet">
+      <div class="page-header">
+        <div><h2>My Timesheet</h2></div>
+        <button class="btn-refresh" onclick="loadTimesheet()">Refresh</button>
+      </div>
+      <div id="alert-timesheet" class="alert"></div>
+      <div id="timesheet-loading" class="loading-block">Loading your records…</div>
+      <div id="timesheet-content"></div>
+    </div>
+
+    <!-- ══ PAY ══ -->
+    <div class="page" id="page-pay">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div><h2>My Pay</h2><p style="color:var(--muted);font-size:13px;margin-top:4px;">All your approved timesheets and what was paid.</p></div>
+        <button class="btn btn-secondary btn-sm" onclick="loadPay()">Refresh</button>
+      </div>
+      <div id="alert-pay" class="alert"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="pay-loading" class="loading-block">Loading your pay…</div>
+        <div id="pay-empty" class="empty-block" style="display:none;"><div class="eicon"></div><p>No approved timesheets yet.</p></div>
+        <div class="table-wrap" id="pay-table-wrap" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ══ PAYSLIP (retired) ══ -->
+    <div class="page" id="page-payslip">
+      <div class="page-header">
+        <div><h2>Payslip</h2><p>Only shows approved timesheets. Downloadable as PDF.</p></div>
+        <button class="btn-refresh" onclick="loadPayslip()">Refresh</button>
+      </div>
+      <div id="payslip-loading" class="loading-block">Loading payslips…</div>
+      <div id="payslip-list" style="display:none;"></div>
+    </div>
+
+    <!-- ══ MEETINGS ══ -->
+    <div class="page" id="page-meetings">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div><h2>Meetings</h2><p>Log meeting time for approval. Approved meetings add to your billable hours in My Timesheet.</p></div>
+        <button class="btn-refresh" onclick="allMeetings=[];loadMeetings();">Refresh</button>
+      </div>
+      <div id="alert-meetings" class="alert"></div>
+      <div class="card">
+        <div class="card-title"><div class="card-icon"></div> Log a Meeting</div>
+        <div class="two-col">
+          <div class="field-group"><label>Date</label><input type="date" id="meeting-date" /></div>
+          <div class="field-group"><label>Meeting Type</label>
+            <select id="meeting-type">
+              <option value="">— Select type —</option>
+              <option value="Coaching">Coaching</option>
+              <option value="Team Huddle">Team Huddle</option>
+            </select>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-group"><label>Start Time</label><input type="time" id="meeting-start" /></div>
+          <div class="field-group"><label>End Time</label><input type="time" id="meeting-end" /></div>
+        </div>
+        <button class="btn btn-primary" onclick="submitMeeting()" id="btn-submit-meeting" style="width:100%;">Submit for Approval</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title" style="margin-bottom:0;">My Submissions</div>
+          <button class="btn-refresh" onclick="loadMeetings()">Refresh</button>
+        </div>
+        <div id="meetings-loading" class="loading-block">Loading…</div>
+        <div id="meetings-empty" class="empty-block" style="display:none;"><div class="eicon"></div><p>No meeting submissions yet.</p></div>
+        <div class="table-wrap" id="meetings-table-wrap" style="display:none;">
+          <table><thead><tr><th>Date</th><th>Type</th><th>Start</th><th>End</th><th>Duration</th><th>Status</th></tr></thead>
+          <tbody id="meetings-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SUBMIT TIMESHEET ══ -->
+    <div class="page" id="page-submit">
+      <div class="page-header">
+        <div><h2>Submit Timesheet</h2><p>Review and submit at the end of each cutoff to get paid.</p></div>
+      </div>
+      <div id="alert-submit" class="alert"></div>
+      <div class="cutoff-selector">
+        <button class="cutoff-btn active" onclick="selectSubmitCutoff('current')" id="subco-current">Current Period</button>
+        <button class="cutoff-btn" onclick="selectSubmitCutoff('prev')" id="subco-prev">Previous Period</button>
+      </div>
+      <div id="submit-loading" class="loading-block">Loading…</div>
+      <div id="submit-content" style="display:none;"></div>
+    </div>
+
+    <!-- ══ LEAVE ══ -->
+    <div class="page" id="page-leave">
+      <div class="page-header"><div><h2>Leave</h2></div></div>
+      <div id="alert-leave" class="alert"></div>
+      <div class="card">
+        <div class="card-title"><div class="card-icon"></div> New Leave Request</div>
+        <div class="two-col">
+          <div class="field-group"><label>From</label><input type="date" id="leave-date" onchange="updateLeavePreview()" /></div>
+          <div class="field-group"><label>To <span style="text-transform:none;font-weight:500;">(leave blank for one day)</span></label><input type="date" id="leave-date-to" onchange="updateLeavePreview()" /></div>
+        </div>
+        <div id="leave-preview" style="display:none;font-size:12px;color:var(--muted);background:#F6F9FA;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:-4px 0 14px;line-height:1.5;"></div>
+        <div class="two-col">
+          <div class="field-group"><label>Leave Type</label>
+            <select id="leave-type">
+              <option value="">— Select —</option>
+              <option value="Full Day">Full Day</option>
+              <option value="Half Day AM">Half Day (AM)</option>
+              <option value="Half Day PM">Half Day (PM)</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+        <div class="field-group"><label>Reason</label><textarea id="leave-reason" rows="3" placeholder="Briefly describe your reason…"></textarea></div>
+        <button class="btn btn-primary btn-full" onclick="submitLeave()" id="btn-submit-leave">Submit Leave Request</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title" style="margin-bottom:0;">My Leave Requests</div>
+          <button class="btn-refresh" onclick="loadLeave()">Refresh</button>
+        </div>
+        <div id="leave-loading" class="loading-block">Loading…</div>
+        <div id="leave-empty" class="empty-block" style="display:none;"><div class="eicon"></div><p>No leave requests yet.</p></div>
+        <div class="table-wrap" id="leave-table-wrap" style="display:none;">
+          <table><thead><tr><th>Date</th><th>Type</th><th>Reason</th><th>Status</th><th>Pay Type</th><th>Paid Hrs</th><th>Admin Note</th></tr></thead>
+          <tbody id="leave-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- PAYSLIP DISPUTE MODAL -->
+<div class="modal-overlay" id="ps-dispute-modal">
+  <div class="modal">
+    <div class="modal-title">Request Review Payslip</div>
+    <div class="modal-sub" id="ps-dispute-sub">—</div>
+    <div id="alert-ps-dispute" class="alert"></div>
+    <div class="field-group"><label>Reason for Request Review</label><textarea id="ps-dispute-text" rows="4" placeholder="Describe the issue with this payslip…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="submitPayslipDispute()" id="btn-ps-dispute">Submit Request Review</button>
+      <button class="btn btn-secondary" onclick="closePsDisputeModal()">Cancel</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbykm0PPuuxOeQzWX5zIYtfZqmbCiJ5l96Arh7OSWOm-wz98uW_byMv5RfQD74P4iTRuBA/exec";
+let currentUser = null;
+let openClockInEntry = null;
+let allEntries = [];
+let allTimesheets = [];
+let allMeetings = [];
+let allLeaves = [];
+let submitCutoffVal = 'current';
+let psDisputeTsId = null;
+const AUTO_CLOCK_OUT_HOURS = 10;
+let lunchStartTime = null;
+let lunchTaken = false;
+
+// ── API ──
+// SDRs only receive their own entries, meetings, timesheets and leave
+function apiDecorate(p){
+  if(["getEntries","getMeetings","getTimesheets","getLeaves"].includes(p.action)){
+    const n=p.forUser||(currentUser&&currentUser.name);
+    if(n) p.forUser=String(n).toLowerCase().trim();      // same key whether typed "jesse" or "Jesse", so prefetched data is reused
+  }
+  return p;
+}
+// ── API (fast + resilient) ─────────────────────────────────────────────────
+// • Reads that happen at the same moment are sent together in one request
+// • Reads are remembered for 15s and identical requests share one call
+// • Failed reads and safe saves are retried automatically
+const READ_ACTIONS=new Set(["getUsers","getEntries","getMeetings","getTimesheets","getLeaves","getCoverage","getAnnouncements","version"]);
+const _apiMem={}, _apiInflight={}; let _apiQueue=[], _apiTimer=null, _apiBatchOK=true;
+const _apiWait=ms=>new Promise(r=>setTimeout(r,ms));
+async function apiRaw(payload){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),30000);
+  try{
+    const res=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload),signal:ctl.signal});
+    const txt=await res.text();
+    try{ return JSON.parse(txt); }catch(e){ throw new Error("Google's server didn't respond properly. Please try again."); }
+  }catch(e){
+    if(e.name==="AbortError") throw new Error("The server took too long to respond. Please try again.");
+    throw e;
+  }finally{ clearTimeout(t); }
+}
+function _apiFlush(){
+  const q=_apiQueue; _apiQueue=[]; _apiTimer=null;
+  const single=it=>apiRaw(it.p).then(it.ok,it.fail);
+  if(q.length===1||!_apiBatchOK){ q.forEach(single); return; }
+  apiRaw({action:"batch",requests:q.map(it=>it.p)}).then(r=>{
+    if(r&&Array.isArray(r.results)&&r.results.length===q.length) q.forEach((it,i)=>it.ok(r.results[i]));
+    else { _apiBatchOK=false; q.forEach(single); }            // older script without batch support
+  },err=>q.forEach(it=>it.fail(err)));
+}
+function _apiQueued(p){ return new Promise((ok,fail)=>{ _apiQueue.push({p,ok,fail}); if(!_apiTimer) _apiTimer=setTimeout(_apiFlush,20); }); }
+async function _apiRetry(fn,tries){
+  let err; for(let i=0;i<tries;i++){ try{ return await fn(); }catch(e){ err=e; if(i<tries-1) await _apiWait(700*(i+1)); } } throw err;
+}
+async function apiPost(payload){
+  payload=apiDecorate({...payload});
+  if(!READ_ACTIONS.has(payload.action)){
+    // saves: retry only the ones that are safe to repeat (never "add…", which would duplicate)
+    const safe=!/^add/.test(payload.action)&&!(payload.action==="saveAnnouncement"&&!payload.id);
+    Object.keys(_apiMem).forEach(k=>delete _apiMem[k]);
+    const r=await _apiRetry(()=>apiRaw(payload),safe?3:1);
+    Object.keys(_apiMem).forEach(k=>delete _apiMem[k]);
+    return r;
+  }
+  const key=JSON.stringify(payload);
+  const hit=_apiMem[key]; if(hit&&Date.now()-hit.t<15000) return JSON.parse(hit.v);
+  if(!_apiInflight[key]){
+    _apiInflight[key]=_apiRetry(async()=>{ const r=await _apiQueued(payload); if(r&&r.error&&/busy|try again/i.test(r.error)) throw new Error(r.error); return r; },3)
+      .then(r=>{ if(r&&!r.error) _apiMem[key]={t:Date.now(),v:JSON.stringify(r)}; return JSON.stringify(r); })
+      .finally(()=>{ delete _apiInflight[key]; });
+  }
+  return JSON.parse(await _apiInflight[key]);
+}
+
+
+// ── AUTH ──
+async function doLogin() {
+  const name = document.getElementById("login-name").value.trim();
+  const pass = document.getElementById("login-password").value.trim();
+  const err = document.getElementById("login-error");
+  const loading = document.getElementById("login-loading");
+  const btn = document.getElementById("btn-login");
+  if (!name || !pass) { err.style.display="block"; err.textContent="Please enter your name and password."; return; }
+  err.style.display="none"; loading.style.display="block"; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Signing in…';
+  try {
+    // Start loading this SDR's data while the password is checked, so the portal opens faster
+    ["getEntries","getMeetings","getTimesheets","getLeaves"].forEach(a=>apiPost({action:a,forUser:name}).catch(()=>{}));
+    apiPost({action:"getAnnouncements"}).catch(()=>{});
+    // Password is checked by the script, so other users' passwords never reach this browser
+    let user = null;
+    const lr = await apiPost({ action: "login", name, password: pass });
+    if (lr && lr.success !== undefined) user = lr.success ? lr.user : null;
+    else {                                            // older script without the login action
+      const result = await apiPost({ action: "getUsers" });
+      user = (result.users || []).find(u => u.name.toLowerCase().trim() === name.toLowerCase().trim() && u.password === pass) || null;
+    }
+    if (!user) { err.style.display="block"; err.textContent="Incorrect name or password."; loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In to J2 Hub"; return; }
+    currentUser = { id: user.id, name: user.name, email: user.email||"", rate: parseFloat(user.rate)||0 };
+    document.getElementById("login-screen").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("user-chip").textContent = currentUser.name;
+    loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In to J2 Hub";
+    localStorage.setItem("j2hub_user", JSON.stringify({...currentUser, loginTime: Date.now()}));
+    initApp();
+  } catch(e) {
+    err.style.display="block"; err.textContent="Could not connect. Please try again.";
+    loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In to J2 Hub";
+  }
+}
+document.addEventListener("keydown", e => { if(e.key==="Enter" && document.getElementById("login-screen").style.display!=="none") doLogin(); });
+function doLogout() {
+  currentUser=null; openClockInEntry=null; allEntries=[];
+  localStorage.removeItem("j2hub_user");
+  document.getElementById("login-screen").style.display="flex";
+  document.getElementById("app").style.display="none";
+  document.getElementById("login-name").value=""; document.getElementById("login-password").value="";
+}
+
+// ── INIT ──
+// ── ANNOUNCEMENTS ──────────────────────────────────────────────────────────
+const ANN_STYLE={
+  Info:     {icon:"📢", accent:"#2563eb", soft:"rgba(37,99,235,0.12)",  border:"#EFF8FF", label:"Announcement"},
+  Important:{icon:"⭐", accent:"#d97706", soft:"rgba(217,119,6,0.14)",  border:"#fde68a", label:"Important"},
+  Urgent:   {icon:"🚨", accent:"#dc2626", soft:"rgba(220,38,38,0.12)",  border:"#fecaca", label:"Urgent"}
+};
+const escHtml=t=>String(t||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let annQueue=[];
+function annCardHtml(a,popup){
+  const st=ANN_STYLE[a.type]||ANN_STYLE.Info;
+  const when=a.createdAt?new Date(a.createdAt).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}):"";
+  return `<div class="ann-card${popup?" ann-popup-card":""}" style="--ann-accent:${st.accent};--ann-soft:${st.soft};--ann-border:${st.border};">
+    <div class="ann-head"><div class="ann-icon">${st.icon}</div>
+      <div><div class="ann-label">${st.label}</div><div class="ann-title">${escHtml(a.title)}</div></div>
+      <div class="ann-date">${when}</div></div>
+    <div class="ann-body"${popup?"":' style="margin-bottom:0;"'}>${escHtml(a.message)}</div>
+    ${popup?`<div class="ann-foot"><span id="ann-popup-count" style="margin-right:auto;font-size:12px;color:var(--muted);align-self:center;"></span><button class="ann-btn" id="ann-popup-btn" onclick="confirmAnnouncement('${a.id}',this)">✓ Got it, confirm</button></div>`:""}
+  </div>`;
+}
+async function loadAnnouncements(){
+  const area=document.getElementById("announcements-area"); if(!area||!currentUser) return;
+  try{
+    const r=await apiPost({action:"getAnnouncements"});
+    const me=currentUser.name.toLowerCase();
+    const acked=new Set((r.acks||[]).filter(a=>(a.sdrName||"").toLowerCase()===me).map(a=>String(a.id)));
+    const live=(r.announcements||[]).filter(a=>a.active).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    // Time Management: every live announcement, read-only
+    area.innerHTML=live.map(a=>annCardHtml(a,false)).join("");
+    // Pop-up: only the ones this SDR hasn't confirmed yet (oldest first)
+    annQueue=live.filter(a=>!acked.has(String(a.id))).reverse();
+    showNextAnnouncement();
+  }catch(e){ area.innerHTML=""; }
+}
+function showNextAnnouncement(){
+  let ov=document.getElementById("ann-popup");
+  if(!annQueue.length){ if(ov) ov.remove(); return; }
+  if(!ov){
+    ov=document.createElement("div"); ov.id="ann-popup";
+    ov.style.cssText="position:fixed;inset:0;background:rgba(12,10,34,0.55);backdrop-filter:blur(3px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;";
+    document.body.appendChild(ov);
+  }
+  const total=annQueue.length;
+  ov.innerHTML=`<div style="width:100%;max-width:620px;max-height:90vh;overflow-y:auto;">${annCardHtml(annQueue[0],true)}</div>`;
+  const c=document.getElementById("ann-popup-count"); if(c) c.textContent=total>1?`${total} announcements to read`:"";
+}
+async function confirmAnnouncement(id,btn){
+  btn.disabled=true; btn.textContent="Confirming…";
+  try{
+    const r=await apiPost({action:"ackAnnouncement",id,sdrName:currentUser.name});
+    if(!r||!r.success) throw new Error("not saved");
+    annQueue=annQueue.filter(a=>String(a.id)!==String(id));
+    showNextAnnouncement();
+  }catch(e){ btn.disabled=false; btn.textContent="✓ Got it, confirm"; alert("Couldn't confirm right now. Please try again."); }
+}
+
+function initApp() {
+  loadAnnouncements();
+  startLiveClock();
+  setTodayDate();
+  checkOpenClockIn();
+  loadNotifications();
+  checkTimesheetReminder();
+}
+
+function startLiveClock() {
+  function update() {
+    const t = new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false});
+    ["live-time","live-time-2"].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=t; });
+  }
+  update(); setInterval(update, 1000);
+  // Auto clock-out check every minute
+  setInterval(checkAutoClockOut, 60000);
+  // Keep the visible date fields in sync with Sydney time even if the tab
+  // is left open across a Sydney midnight rollover (e.g. SA-based staff)
+  setInterval(setTodayDate, 60000);
+}
+
+function currentSydneyDate() {
+  // Always computes "today" fresh in Australia/Sydney time, regardless of the
+  // user's own device/browser timezone (e.g. South Africa-based staff).
+  return new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+}
+
+function setTodayDate() {
+  const today = currentSydneyDate();
+  ["clock-in-date","meeting-date"].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
+}
+
+
+// ── LUNCH ──
+function startLunch() {
+  const aestTime = new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"});
+  lunchStartTime = aestTime;
+  document.getElementById("lunch-not-started").style.display = "none";
+  document.getElementById("lunch-in-progress").style.display = "block";
+  document.getElementById("lunch-start-display").textContent = aestTime;
+}
+
+async function endLunch() {
+  const aestTime = new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"});
+  lunchTaken = true;
+  // Save lunch times to the entry
+  if (openClockInEntry) {
+    try {
+      await apiPost({action:"updateEntry", id:openClockInEntry.itemId, lunchStart:lunchStartTime, lunchEnd:aestTime, lunchTaken:"TRUE"});
+    } catch(e) {}
+  }
+  document.getElementById("lunch-in-progress").style.display = "none";
+  document.getElementById("lunch-done").style.display = "block";
+  document.getElementById("lunch-time-display").textContent = lunchStartTime + " – " + aestTime;
+}
+
+function resetLunchUI() {
+  lunchStartTime = null; lunchTaken = false;
+  document.getElementById("lunch-not-started").style.display = "block";
+  document.getElementById("lunch-in-progress").style.display = "none";
+  document.getElementById("lunch-done").style.display = "none";
+}
+// ── AUTO CLOCK OUT ──
+async function checkAutoClockOut() {
+  if (!openClockInEntry) return;
+  const clockInTime = openClockInEntry.clockInTime;
+  if (!clockInTime) return;
+  const [h,m] = clockInTime.split(":").map(Number);
+  const now = new Date();
+  const aest = new Date(now.toLocaleString("en-AU",{timeZone:"Australia/Sydney"}));
+  const clockInMins = h*60+m;
+  const nowMins = aest.getHours()*60+aest.getMinutes();
+  const elapsed = nowMins - clockInMins;
+  if (elapsed >= AUTO_CLOCK_OUT_HOURS * 60) {
+    // Auto clock out with 0 billable hours
+    try {
+      const aestTime = aest.getHours().toString().padStart(2,"0")+":"+aest.getMinutes().toString().padStart(2,"0");
+      await apiPost({action:"updateEntry", id:openClockInEntry.itemId, clockOut:aestTime, billableHrs:0, deduction:8, dailyPay:0});
+      openClockInEntry = null;
+      showClockedOut();
+      showAlert(document.getElementById("alert-clock"), "warning", "⚠️ You were automatically clocked out after 10 hours. Billable hours set to 0 for that entry.");
+      allEntries = [];
+    } catch(e) {}
+  }
+}
+
+// ── NOTIFICATIONS ──
+async function loadNotifications() {
+  const notifs = [];
+  try {
+    const [tsRes, leaveRes, meetRes, entRes] = await Promise.all([
+      apiPost({action:"getTimesheets"}),
+      apiPost({action:"getLeaves"}),
+      apiPost({action:"getMeetings"}),
+      apiPost({action:"getEntries"})
+    ]);
+    allTimesheets = (tsRes.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
+    allLeaves = (leaveRes.leaves||[]).filter(l=>l.sdrName===currentUser.name);
+    allMeetings = (meetRes.meetings||[]).filter(m=>m.sdrName===currentUser.name);
+    const myEntries = (entRes.entries||[]).filter(e=>e.sdrName&&e.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+
+    // ── TIMESHEET notifications ──
+    allTimesheets.forEach(t => {
+      const period = t.cutoffLabel||t.cutoffKey||"period";
+      if (t.status==="Approved")
+        notifs.push({type:"success", text:"✓ Timesheet approved: "+period+(t.payDate?" — pay date "+formatDate(t.payDate):"")});
+      if (t.status==="Rejected")
+        notifs.push({type:"red", text:"✗ Timesheet rejected: "+period+(t.adminNote?" — "+t.adminNote:"")});
+      if (t.status==="Disputed")
+        notifs.push({type:"warning", text:"⚠️ Timesheet under review: "+period});
+      if (t.status==="Processed")
+        notifs.push({type:"info", text:"💳 Timesheet processed (paid): "+period});
+      // Deleted timesheet — adminNote contains "[Deleted]" or similar
+      if ((t.adminNote||"").toLowerCase().includes("deleted") || (t.status||"").toLowerCase().includes("deleted"))
+        notifs.push({type:"red", text:"🗑️ Timesheet deleted: "+period+(t.adminNote?" — "+t.adminNote:"")});
+    });
+
+    // ── ENTRY-LEVEL notifications ──
+    myEntries.forEach(e => {
+      const dateLabel = e.workDate ? formatDate(e.workDate) : "entry";
+      // Entry dispute approved/resolved
+      if (e.disputeStatus==="Resolved" && e.adminNotes)
+        notifs.push({type:"success", text:"✓ Request Review resolved ("+dateLabel+")"+(e.adminNotes?" — "+e.adminNotes:"")});
+      // Entry dispute rejected
+      if (e.disputeStatus==="Rejected")
+        notifs.push({type:"red", text:"✗ Request Review rejected ("+dateLabel+")"+(e.adminNotes?" — "+e.adminNotes:"")});
+      // Entry dispute under review
+      if (e.disputeStatus==="Under Review")
+        notifs.push({type:"warning", text:"⏳ Request Review pending admin ("+dateLabel+")"});
+      // Manual timesheet request submitted
+      if (e.disputeStatus==="Manual Request")
+        notifs.push({type:"info", text:"📋 Manual timesheet request submitted ("+dateLabel+")"});
+      // Entry approved (billable hours entered by admin)
+      if ((e.billableHrs!=null && e.billableHrs!=="" && e.disputeStatus!=="Under Review" && e.disputeStatus!=="Manual Request") && !e._notifSuppressed)
+        notifs.push({type:"success", text:"✓ Work hours approved: "+dateLabel+" — "+parseFloat(e.billableHrs||0).toFixed(1)+"h billable"});
+      // Deleted entry — adminNotes contains "[Deleted]"
+      if ((e.adminNotes||"").toLowerCase().includes("[deleted]") || (e.adminNotes||"").toLowerCase().includes("deleted"))
+        notifs.push({type:"red", text:"🗑️ Entry deleted by admin ("+dateLabel+")"+(e.adminNotes?" — "+e.adminNotes:"")});
+    });
+
+    // ── LEAVE notifications ──
+    allLeaves.forEach(l => {
+      const dateLabel = l.leaveDate ? formatDate(l.leaveDate) : "leave";
+      if (l.status==="Pending")
+        notifs.push({type:"info", text:"📨 Leave request pending: "+dateLabel+" ("+( l.leaveType||"")+")"});
+      if (l.status==="Approved")
+        notifs.push({type:"success", text:"✓ Leave approved ("+l.payType+"): "+dateLabel});
+      if (l.status==="Rejected")
+        notifs.push({type:"red", text:"✗ Leave rejected: "+dateLabel+(l.adminNote?" — "+l.adminNote:"")});
+    });
+
+    // ── MEETING notifications ──
+    allMeetings.forEach(m => {
+      const label = (m.meetingType||"Meeting")+" on "+formatDate(m.date);
+      if (m.status==="Pending")
+        notifs.push({type:"info", text:"📨 Meeting request pending: "+label});
+      if (m.status==="Approved")
+        notifs.push({type:"success", text:"✓ Meeting approved: "+label});
+      if (m.status==="Rejected")
+        notifs.push({type:"red", text:"✗ Meeting rejected: "+label});
+    });
+
+  } catch(e) { console.warn("loadNotifications error:", e); }
+
+  renderNotifications(notifs);
+  loadTimeSummary();
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById("inline-notif-wrap");
+  if (!panel) return;
+  const isVisible = panel.style.display === "flex";
+  panel.style.display = isVisible ? "none" : "flex";
+}
+
+function clearAllNotifs() {
+  const inner = document.getElementById("inline-notif-inner");
+  if (inner) inner.innerHTML = "";
+  const footer = document.getElementById("notif-footer");
+  if (footer) footer.style.display = "none";
+  // Update badges
+  _updateNotifBadge(0);
+  // Close panel
+  const panel = document.getElementById("inline-notif-wrap");
+  if (panel) panel.style.display = "none";
+}
+
+function _updateNotifBadge(count) {
+  // Bell button badge
+  const b1 = document.getElementById("notif-count-badge");
+  if (b1) { b1.textContent = count > 0 ? count : ""; b1.style.display = count > 0 ? "inline-block" : "none"; }
+  // Panel header badge
+  const b2 = document.getElementById("notif-count-badge-panel");
+  if (b2) { b2.textContent = count > 0 ? count : ""; b2.style.display = count > 0 ? "inline-block" : "none"; }
+  // Bell button pulse when there are unread notifications
+  const btn = document.getElementById("notif-bell-btn");
+  if (btn) btn.style.borderColor = count > 0 ? "#E53935" : "rgba(133,125,228,0.3)";
+}
+
+function renderNotifications(notifs) {
+  const wrap = document.getElementById("inline-notif-wrap");
+  const inner = document.getElementById("inline-notif-inner");
+  const footer = document.getElementById("notif-footer");
+  if(!wrap||!inner) return;
+  if (notifs.length === 0) {
+    inner.innerHTML = '<div style="text-align:center;color:#99AABB;font-size:13px;padding:24px 12px;">🎉 All clear — no new notifications.</div>';
+    if (footer) footer.style.display = "none";
+    _updateNotifBadge(0);
+    return;
+  }
+  // Sort: red first, then warning, then info, then success
+  const order = {red:0, warning:1, info:2, success:3};
+  notifs.sort((a,b)=>(order[a.type]??4)-(order[b.type]??4));
+  _updateNotifBadge(notifs.length);
+  if (footer) footer.style.display = "block";
+  inner.innerHTML = notifs.map((n,i) => {
+    const colors = {
+      success: 'background:linear-gradient(135deg,#E8FFF5,#D0F5E8);border-left:3px solid #00D68F;color:#0A8050;',
+      red: 'background:linear-gradient(135deg,#FFF0F2,#FFE0E5);border-left:3px solid #FF4D6A;color:#CC1A35;',
+      warning: 'background:linear-gradient(135deg,#FFFBEC,#FFF3CC);border-left:3px solid #FFB800;color:#996600;',
+      info: 'background:linear-gradient(135deg,#EEF8FF,#DCF0FF);border-left:3px solid #857DE4;color:#006699;'
+    };
+    const style = colors[n.type]||colors.info;
+    return `<div style="${style}border-radius:10px;padding:10px 12px;font-size:12px;font-weight:600;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-shrink:0;" id="notif-${i}">
+      <span style="line-height:1.4;flex:1;">${n.text}</span>
+      <button onclick="dismissNotif(${i})" style="background:none;border:none;cursor:pointer;opacity:0.45;font-size:13px;padding:0;line-height:1;flex-shrink:0;margin-top:1px;">✕</button>
+    </div>`;
+  }).join("");
+}
+
+function dismissNotif(i) {
+  const el = document.getElementById("notif-"+i);
+  if(el) el.remove();
+  const remaining = document.querySelectorAll("[id^='notif-']").length;
+  _updateNotifBadge(remaining);
+  const footer = document.getElementById("notif-footer");
+  if (remaining === 0) {
+    const inner = document.getElementById("inline-notif-inner");
+    if (inner) inner.innerHTML = '<div style="text-align:center;color:#99AABB;font-size:13px;padding:24px 12px;">🎉 All clear — no new notifications.</div>';
+    if (footer) footer.style.display = "none";
+  }
+}
+
+function checkTimesheetReminder() {
+  const today = new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day = today.getDate();
+  if (day === 25 || day === 26 || day === 10 || day === 11) {
+    const period = (day === 25 || day === 26) ? "11th–25th" : "26th–10th";
+    const bar = document.getElementById("notif-bar");
+    const inner = document.getElementById("notif-inner");
+    bar.style.display = "block";
+    inner.insertAdjacentHTML("afterbegin", `<div class="notif-pill notif-warning">📅 Reminder: Submit your ${period} timesheet today!</div>`);
+  }
+}
+
+// ── CLOCK IN/OUT ──
+async function checkOpenClockIn() {
+  try {
+    const today = new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"});
+    const entries = await fetchEntries();
+    allEntries = entries;
+    const open = entries.find(e => e.workDate===today && e.clockIn && !e.clockOut);
+    if (open) { openClockInEntry={itemId:open.id, clockInTime:open.clockIn}; showClockedIn(open.clockIn, open); }
+    else showClockedOut();
+    loadTimeSummary();
+  } catch(e) { showClockedOut(); }
+}
+
+function showClockedIn(t, lunchData) {
+  document.getElementById("clock-status-block").className="clock-status clocked-in";
+  document.getElementById("clock-status-text").textContent="Clocked in at "+t+" — remember to clock out before finishing.";
+  document.getElementById("clock-card-in").style.display="none";
+  document.getElementById("clock-card-out").style.display="flex";
+  document.getElementById("clock-in-time-display").textContent=t;
+  document.getElementById("quick-meeting-card").style.display="flex";
+  // Restore lunch state if already taken today
+  if(lunchData && (lunchData.lunchTaken==="TRUE"||lunchData.lunchTaken===true||lunchData.lunchTaken==="true")) {
+    lunchTaken=true;
+    document.getElementById("lunch-not-started").style.display="none";
+    document.getElementById("lunch-in-progress").style.display="none";
+    document.getElementById("lunch-done").style.display="block";
+    document.getElementById("lunch-time-display").textContent=(lunchData.lunchStart||"")+" – "+(lunchData.lunchEnd||"");
+  }
+}
+
+function showClockedOut() {
+  document.getElementById("clock-status-block").className="clock-status clocked-out";
+  document.getElementById("clock-status-text").textContent="You are currently clocked out.";
+  document.getElementById("clock-card-in").style.display="flex";
+  document.getElementById("clock-card-out").style.display="none";
+  document.getElementById("quick-meeting-card").style.display="flex";
+}
+
+async function submitClockIn() {
+  const btn=document.getElementById("btn-clock-in"); const alert=document.getElementById("alert-clock");
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    const aestTime=new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"});
+    const date=currentSydneyDate();
+    document.getElementById("clock-in-date").value=date;
+    const entries=await fetchEntries();
+    const todayOpen=entries.find(e=>e.workDate===date&&e.clockIn&&!e.clockOut);
+    if(todayOpen){showAlert(alert,"error","You already have an open clock-in for today.");btn.innerHTML="Clock In Now";btn.disabled=false;return;}
+    const result=await apiPost({action:"addEntry",sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:aestTime,cutoffPeriod:getCutoffLabel(date)});
+    if(!result.success) throw new Error("Failed");
+    openClockInEntry={itemId:result.id,clockInTime:aestTime};
+    showClockedIn(aestTime); showAlert(alert,"success","✓ Clocked in at "+aestTime+"!");
+    allEntries=[]; loadTimeSummary();
+  } catch(e){showAlert(alert,"error","Could not save. "+e.message);}
+  btn.innerHTML="Clock In Now"; btn.disabled=false;
+}
+
+async function submitClockOut() {
+  if(!openClockInEntry) return;
+  const btn=document.getElementById("btn-clock-out"); const alert=document.getElementById("alert-clock");
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    const aestTime=new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"});
+    await apiPost({action:"updateEntry",id:openClockInEntry.itemId,clockOut:aestTime});
+    openClockInEntry=null;
+    resetLunchUI();
+    showClockedOut();
+    showAlert(alert,"success","✓ Clocked out at "+aestTime+". Great work!");
+    allEntries=[]; loadTimeSummary();
+  } catch(e){showAlert(alert,"error","Could not save. "+e.message);}
+  btn.innerHTML="Clock Out Now"; btn.disabled=false;
+}
+
+// ── QUICK MEETING ──
+async function submitQuickMeeting() {
+  const start=document.getElementById("qm-start").value;
+  const end=document.getElementById("qm-end").value;
+  const type=document.getElementById("qm-type").value;
+  const alert=document.getElementById("alert-clock");
+  const btn=document.getElementById("btn-qm");
+  if(!start||!end||!type){showAlert(alert,"error","Please fill in all meeting fields.");return;}
+  if(start>=end){showAlert(alert,"error","End time must be after start time.");return;}
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    const date=currentSydneyDate();
+    await apiPost({action:"addMeeting",sdrName:currentUser.name,email:currentUser.email,date,startTime:start,endTime:end,meetingType:type,status:"Pending"});
+    showAlert(alert,"success","✓ Meeting submitted for approval.");
+    document.getElementById("qm-start").value=""; document.getElementById("qm-end").value=""; document.getElementById("qm-type").value="";
+  } catch(e){showAlert(alert,"error","Could not submit. "+e.message);}
+  btn.innerHTML="Submit for Approval"; btn.disabled=false;
+}
+
+// ── CURRENT CUTOFF SUMMARY ──
+async function loadTimeSummary() {
+  const loading=document.getElementById("ts-summary-loading");
+  const content=document.getElementById("ts-summary-content");
+  if(!loading||!content) return;   // summary card replaced by announcements
+  loading.style.display="block"; content.style.display="none";
+  try {
+    if(allEntries.length===0) allEntries=await fetchEntries();
+    const filtered=filterByCutoff(allEntries,"current").filter(e=>e.clockIn);
+    const monthlyRate=currentUser.rate||0;
+    const cutoffRate=monthlyRate/2;
+    const wDays=getWorkingDaysInCutoff("current");
+    const dailyRate=cutoffRate/wDays;
+    const totalHrs=filtered.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
+    let totalPay=filtered.reduce((s,e)=>s+calcEntryPay(e,dailyRate).pay,0);
+    totalPay=Math.min(totalPay,cutoffRate);
+    // Get timesheet status
+    if(allTimesheets.length===0){try{const tr=await apiPost({action:"getTimesheets"});allTimesheets=(tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);}catch(e){}}
+    const cutoffKey=getCutoffPeriodKey("current");
+    const ts=allTimesheets.find(t=>t.cutoffKey===cutoffKey);
+    const tsStatus=ts?ts.status:"Not submitted";
+    document.getElementById("ts-summary-period").textContent="Period: "+getCutoffDisplayLabel("current");
+    document.getElementById("tss-days").textContent=filtered.length;
+    document.getElementById("tss-hrs").textContent=totalHrs.toFixed(1)+" hrs";
+    const statusEl=document.getElementById("tss-status");
+    if(tsStatus==="Approved") statusEl.innerHTML='<span class="badge badge-green">✓ Approved</span>';
+    else if(tsStatus==="Pending") statusEl.innerHTML='<span class="badge badge-amber">⏳ Pending</span>';
+    else if(tsStatus==="Rejected") statusEl.innerHTML='<span class="badge badge-red">✗ Rejected</span>';
+    else statusEl.innerHTML='<span class="badge badge-gray">Not submitted</span>';
+    loading.style.display="none"; content.style.display="block";
+  } catch(e){ loading.textContent="Could not load summary."; }
+}
+
+// ── FETCH ENTRIES ──
+async function fetchEntries() {
+  const result=await apiPost({action:"getEntries"});
+  return (result.entries||[]).filter(e=>e.sdrName&&e.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+}
+
+// ── TIMESHEET (grouped by cutoff) ──
+async function loadTimesheet() {
+  document.getElementById("timesheet-loading").style.display="block";
+  document.getElementById("timesheet-content").innerHTML="";
+  try {
+    // Always fetch fresh data so approved meeting hours show immediately
+    allEntries = await fetchEntries();
+    allTimesheets = [];
+    allMeetings = [];
+    allLeaves = [];
+    const [tr, mr, lr] = await Promise.all([
+      apiPost({action:"getTimesheets"}),
+      apiPost({action:"getMeetings"}),
+      apiPost({action:"getLeaves"})
+    ]);
+    allTimesheets = (tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
+    allMeetings = (mr.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    allLeaves = (lr.leaves||[]).filter(l=>l.sdrName===currentUser.name);
+    renderTimesheetGrouped();
+  } catch(e){ document.getElementById("timesheet-loading").textContent="Could not load entries."; }
+}
+
+function renderTimesheetGrouped() {
+  document.getElementById("timesheet-loading").style.display="none";
+  const content=document.getElementById("timesheet-content");
+  if(allEntries.length===0){ content.innerHTML='<div class="empty-block"><div class="eicon">📭</div><p>No entries yet.</p></div>'; return; }
+  // Group by cutoff
+  const groups={};
+  allEntries.forEach(e=>{
+    const key=e.cutoffPeriod||getCutoffLabel(e.workDate);
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(e);
+  });
+  let html="";
+  Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([cutoffLabel, entries])=>{
+    const cutoffKey=deriveCutoffKeyFromLabel(cutoffLabel);
+    const ts=allTimesheets.find(t=>t.cutoffKey===cutoffKey||t.cutoffLabel===cutoffLabel);
+    const tsStatus=ts?ts.status:"Not submitted";
+    const tsStatusBadge=getTsBadge(tsStatus);
+    const totalHrs=entries.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
+    // Get approved meetings for this cutoff's dates
+    const cutoffDates = new Set(entries.map(e=>e.workDate));
+    const cutoffMeetings = allMeetings.filter(m=>m.status==="Approved"&&cutoffDates.has(m.date));
+    const totalMeetingHrs=cutoffMeetings.reduce((s,m)=>{
+      const mins=calcMins(m.startTime,m.endTime);
+      return s+(mins>0?mins/60:0);
+    },0);
+    const grandTotalHrs=totalHrs+totalMeetingHrs;
+
+    const _aestToday = new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+    const _aestDateStr = _aestToday.toISOString().slice(0,10);
+    const isCurrent = cutoffLabel === getCutoffDisplayLabel('current') || cutoffKey === getCutoffPeriodKey('current') || cutoffLabel === getCutoffLabel(_aestDateStr);
+    html+=`<div class="cutoff-group">
+      <div class="cutoff-group-header">
+        <div><div class="title">${cutoffLabel}</div><div class="meta">${entries.length} entries &nbsp;·&nbsp; ${grandTotalHrs.toFixed(1)} billable hrs (incl. ${totalMeetingHrs.toFixed(1)}h meetings)</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">${tsStatusBadge}${isCurrent?'&nbsp;<button onclick="mtsOpen(this.dataset.co)" style="font-size:11px;padding:4px 12px;background:#F6F9FA;color:#0C0A22;border:1.5px solid #E2E5EE;border-radius:8px;cursor:pointer;font-weight:600;" data-co="${cutoffLabel}">+ Enter Timesheet</button>':''}</div>
+      </div>
+      <div class="cutoff-group-body">
+        <div class="table-wrap"><table>
+          <colgroup>
+            <col style="width:8%"><col style="width:6%"><col style="width:6%">
+            <col style="width:7%"><col style="width:17%"><col style="width:10%"><col style="width:6%">
+            <col style="width:7%"><col style="width:7%"><col style="width:7%">
+            <col style="width:19%">
+          </colgroup>
+          <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Admin Note</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th></tr></thead>
+          <tbody>${(()=>{
+            // Merge work entries + leave rows, sort all by date descending
+            const cutoffLeaves = allLeaves.filter(l => getCutoffLabel(l.leaveDate) === cutoffLabel);
+            // Always create a leave row, even if there's also a clock entry that day
+            const combined = [
+              ...entries.map(e=>({type:'work', date:e.workDate, data:e})),
+              ...cutoffLeaves.map(l=>({type:'leave', date:l.leaveDate, data:l}))
+            ].sort((a,b)=>b.date.localeCompare(a.date));
+            return combined.map(item=>{
+              if(item.type==='leave'){
+                const l=item.data;
+                const hrs=getLeaveHours(l.leaveType);
+                const payBadge=l.status==="Approved"
+                  ?(l.payType==="Paid"?'<span class="badge badge-green">💰 Paid</span>':'<span class="badge badge-red">Unpaid</span>')
+                  :'<span class="badge badge-gray">Pending</span>';
+                const billableLeaveHrs = (l.status==="Approved" && l.payType==="Paid") ? hrs : 0;
+                const paidHrsCell = l.status==="Approved"
+                  ? (l.payType==="Paid"
+                    ? `<strong style="color:#0A8050;">${hrs}h</strong>`
+                    : `<span style="color:var(--muted);">0h</span>`)
+                  : `<span style="color:var(--muted);">—</span>`;
+                return`<tr style="background:#fffbeb;border-bottom:1px solid #fde68a;">
+                  <td><strong>${formatDate(l.leaveDate)}</strong></td>
+                  <td colspan="7" style="font-size:12px;white-space:normal;">
+                    🏖️ <strong>${l.leaveType||"Leave"}</strong>
+                    <span style="color:var(--muted);margin-left:8px;">${l.reason||""}</span>
+                    &nbsp;${payBadge}
+                    ${l.adminNote?`<span style="font-size:11px;color:var(--muted);margin-left:6px;">· ${l.adminNote}</span>`:""}
+                  </td>
+                  <td style="text-align:center;">${paidHrsCell}</td>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>`;
+              }
+              const e=item.data;
+              const canEntryDispute=!["Under Review","Approved"].includes(tsStatus)&&(e.billableHrs!=null&&e.billableHrs!=="")&&!["Under Review","Resolved"].includes(e.disputeStatus);
+              const disputeCell=canEntryDispute
+                ?`${getDisputeBadge(e.disputeStatus)} <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px;" onclick="openDisputeModal('${e.id}','${e.workDate}')">Request Review</button>`
+                :getDisputeBadge(e.disputeStatus);
+              const lunchStr=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")
+                ?`<span style="font-size:11px;color:#0A8050;font-weight:700;">🍽️ ${e.lunchStart||""}–${e.lunchEnd||""}</span>`
+                :'<span style="color:var(--muted);font-size:11px;">None</span>';
+              const dayMeetings=cutoffMeetings.filter(m=>m.date===e.workDate);
+              const workHrsVal=(e.billableHrs!=null&&e.billableHrs!=="") ? parseFloat(e.billableHrs) : null;
+              const workHoursStr=workHrsVal!==null?`${workHrsVal.toFixed(2)} hrs`:'<span style="color:var(--muted)">Pending</span>';
+              const meetHrsTotal=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+              const totalWorkHrs=workHrsVal!==null?Math.min(8,calcWorkHours(workHrsVal,meetHrsTotal,e.lunchTaken)):null;
+              const billableDisplay=totalWorkHrs!==null?`<strong>${totalWorkHrs.toFixed(2)} hrs</strong>`:(e.clockIn?"<span style='color:var(--muted)'>Pending</span>":"—");
+              const totalMeetCellHrs=dayMeetings.reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+              const meetingCell=totalMeetCellHrs>0?`<span style="font-size:12px;font-weight:600;color:#3122D3;">${totalMeetCellHrs.toFixed(1)}h</span>`:'<span style="color:var(--muted);font-size:11px;">—</span>';
+              const leaveOnDay=cutoffLeaves.find(l=>l.leaveDate===e.workDate);
+              const timeOffCell=leaveOnDay
+                ?`<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">${leaveOnDay.leaveType||"Leave"}</span>`
+                :'<span style="color:var(--muted);font-size:11px;">—</span>';
+              return`<tr style="border-bottom:1px solid #EDEFF5;">
+                <td><strong>${formatDate(e.workDate)}</strong></td>
+                <td>${e.clockIn||"—"}</td><td>${e.clockOut||"—"}</td>
+                <td style="font-size:12px;">${workHoursStr}</td>
+                <td style="white-space:normal;overflow:visible;">${noteCellHtml(e.adminNotes)}</td>
+                <td>${lunchStr}</td>
+                <td style="font-size:11px;">${meetingCell}</td>
+                <td style="font-size:11px;">${timeOffCell}</td>
+                <td>${billableDisplay}</td>
+                <td>${(()=>{const ded=workHrsVal!==null?calcDeduction(workHrsVal,meetHrsTotal,e.lunchTaken):0;return ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+'h</span>':"—";})()}</td>
+                <td style="white-space:nowrap;">${disputeCell}</td>
+              </tr>`;
+            });
+          })().join("")}</tbody>
+        </table></div>`;
+    // Cutoff-level dispute (after timesheet submitted)
+    if(ts && ["Pending","Rejected","Disputed"].includes(ts.status)) {
+      html+=`<div style="padding:16px;border-top:1.5px solid var(--border);background:#fffbf5;">
+        <div style="font-size:12px;font-weight:700;color:#c2410c;margin-bottom:8px;">⚠️ Request Review this Cutoff Timesheet</div>
+        <div class="field-group" style="margin-bottom:8px;"><textarea id="cutoff-dispute-${ts.id}" rows="2" placeholder="Describe the issue with this cutoff…" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;font-family:inherit;"></textarea></div>
+        <button class="btn btn-danger btn-sm" onclick="submitCutoffDisputeFromTs('${ts.id}')">Submit Request Review</button>
+      </div>`;
+    }
+    html+=`</div></div>`;
+  });
+  content.innerHTML=html;
+}
+
+function getTsBadge(status) {
+  if(status==="Approved") return '<span class="badge badge-green">✓ Approved</span>';
+  if(status==="Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
+  if(status==="Disputed") return '<span class="badge badge-amber">⚠️ Request Reviewd</span>';
+  if(status==="Pending") return '<span class="badge badge-blue">⏳ Pending</span>';
+  return '<span class="badge badge-gray">Not submitted</span>';
+}
+
+async function submitCutoffDisputeFromTs(tsId) {
+  const notes=document.getElementById("cutoff-dispute-"+tsId)?.value.trim();
+  if(!notes){showAlert(document.getElementById("alert-timesheet"),"error","Please describe your dispute reason.");return;}
+  try {
+    await apiPost({action:"updateTimesheet",id:tsId,status:"Disputed",disputeNotes:notes});
+    showAlert(document.getElementById("alert-timesheet"),"success","✓ Dispute submitted. Admin will review.");
+    allTimesheets=[]; loadTimesheet();
+  } catch(e){showAlert(document.getElementById("alert-timesheet"),"error","Could not submit: "+e.message);}
+}
+
+// ── REVIEW REQUEST MODAL ──
+let disputeItemId=null;
+function openDisputeModal(itemId,date){
+  disputeItemId=itemId;
+  const html=`<div class="modal-overlay open" id="entry-dispute-modal" onclick="if(event.target===this)closeEntryDisputeModal()">
+    <div class="modal">
+      <div class="modal-title">Request Review Entry</div>
+      <div class="modal-sub">Entry: ${formatDate(date)}</div>
+      <div id="alert-entry-dispute" class="alert"></div>
+      <div class="field-group"><label>Reason</label><textarea id="entry-dispute-text" rows="4" placeholder="Describe why this entry needs correction…"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="submitEntryDispute()">Submit Request Review</button>
+        <button class="btn btn-secondary" onclick="closeEntryDisputeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend",html);
+}
+function closeEntryDisputeModal(){const el=document.getElementById("entry-dispute-modal");if(el)el.remove();disputeItemId=null;}
+async function submitEntryDispute(){
+  const notes=document.getElementById("entry-dispute-text").value.trim();
+  if(!notes){showAlert(document.getElementById("alert-entry-dispute"),"error","Please describe your reason.");return;}
+  try {
+    await apiPost({action:"updateEntry",id:disputeItemId,disputeStatus:"Under Review",disputeNotes:notes});
+    showAlert(document.getElementById("alert-entry-dispute"),"success","✓ Dispute submitted.");
+    allEntries=[]; setTimeout(()=>{closeEntryDisputeModal();loadTimesheet();},1500);
+  } catch(e){showAlert(document.getElementById("alert-entry-dispute"),"error","Could not submit: "+e.message);}
+}
+
+// ── MY PAY ──
+
+
+
+// ── PAYSLIP ──
+async function loadPayslip() {
+  document.getElementById("payslip-loading").style.display="block";
+  document.getElementById("payslip-list").style.display="none";
+  try {
+    if(allEntries.length===0) allEntries=await fetchEntries();
+    const tr=await apiPost({action:"getTimesheets"});
+    allTimesheets=(tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);
+    const approved=allTimesheets.filter(t=>t.status==="Approved");
+    if(approved.length===0){
+      document.getElementById("payslip-loading").textContent="No approved payslips yet. Submit your timesheet and wait for admin approval.";
+      return;
+    }
+    renderPayslips(approved);
+  } catch(e){ document.getElementById("payslip-loading").textContent="Could not load payslips."; }
+}
+
+function renderPayslips(timesheets) {
+  document.getElementById("payslip-loading").style.display="none";
+  const list=document.getElementById("payslip-list");
+  list.style.display="block";
+  list.innerHTML=timesheets.map(ts=>{
+    const basePay=parseFloat(ts.totalPay||0);
+    const incentive=parseFloat(ts.totalIncentive||0);
+    const grandTotal=parseFloat(ts.grandTotal||basePay);
+    const payDate=getPayDateFromCutoffLabel(ts.cutoffLabel||ts.cutoffKey);
+    const incentiveItems=ts.incentives?JSON.parse(ts.incentives||"[]"):[];
+    const wDays=getWorkingDaysFromKey(ts.cutoffKey);
+    const monthlyRate=currentUser.rate||0; const cutoffRate=monthlyRate/2;
+    const dailyRate=cutoffRate/(wDays||11);
+    // Entries for this cutoff
+    const entries=allEntries.filter(e=>(e.cutoffPeriod===ts.cutoffLabel)||(getCutoffLabel(e.workDate)===ts.cutoffLabel));
+    return `<div class="payslip-wrap" id="payslip-${ts.id}" style="margin-bottom:20px;">
+      <div class="payslip-header">
+        <div class="payslip-logo-area">
+          <img src="data:image/png;base64,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" alt="J2 Group" style="width:50px;height:50px;object-fit:contain;margin-bottom:6px;" /><div class="co-name">J2 <span>Group</span> Consulting</div>
+          <div class="doc-type">Official Payslip</div>
+        </div>
+        <div class="payslip-meta">
+          <div class="pm-label">Pay Period</div>
+          <div class="pm-value">${ts.cutoffLabel||ts.cutoffKey}</div>
+          <div class="pm-label" style="margin-top:6px;">Payment Date</div>
+          <div class="pm-pay">${payDate}</div>
+        </div>
+      </div>
+      <div class="ps-info-grid">
+        <div>
+          <div class="ps-section-title">Employee</div>
+          <div style="font-size:16px;font-weight:600;color:var(--navy);">${currentUser.name}</div>
+          <div style="font-size:13px;color:var(--muted);">${currentUser.email}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Contractor</div>
+        </div>
+        <div>
+          <div class="ps-section-title">Rate</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.8;">
+            <div>Monthly: <strong>AUD $${monthlyRate.toFixed(2)}</strong></div>
+            <div>This cutoff: <strong>AUD $${cutoffRate.toFixed(2)}</strong></div>
+            <div>Daily rate: <strong>AUD $${dailyRate.toFixed(2)}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="ps-section-title">Earnings Breakdown</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px;">
+        <thead><tr style="background:var(--off-white);">
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Date</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Billable Hrs</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Deduction</th>
+          
+        </tr></thead>
+        <tbody>${entries.length===0?'<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--muted);">No entries</td></tr>':entries.sort((a,b)=>a.workDate.localeCompare(b.workDate)).map(e=>{
+          const phoneH=parseFloat(e.billableHrs||0);
+          const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+          const totalH=phoneH>0?Math.min(8,calcWorkHours(phoneH,mH,e.lunchTaken)):0;
+          const ded=phoneH>0?calcDeduction(phoneH,mH,e.lunchTaken):0;
+          return`<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 12px;">${formatDate(e.workDate)}</td>
+            <td style="padding:9px 12px;">${phoneH>0?totalH.toFixed(2)+' hrs':'<span style="color:var(--muted)">Pending</span>'}</td>
+            <td style="padding:9px 12px;">${ded>0?'<span style="color:var(--red)">-'+ded.toFixed(2)+'h</span>':"—"}</td>
+            <td style="padding:9px 12px;text-align:right;"></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>
+      ${incentiveItems.length>0?`<div class="ps-section-title">Incentives</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px;">
+          <thead><tr style="background:var(--off-white);">
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Description</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Units</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Rate</th>
+            <th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1.5px solid var(--border);">Total</th>
+          </tr></thead>
+          <tbody>${incentiveItems.map(i=>`<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 12px;">${i.desc}</td>
+            <td style="padding:9px 12px;">${i.units}</td>
+            <td style="padding:9px 12px;">$${parseFloat(i.rate).toFixed(2)}</td>
+            <td style="padding:9px 12px;text-align:right;"><strong>$${parseFloat(i.total).toFixed(2)}</strong></td>
+          </tr>`).join("")}</tbody>
+        </table>`:""}
+      <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;color:var(--muted);"><span>Base Pay</span><span>AUD $${basePay.toFixed(2)}</span></div>
+        ${incentive>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;color:#3122D3;"><span>Incentives</span><span>+ AUD $${incentive.toFixed(2)}</span></div>`:""}
+      </div>
+      <div class="ps-net"><span class="nl">NET PAY</span><span class="nv">AUD $${grandTotal.toFixed(2)}</span></div>
+      <div style="margin-top:14px;padding:10px;background:var(--off-white);border-radius:7px;font-size:11px;color:var(--muted);text-align:center;">This payslip is auto-generated based on approved timesheet data. Contact your J2 admin for queries.</div>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="downloadPayslipPdf('${ts.id}','${ts.cutoffLabel||ts.cutoffKey}')">⬇ Download PDF</button>
+        <button class="btn btn-danger btn-sm" onclick="openPsDisputeModal('${ts.id}','${ts.cutoffLabel||ts.cutoffKey}')">⚠️ Request Review</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function downloadPayslipPdf(tsId, label) {
+  const el = document.getElementById("payslip-"+tsId);
+  if(!el){ alert("Payslip not found."); return; }
+  // Use print to PDF approach
+  const printWindow = window.open('','_blank');
+  printWindow.document.write(`<!DOCTYPE html><html><head><title>J2 Hub Emp</title>
+    <style>
+      body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#1a1a2e;font-size:13px;}
+      .co-name{font-size:20px;font-weight:700;color:#0C0A22;}
+      .co-name span{color:#C8922A;}
+      table{width:100%;border-collapse:collapse;margin-bottom:14px;}
+      th{background:#f7f4ef;padding:8px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#7A8599;border-bottom:1.5px solid #D8D0C4;}
+      td{padding:8px 10px;border-bottom:1px solid #EDEFF5;}
+      .net{background:#0C0A22;color:white;padding:14px 18px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-top:12px;}
+      .net .val{font-size:22px;font-weight:700;color:#C8922A;}
+    
+  /* FORCE LOGIN OVERRIDES */
+  #login-screen * { color: #0C0A22; }
+  #login-screen h1 span:first-child { color: #0C0A22 !important; }
+  #login-screen h1 span:last-child { color: #3122D3 !important; }
+  #login-screen input { background: #ffffff !important; color: #0C0A22 !important; -webkit-text-fill-color: #0C0A22 !important; }
+  #login-screen input::placeholder { color: #5A5E78 !important; -webkit-text-fill-color: #5A5E78 !important; }
+  #login-screen .field-group label { color: #0C0A22 !important; }
+  #login-screen .login-error { color: #CC1A35 !important; }
+  #login-screen p { color: #5A5E78 !important; }
+
+.btn-refresh {
+  background: linear-gradient(135deg, #3122D3 0%, #3122D3 100%);
+  color: white; border: none; border-radius: 12px;
+  padding: 10px 22px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(49,34,211,0.35);
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-refresh:hover {
+  background: linear-gradient(135deg, #3A29FF 0%, #3122D3 100%);
+  box-shadow: 0 6px 20px rgba(49,34,211,0.45);
+  transform: translateY(-1px);
+}
+</style>
+  </head><body>${el.innerHTML.replace(/<button[^>]*>.*?<\/button>/gs,'')}
+<!-- ── MANUAL TIMESHEET MODAL ── -->
+<div id="mts-overlay" style="display:none;position:fixed;inset:0;background:rgba(12,10,34,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:32px;width:100%;max-width:460px;margin:20px;box-shadow:0 24px 64px rgba(12,10,34,0.2);">
+    <div style="font-size:19px;font-weight:600;color:#0C0A22;margin-bottom:4px;">📋 Enter Timesheet</div>
+    <div id="mts-period-label" style="font-size:12px;color:#5A5E78;margin-bottom:20px;"></div>
+    <div id="mts-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:13px;margin-bottom:14px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div style="grid-column:1/3;">
+        <label style="font-size:11px;font-weight:700;color:#5A5E78;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">Date *</label>
+        <input type="date" id="mts-date" style="width:100%;padding:10px 12px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:13px;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#5A5E78;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">Start Time *</label>
+        <input type="time" id="mts-start" style="width:100%;padding:10px 12px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:13px;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#5A5E78;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">End Time *</label>
+        <input type="time" id="mts-end" style="width:100%;padding:10px 12px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:13px;box-sizing:border-box;" />
+      </div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:11px;font-weight:700;color:#5A5E78;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">Reason *</label>
+      <textarea id="mts-reason" rows="3" placeholder="Explain why you are filing this timesheet manually..." style="width:100%;padding:10px 12px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button id="mts-submit-btn" onclick="mtsSubmit()" style="flex:1;background:linear-gradient(135deg,#3122D3,#3122D3);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">Submit for Review</button>
+      <button onclick="mtsClose()" style="flex:1;background:#F6F9FA;color:#0C0A22;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+</body></html>`);
+  printWindow.document.close();
+  setTimeout(()=>{ printWindow.print(); }, 500);
+}
+
+// ── PAYSLIP DISPUTE ──
+function openPsDisputeModal(tsId, label) {
+  psDisputeTsId=tsId;
+  document.getElementById("ps-dispute-sub").textContent="Period: "+label;
+  document.getElementById("ps-dispute-text").value="";
+  hideAlert(document.getElementById("alert-ps-dispute"));
+  document.getElementById("ps-dispute-modal").classList.add("open");
+}
+function closePsDisputeModal(){document.getElementById("ps-dispute-modal").classList.remove("open");psDisputeTsId=null;}
+async function submitPayslipDispute(){
+  const notes=document.getElementById("ps-dispute-text").value.trim();
+  const alert=document.getElementById("alert-ps-dispute");
+  const btn=document.getElementById("btn-ps-dispute");
+  if(!notes){showAlert(alert,"error","Please describe your dispute reason.");return;}
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    await apiPost({action:"updateTimesheet",id:psDisputeTsId,status:"Disputed",disputeNotes:notes});
+    showAlert(alert,"success","✓ Dispute submitted. Admin will review.");
+    allTimesheets=[]; setTimeout(()=>{closePsDisputeModal();loadPayslip();},1500);
+  } catch(e){showAlert(alert,"error","Could not submit: "+e.message);}
+  btn.innerHTML="Submit Review Request"; btn.disabled=false;
+}
+document.getElementById("ps-dispute-modal").addEventListener("click",function(e){if(e.target===this)closePsDisputeModal();});
+
+// ── MEETINGS ──
+async function loadMeetings() {
+  document.getElementById("meetings-loading").style.display="block";
+  document.getElementById("meetings-empty").style.display="none";
+  document.getElementById("meetings-table-wrap").style.display="none";
+  try {
+    const result=await apiPost({action:"getMeetings"});
+    allMeetings=(result.meetings||[]).filter(m=>m.sdrName&&m.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    renderMeetings();
+  } catch(e){ document.getElementById("meetings-loading").textContent="Could not load."; }
+}
+function renderMeetings(){
+  document.getElementById("meetings-loading").style.display="none";
+  if(allMeetings.length===0){document.getElementById("meetings-empty").style.display="block";return;}
+  document.getElementById("meetings-table-wrap").style.display="block";
+  document.getElementById("meetings-body").innerHTML=allMeetings.sort((a,b)=>b.date.localeCompare(a.date)).map(m=>{
+    const dur=calcDuration(m.startTime,m.endTime);
+    const durationHrs = calcMins(m.startTime,m.endTime)/60;
+    const hoursNote = m.status==="Approved" && durationHrs>0
+      ? `<span style="font-size:11px;color:#15803d;font-weight:700;margin-left:6px;">+${durationHrs.toFixed(2)}h added</span>`
+      : "";
+    return`<tr>
+      <td>${formatDate(m.date)}</td>
+      <td><strong>${m.meetingType||"—"}</strong></td>
+      <td>${m.startTime||"—"}</td>
+      <td>${m.endTime||"—"}</td>
+      <td>${dur}${hoursNote}</td>
+      <td>${getMeetingBadge(m.status)}</td>
+    </tr>`;
+  }).join("");
+}
+async function submitMeeting(){
+  const start=document.getElementById("meeting-start").value,end=document.getElementById("meeting-end").value;
+  const type=document.getElementById("meeting-type").value,date=document.getElementById("meeting-date").value;
+  const alert=document.getElementById("alert-meetings"),btn=document.getElementById("btn-submit-meeting");
+  if(!start||!end){showAlert(alert,"error","Please enter start and end time.");return;}
+  if(!type){showAlert(alert,"error","Please select a meeting type.");return;}
+  if(start>=end){showAlert(alert,"error","End time must be after start time.");return;}
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    await apiPost({action:"addMeeting",sdrName:currentUser.name,email:currentUser.email,date,startTime:start,endTime:end,meetingType:type,status:"Pending"});
+    showAlert(alert,"success","✓ Meeting submitted for admin approval.");
+    document.getElementById("meeting-start").value=""; document.getElementById("meeting-end").value=""; document.getElementById("meeting-type").value="";
+    loadMeetings();
+  } catch(e){showAlert(alert,"error","Could not submit. "+e.message);}
+  btn.innerHTML="Submit for Approval"; btn.disabled=false;
+}
+function getMeetingBadge(s){
+  if(s==="Approved") return '<span class="badge badge-green">✓ Approved</span>';
+  if(s==="Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
+  return '<span class="badge badge-amber">⏳ Pending</span>';
+}
+function calcMins(s,e){
+  if(!s||!e) return 0;
+  const [sh,sm]=s.split(":").map(Number),[eh,em]=e.split(":").map(Number);
+  return Math.max(0,(eh*60+em)-(sh*60+sm));
+}
+function calcWorkHours(billableHrs, meetingHrs, lunchTaken){
+  // Billable = phone hours + 1hr lunch (ONLY if punched) + meeting hours
+  const lunch = (lunchTaken==="TRUE"||lunchTaken===true||lunchTaken==="true"||lunchTaken==="1") ? 1 : 0;
+  return parseFloat(billableHrs||0) + lunch + parseFloat(meetingHrs||0);
+}
+function calcDeduction(billableHrs, meetingHrs, lunchTaken){
+  return Math.max(0, 8 - Math.min(8, calcWorkHours(billableHrs, meetingHrs, lunchTaken)));
+}
+function calcDailyPay(billableHrs, meetingHrs, lunchTaken, dailyRate){
+  const workHrs = Math.min(8, calcWorkHours(billableHrs, meetingHrs, lunchTaken));
+  return (workHrs / 8) * dailyRate;
+}
+function calcDuration(s,e){
+  const mins=calcMins(s,e);
+  if(mins<=0) return "—";
+  const h=Math.floor(mins/60),m=mins%60;
+  return h>0?h+"h "+m+"m":m+"m";
+}
+
+// ── SUBMIT TIMESHEET ──
+async function loadSubmitPage(){
+  document.getElementById("submit-loading").style.display="block";
+  document.getElementById("submit-content").style.display="none";
+  document.getElementById("submit-content").innerHTML="";
+  allTimesheets=[];
+  if(allEntries.length===0){try{allEntries=await fetchEntries();}catch(e){}}
+  try{const tr=await apiPost({action:"getTimesheets"});allTimesheets=(tr.timesheets||[]).filter(t=>t.sdrName===currentUser.name);}catch(e){}
+  renderSubmitPage();
+}
+function renderSubmitPage(){
+  document.getElementById("submit-loading").style.display="none";
+  const filtered=filterByCutoff(allEntries,submitCutoffVal).filter(e=>e.clockIn);
+  const cutoffKey=getCutoffPeriodKey(submitCutoffVal);
+  const existing=allTimesheets.find(t=>t.cutoffKey===cutoffKey);
+  const monthlyRate=currentUser.rate||0,cutoffRate=monthlyRate/2;
+  const wDays=getWorkingDaysInCutoff(submitCutoffVal),dailyRate=cutoffRate/wDays;
+  // Approved leaves for this cutoff period
+  // Filter approved leaves for this cutoff using the same date-range logic as filterByCutoff
+  const cutoffLeaves=(()=>{
+    const fakeEntries=(allLeaves||[]).filter(l=>l.status==="Approved").map(l=>({...l,workDate:l.leaveDate}));
+    return filterByCutoff(fakeEntries,submitCutoffVal).map(l=>{const {workDate,...rest}=l;return rest;});
+  })();
+  // Billable hrs from work entries
+  const workBillableHrs=filtered.reduce((s,e)=>{
+    const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+    return s+((e.billableHrs!=null&&e.billableHrs!=="")?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0);
+  },0);
+  // Billable hrs from paid approved leaves only
+  const leaveBillableHrs=cutoffLeaves.reduce((s,l)=>{
+    if(l.payType==="Paid") return s+getLeaveHours(l.leaveType);
+    return s;
+  },0);
+  const totalHrs=workBillableHrs+leaveBillableHrs;
+  const totalDed=filtered.reduce((s,e)=>{
+    const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((ms,m)=>ms+calcMins(m.startTime,m.endTime)/60,0);
+    return s+((e.billableHrs!=null&&e.billableHrs!=="")?calcDeduction(parseFloat(e.billableHrs||0),mH,e.lunchTaken):0);
+  },0);
+  let totalPay=filtered.reduce((s,e)=>s+calcEntryPay(e,dailyRate).pay,0);
+  totalPay=Math.min(totalPay,cutoffRate);
+  let statusHtml="";
+  if(!existing&&filtered.length>0){
+    statusHtml=`<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:600;color:#15803d;margin-bottom:6px;">Ready to submit?</div>
+      <p style="font-size:13px;color:#166534;margin-bottom:14px;">Once submitted, row-level disputes are locked. Submit a cutoff dispute after if needed.</p>
+      <button class="btn btn-primary" onclick="submitTimesheet()" id="btn-submit-ts" style="background:#15803d;">📤 Submit Timesheet</button>
+    </div>`;
+  } else if(existing){
+    const colors={Pending:"#EFF8FF;border-color:#E2E5EE;color:#3122D3",Approved:"#f0fdf4;border-color:#bbf7d0;color:#15803d",Rejected:"#fef2f2;border-color:#fecaca;color:#b91c1c",Disputed:"#fffbeb;border-color:#fde68a;color:#92400e"};
+    const icons={Pending:"⏳",Approved:"✓",Rejected:"✗",Disputed:"⚠️"};
+    const style=colors[existing.status]||"#F6F9FA;border-color:var(--border);color:var(--muted)";
+    const icon=icons[existing.status]||"";
+    let msg=icon+" Timesheet "+existing.status;
+    if(existing.status==="Approved") msg+=" — Payment will be processed on the due date.";
+    if(existing.status==="Rejected"&&existing.adminNote) msg+=" — Note: "+existing.adminNote;
+    statusHtml=`<div style="background:${style};border:1.5px solid;padding:14px 18px;border-radius:10px;margin-bottom:16px;font-size:14px;font-weight:700;">${msg}</div>`;
+    if(["Pending","Rejected"].includes(existing.status)){
+      statusHtml+=`<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:8px;">⚠️ Request Review this Timesheet</div>
+        <div class="field-group" style="margin-bottom:8px;"><textarea id="ts-cutoff-dispute-text" rows="2" placeholder="Describe the issue…" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;font-family:inherit;"></textarea></div>
+        <button class="btn btn-danger btn-sm" onclick="submitCutoffDisputeSubmit('${existing.id}')">Submit Request Review</button>
+      </div>`;
+    }
+  }
+  const content=document.getElementById("submit-content");
+  content.innerHTML=`
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:14px;">Period: ${getCutoffDisplayLabel(submitCutoffVal)}</div>
+    ${statusHtml}
+    <div class="card">
+      <div class="card-title">📊 Summary</div>
+      <div class="mini-grid">
+        <div class="mini-card"><div class="lbl">Days</div><div class="val">${filtered.length + cutoffLeaves.length}</div></div>
+        <div class="mini-card"><div class="lbl">Billable Hrs</div><div class="val gold">${totalHrs.toFixed(2)}</div></div>
+
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;border-bottom:1.5px solid var(--border);"><div class="card-title" style="margin-bottom:0;">Entries</div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hours</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Status</th></tr></thead>
+        <tbody>${(()=>{
+          // Combine work entries + approved leaves, sorted by date
+          const leaveRows=cutoffLeaves.map(l=>({type:'leave',date:l.leaveDate,data:l}));
+          const workRows=filtered.map(e=>({type:'work',date:e.workDate,data:e}));
+          const combined=[...workRows,...leaveRows].sort((a,b)=>a.date.localeCompare(b.date));
+          if(combined.length===0) return '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">No entries for this period.</td></tr>';
+          return combined.map(item=>{
+            if(item.type==='leave'){
+              const l=item.data;
+              const lHrs=getLeaveHours(l.leaveType);
+              const bilHrs=(l.payType==="Paid")?lHrs:0;
+              const payBadge=l.payType==="Paid"?'<span style="font-size:10px;background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 6px;color:#15803d;font-weight:600;">💰 Paid</span>':'<span style="font-size:10px;background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;padding:2px 6px;color:#b91c1c;font-weight:600;">Unpaid</span>';
+              return '<tr style="background:#fffbeb;border-bottom:1px solid #fde68a;"><td><strong>'+formatDate(l.leaveDate)+'</strong></td><td colspan="5" style="font-size:12px;">🏖️ <strong>'+(l.leaveType||'Leave')+'</strong> &nbsp;'+payBadge+'</td><td>—</td><td>'+(bilHrs>0?'<strong style="color:#0A8050;">'+bilHrs+'h</strong>':'<span style="color:var(--muted);">0h</span>')+'</td><td>—</td><td><span style="color:#15803d;font-weight:700;">✓ Approved</span></td></tr>';
+            }
+            const e=item.data;
+            const mH=allMeetings.filter(m=>m.status==="Approved"&&m.sdrName===currentUser.name&&m.date===e.workDate).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+            const totalBil=(e.billableHrs!=null&&e.billableHrs!=="")?Math.min(8,calcWorkHours(parseFloat(e.billableHrs||0),mH,e.lunchTaken)):0;
+            const ded2=(e.billableHrs!=null&&e.billableHrs!=="")?calcDeduction(parseFloat(e.billableHrs||0),mH,e.lunchTaken):0;
+            const lunchCell=(e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true")?('<span style="color:#0A8050;font-weight:600;font-size:11px;">🍽 '+(e.lunchStart||'')+(e.lunchEnd?'–'+e.lunchEnd:'')+'</span>'):'<span style="color:var(--muted);font-size:11px;">None</span>';
+            const meetCell=mH>0?('<span style="font-size:12px;font-weight:600;color:#3122D3;">'+mH.toFixed(1)+'h</span>'):'—';
+            const leaveOnDay=(allLeaves||[]).find(l=>l.leaveDate===e.workDate&&l.status==="Approved");
+            const timeOffCell=leaveOnDay?('<span style="font-size:10px;background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:2px 6px;color:#92400e;font-weight:600;">'+(leaveOnDay.leaveType||'Leave')+'</span>'):'—';
+            const entryStatus=(e.billableHrs!=null&&e.billableHrs!=="")?'<span style="color:#15803d;font-weight:700;">✓ Complete</span>':'<span style="color:#92400e;">Pending</span>';
+            return('<tr><td>'+formatDate(e.workDate)+'</td><td>'+(e.clockIn||'-')+'</td><td>'+(e.clockOut||'-')+'</td><td>'+((e.billableHrs!=null&&e.billableHrs!=="")?parseFloat(e.billableHrs).toFixed(2)+' hrs':'<span style="color:var(--muted);font-size:11px;">Pending</span>')+'</td><td>'+lunchCell+'</td><td>'+meetCell+'</td><td>'+timeOffCell+'</td><td>'+(totalBil>0?totalBil.toFixed(2)+' hrs':'-')+'</td><td>'+(ded2>0?'<span style="color:#dc2626">-'+ded2.toFixed(2)+'h</span>':'-')+'</td><td>'+entryStatus+'</td></tr>');
+          }).join("");
+        })()}</tbody>
+      </table></div>
+    </div>`;
+  content.style.display="block";
+}
+function selectSubmitCutoff(val){
+  submitCutoffVal=val;
+  document.querySelectorAll("#page-submit .cutoff-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("subco-"+val).classList.add("active");
+  loadSubmitPage();
+}
+async function submitTimesheet(){
+  const btn=document.getElementById("btn-submit-ts");
+  const alert=document.getElementById("alert-submit");
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    const cutoffKey=getCutoffPeriodKey(submitCutoffVal);
+    const filtered=filterByCutoff(allEntries,submitCutoffVal).filter(e=>e.clockIn);
+    const monthlyRate=currentUser.rate||0,cutoffRate=monthlyRate/2;
+    const wDays=getWorkingDaysInCutoff(submitCutoffVal),dailyRate=cutoffRate/wDays;
+    let totalPay=filtered.reduce((s,e)=>s+calcEntryPay(e,dailyRate).pay,0);
+    totalPay=Math.min(totalPay,cutoffRate);
+    await apiPost({action:"addTimesheet",sdrName:currentUser.name,email:currentUser.email,cutoffKey,cutoffLabel:getCutoffDisplayLabel(submitCutoffVal),totalDays:filtered.length,totalPay:totalPay.toFixed(2),status:"Pending",disputeNotes:"",adminNote:""});
+    showAlert(alert,"success","✓ Timesheet submitted for approval!");
+    allTimesheets=[]; loadSubmitPage();
+  } catch(e){showAlert(alert,"error","Could not submit: "+e.message);}
+  btn.innerHTML="📤 Submit Timesheet"; btn.disabled=false;
+}
+async function submitCutoffDisputeSubmit(tsId){
+  const notes=document.getElementById("ts-cutoff-dispute-text")?.value.trim();
+  if(!notes){showAlert(document.getElementById("alert-submit"),"error","Please describe the issue.");return;}
+  try{
+    await apiPost({action:"updateTimesheet",id:tsId,status:"Disputed",disputeNotes:notes});
+    showAlert(document.getElementById("alert-submit"),"success","✓ Dispute submitted.");
+    allTimesheets=[]; loadSubmitPage();
+  }catch(e){showAlert(document.getElementById("alert-submit"),"error","Could not submit: "+e.message);}
+}
+
+// ── LEAVE ──
+async function loadLeave(){
+  document.getElementById("leave-loading").style.display="block";
+  document.getElementById("leave-empty").style.display="none";
+  document.getElementById("leave-table-wrap").style.display="none";
+  try{
+    const r=await apiPost({action:"getLeaves"});
+    allLeaves=(r.leaves||[]).filter(l=>l.sdrName&&l.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+    renderLeave();
+  }catch(e){document.getElementById("leave-loading").textContent="Could not load.";}
+}
+function renderLeave(){
+  document.getElementById("leave-loading").style.display="none";
+  if(allLeaves.length===0){document.getElementById("leave-empty").style.display="block";return;}
+  document.getElementById("leave-table-wrap").style.display="block";
+  document.getElementById("leave-body").innerHTML=allLeaves.sort((a,b)=>b.leaveDate.localeCompare(a.leaveDate)).map(l=>{
+    const hrs=getLeaveHours(l.leaveType);
+    const payBadge=l.status==="Approved"
+      ?(l.payType==="Paid"?'<span class="badge badge-green">💰 Paid</span>':'<span class="badge badge-red">Unpaid</span>')
+      :'<span class="badge badge-gray">Pending</span>';
+    const paidHrsCell=l.status==="Approved"
+      ?(l.payType==="Paid"
+        ?`<strong style="color:#0A8050;">${hrs}h</strong>`
+        :`<span style="color:var(--muted);">0h</span>`)
+      :`<span style="color:var(--muted);">—</span>`;
+    return`<tr>
+      <td><strong>${formatDate(l.leaveDate)}</strong></td>
+      <td>${l.leaveType||"—"}</td>
+      <td style="font-size:12px;max-width:180px;">${l.reason||"—"}</td>
+      <td>${getLeaveBadge(l.status)}</td>
+      <td>${payBadge}</td>
+      <td style="text-align:center;">${paidHrsCell}</td>
+      <td style="font-size:12px;color:var(--muted);">${l.adminNote||"—"}</td>
+    </tr>`;
+  }).join("");
+}
+// Weekdays (Mon–Fri) between two dates, inclusive
+function leaveWorkdays(from,to){
+  if(!from) return [];
+  if(!to) to=from;
+  if(to<from) [from,to]=[to,from];
+  const out=[], d=new Date(from+"T12:00:00"), end=new Date(to+"T12:00:00");
+  while(d<=end){ const w=d.getDay(); if(w!==0&&w!==6) out.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")); d.setDate(d.getDate()+1); }
+  return out;
+}
+function leaveAlreadyFiled(date){ return (allLeaves||[]).some(l=>l.leaveDate===date&&l.status!=="Rejected"); }
+function updateLeavePreview(){
+  const el=document.getElementById("leave-preview");
+  const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
+  const days=leaveWorkdays(from,to);
+  if(!from||(!to||to===from)&&days.length===1){el.style.display="none";return;}
+  el.style.display="block";
+  if(!days.length){el.innerHTML="⚠ That range only covers a weekend, so there are no leave days to request.";return;}
+  const dup=days.filter(leaveAlreadyFiled), fresh=days.filter(d=>!leaveAlreadyFiled(d));
+  const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"});
+  el.innerHTML=`This will request <strong>${fresh.length} leave day${fresh.length===1?"":"s"}</strong> (weekends skipped): ${fresh.map(fmt).join(", ")||"—"}`
+    +(dup.length?`<br><span style="color:#b45309;">Already requested, will be skipped: ${dup.map(fmt).join(", ")}</span>`:"");
+}
+
+// Google's servers sometimes reject quick back-to-back saves with an error page.
+// Retry a few times, and before each retry check whether the day actually saved (so we never duplicate it).
+async function addLeaveDayWithRetry(payload){
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  let lastErr;
+  for(let attempt=1;attempt<=4;attempt++){
+    try{
+      const r=await apiPost(payload);
+      if(r&&r.error) throw new Error(r.error);
+      return;
+    }catch(e){
+      lastErr=e;
+      await wait(1500*attempt);
+      try{
+        const lr=await apiPost({action:"getLeaves"});
+        const saved=(lr.leaves||[]).some(l=>l.sdrName===payload.sdrName&&l.leaveDate===payload.leaveDate&&l.status!=="Rejected");
+        if(saved) return;                                // it did save; the reply just got lost
+      }catch(_){}
+    }
+  }
+  throw new Error("Google's server didn't respond for "+payload.leaveDate+" after several tries. Please submit again. Days already saved will be skipped.");
+}
+
+async function submitLeave(){
+  const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
+  const type=document.getElementById("leave-type").value, reason=document.getElementById("leave-reason").value.trim();
+  const alert=document.getElementById("alert-leave"), btn=document.getElementById("btn-submit-leave");
+  if(!from){showAlert(alert,"error","Please select a leave date.");return;}
+  if(!type){showAlert(alert,"error","Please select a leave type.");return;}
+  if(!reason){showAlert(alert,"error","Please provide a reason.");return;}
+  try{ const lr=await apiPost({action:"getLeaves"}); allLeaves=(lr.leaves||[]).filter(l=>l.sdrName===currentUser.name); }catch(_){}
+  const all=leaveWorkdays(from,to);
+  if(!all.length){showAlert(alert,"error","That range only covers a weekend. Pick at least one weekday.");return;}
+  const days=all.filter(d=>!leaveAlreadyFiled(d));
+  if(!days.length){showAlert(alert,"error","You've already requested leave for "+(all.length===1?"that day.":"all of those days."));return;}
+  const multi=all.length>1;
+  const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
+  const note=multi?` [Part of leave ${fmt(all[0])} – ${fmt(all[all.length-1])}]`:"";
+  btn.disabled=true;
+  let done=0;
+  try{
+    // One leave record per weekday, so each day shows individually everywhere (timesheet, admin, coverage)
+    for(const d of days){
+      btn.innerHTML=`<span class="spinner"></span> Submitting ${done+1} of ${days.length}…`;
+      await addLeaveDayWithRetry({action:"addLeave",sdrName:currentUser.name,email:currentUser.email,leaveDate:d,leaveType:type,reason:reason+note,status:"Pending",payType:"",adminNote:""});
+      done++;
+      if(done<days.length) await new Promise(r=>setTimeout(r,700));   // give Google a breather between saves
+    }
+    const skipped=all.length-days.length;
+    showAlert(alert,"success",`✓ Leave request submitted for ${done} day${done===1?"":"s"}.`+(skipped?` ${skipped} day${skipped===1?" was":"s were"} already requested and skipped.`:""));
+    ["leave-date","leave-date-to","leave-type","leave-reason"].forEach(id=>document.getElementById(id).value="");
+    document.getElementById("leave-preview").style.display="none";
+    loadLeave();
+  }catch(e){
+    showAlert(alert,"error",`Could not submit${done?` (${done} of ${days.length} days were saved)`:""}: `+e.message);
+    if(done) loadLeave();
+  }
+  btn.innerHTML="Submit Leave Request"; btn.disabled=false;
+}
+function getLeaveHours(leaveType){
+  if(!leaveType) return 0;
+  if(leaveType==="Full Day") return 8;
+  if(leaveType.startsWith("Half Day")) return 4;
+  return 0;
+}
+
+function getLeaveBadge(s){
+  if(s==="Approved") return '<span class="badge badge-green">✓ Approved</span>';
+  if(s==="Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
+  return '<span class="badge badge-amber">⏳ Pending</span>';
+}
+
+// ── TAB SWITCHING ──
+function switchTab(tab){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("page-"+tab).classList.add("active");
+  document.getElementById("tab-"+tab).classList.add("active");
+  if(tab==="timesheet") loadTimesheet();
+  if(tab==="payslip") loadPayslip();
+  if(tab==="pay") loadPay();
+  if(tab==="time") loadAnnouncements();
+  if(tab==="meetings") { allMeetings=[]; loadMeetings(); }
+  if(tab==="submit") loadSubmitPage();
+  if(tab==="leave") loadLeave();
+}
+
+// ── MY PAY ─────────────────────────────────────────────────────────────────
+function parsePayItems(ts){
+  let items=[]; try{items=JSON.parse(ts.incentives||"[]");}catch(e){}
+  if(!Array.isArray(items)) items=[];
+  const g={"Incentive":[],"Allowance":[],"Additional Pay":[],"Deduction":[]};
+  let baseAdj=0;
+  items.forEach(i=>{
+    const type=i.type||"Incentive";                 // older approvals had no type = incentive
+    const total=parseFloat(i.total)||0;
+    if(type==="Base Pay Adjustment"){baseAdj+=total;return;}
+    (g[type]||g["Additional Pay"]).push({desc:i.desc||"",units:parseFloat(i.units)||0,total:Math.abs(total)});
+  });
+  return {g,baseAdj};
+}
+async function loadPay(){
+  const load=document.getElementById("pay-loading"),empty=document.getElementById("pay-empty"),wrap=document.getElementById("pay-table-wrap");
+  load.style.display="block";empty.style.display="none";wrap.style.display="none";
+  try{
+    const r=await apiPost({action:"getTimesheets"});
+    const mine=(r.timesheets||[]).filter(t=>(t.sdrName||"").toLowerCase()===currentUser.name.toLowerCase()&&(t.status==="Approved"||t.status==="Processed"));
+    load.style.display="none";
+    if(!mine.length){empty.style.display="block";return;}
+    mine.sort((a,b)=>(b.payDate||"").localeCompare(a.payDate||"")||(b.id||"").localeCompare(a.id||""));
+    const $=v=>"$"+v.toFixed(2);
+    const descs=list=>list.length?`<div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4;">${list.map(i=>`${i.desc} (${$(i.total)})`).join("<br>")}</div>`:"";
+    const sum=list=>list.reduce((s,i)=>s+i.total,0);
+    let tot={base:0,qty:0,inc:0,alw:0,add:0,ded:0,pay:0};
+    const rows=mine.map(ts=>{
+      const {g,baseAdj}=parsePayItems(ts);
+      const base=(parseFloat(ts.totalPay)||0)+baseAdj;
+      const qty=g["Incentive"].reduce((s,i)=>s+i.units,0);
+      const inc=sum(g["Incentive"]),alw=sum(g["Allowance"]),add=sum(g["Additional Pay"]),ded=sum(g["Deduction"]);
+      const pay=parseFloat(ts.grandTotal)||(base+inc+alw+add-ded);
+      tot.base+=base;tot.qty+=qty;tot.inc+=inc;tot.alw+=alw;tot.add+=add;tot.ded+=ded;tot.pay+=pay;
+      return `<tr>
+        <td style="white-space:nowrap;"><strong>${ts.payDate?formatDate(ts.payDate):'<span style="color:var(--muted);font-weight:500;">Not set yet</span>'}</strong></td>
+        <td style="white-space:nowrap;font-size:12px;line-height:1.5;">${(ts.cutoffLabel||ts.cutoffKey||"—").replace(" to ","<br><span style='color:var(--muted);'>to</span> ")}</td>
+        <td>${$(base)}</td>
+        <td style="text-align:center;">${qty||"—"}</td>
+        <td class="pay-desc">${inc?`<span style="color:#3122D3;font-weight:600;">${$(inc)}</span>`:"—"}${descs(g["Incentive"])}</td>
+        <td class="pay-desc">${alw?`<span style="color:#3122D3;font-weight:600;">${$(alw)}</span>`:"—"}${descs(g["Allowance"])}</td>
+        <td class="pay-desc">${add?`<span style="color:#3122D3;font-weight:600;">${$(add)}</span>`:"—"}${descs(g["Additional Pay"])}</td>
+        <td class="pay-desc">${ded?`<span style="color:var(--red);font-weight:600;">−${$(ded)}</span>`:"—"}${descs(g["Deduction"])}</td>
+        <td><strong style="color:#15803d;font-size:14px;">${$(pay)}</strong></td>
+      </tr>`;
+    }).join("");
+    wrap.innerHTML=`<table class="pay-table" style="min-width:1100px;">
+      <thead><tr><th>Pay Date</th><th>Coverage</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive Amount</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="background:#F6F9FA;font-weight:700;">
+        <td colspan="2">Total (${mine.length} timesheet${mine.length===1?"":"s"})</td>
+        <td>${$(tot.base)}</td><td style="text-align:center;">${tot.qty||"—"}</td><td>${$(tot.inc)}</td><td>${$(tot.alw)}</td><td>${$(tot.add)}</td>
+        <td style="color:var(--red);">${tot.ded?"−"+$(tot.ded):"$0.00"}</td><td style="color:#15803d;">${$(tot.pay)}</td>
+      </tr></tfoot></table>`;
+    wrap.style.display="block";
+  }catch(e){load.textContent="Could not load your pay: "+e.message;}
+}
+
+// Admin note without the system tags the portal stores alongside it ([Leads:N], [Suburb:X])
+function cleanAdminNote(n){
+  return String(n||"").replace(/\[(Leads|Suburb):[^\]]*\]/g,"").replace(/\s*\|\s*(\|\s*)+/g," | ").replace(/^\s*\|\s*|\s*\|\s*$/g,"").trim();
+}
+function noteCellHtml(n){
+  const t=cleanAdminNote(n);
+  if(!t) return '<span style="color:#aaa;">—</span>';
+  const esc=t.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  return '<div style="font-size:11px;line-height:1.4;white-space:normal;word-break:break-word;color:var(--text);">'+esc+'</div>';
+}
+
+// ── HELPERS ──
+function filterByCutoff(entries,cutoff){
+  if(cutoff==="all") return entries;
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
+  let start,end;
+  if(cutoff==="current"){
+    if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+    else{start=new Date(year,month,11);end=new Date(year,month,25);}
+  } else {
+    if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
+    else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+  }
+  end.setHours(23,59,59,999); // include the entire last day of the cutoff — entries are compared at T12:00:00
+  return entries.filter(e=>{if(!e.workDate)return false;const d=new Date(e.workDate+"T12:00:00");return d>=start&&d<=end;});
+}
+
+function getWorkingDaysInCutoff(cutoff){
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
+  let start,end;
+  if(cutoff==="current"){
+    if(day>=26){start=new Date(year,month,26);end=new Date(month===11?year+1:year,(month+1)%12,10);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+    else{start=new Date(year,month,11);end=new Date(year,month,25);}
+  } else {
+    if(day>=26){start=new Date(year,month,11);end=new Date(year,month,25);}
+    else if(day<=10){start=new Date(month===0?year-1:year,(month-1+12)%12,11);end=new Date(month===0?year-1:year,(month-1+12)%12,25);}
+    else{start=new Date(month===0?year-1:year,(month-1+12)%12,26);end=new Date(year,month,10);}
+  }
+  let count=0;const d=new Date(start);
+  while(d<=end){const dow=d.getDay();if(dow!==0&&dow!==6)count++;d.setDate(d.getDate()+1);}
+  return count||1;
+}
+
+function getWorkingDaysFromKey(key){
+  if(!key) return 11;
+  // Estimate from key - just return standard
+  return 11;
+}
+
+function getCutoffPeriodKey(cutoff){
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),month=today.getMonth(),year=today.getFullYear();
+  if(cutoff==="current"){
+    if(day>=26) return year+"-"+(month+1)+"-26-to-"+(month===11?year+1:year)+"-"+((month+1)%12+1)+"-10";
+    if(day<=10) return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-26-to-"+year+"-"+(month+1)+"-10";
+    return year+"-"+(month+1)+"-11-to-"+year+"-"+(month+1)+"-25";
+  } else {
+    if(day>=26) return year+"-"+(month+1)+"-11-to-"+year+"-"+(month+1)+"-25";
+    if(day<=10) return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-11-to-"+(month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-25";
+    return (month===0?year-1:year)+"-"+((month-1+12)%12+1)+"-26-to-"+year+"-"+(month+1)+"-10";
+  }
+}
+
+function deriveCutoffKeyFromLabel(label){ return label; }
+
+function getCutoffLabel(dateStr){const d=new Date(dateStr);return d.getDate()>=11&&d.getDate()<=25?"11th–25th (Pay 30th)":"26th–10th (Pay 15th)";}
+
+function getCutoffDisplayLabel(cutoff){
+  const today=new Date(new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}));
+  const day=today.getDate(),mo=today.toLocaleString("en-AU",{month:"long",timeZone:"Australia/Sydney"}),yr=today.getFullYear();
+  if(cutoff==="current"){if(day>=26)return"26 "+mo+" – 10 next month";if(day<=10)return"26 last month – 10 "+mo+" "+yr;return"11–25 "+mo+" "+yr;}
+  return "Previous cutoff period";
+}
+
+function getPayDateFromCutoffLabel(label){
+  if(!label) return "—";
+  if(label.includes("11th–25th")||label.includes("11–25")) return "30th of the month";
+  if(label.includes("26th–10th")||label.includes("26")) return "15th of next month";
+  return "—";
+}
+
+function getDisputeBadge(s){
+  if(!s||s==="None"||s==="") return '<span class="badge badge-gray">—</span>';
+  if(s==="Under Review") return '<span class="badge badge-amber">⏳ Under Review</span>';
+  if(s==="Under Review") return '<span class="badge badge-blue">🔍 Under Review</span>';
+  if(s==="Resolved") return '<span class="badge badge-green">✓ Resolved</span>';
+  if(s==="Rejected") return '<span class="badge badge-red">✗ Rejected</span>';
+  return`<span class="badge badge-gray">${s}</span>`;
+}
+
+function formatDate(d){if(!d)return"—";try{return new Date(d+"T12:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});}catch{return d;}}
+function showAlert(el,type,msg){el.className="alert show alert-"+type;el.textContent=msg;}
+function hideAlert(el){el.className="alert";el.textContent="";}
+
+function calcEntryPay(e, dailyRate) {
+  const workHrs = parseFloat(e.billableHrs||0);
+  const lunchHr = (e.lunchTaken==="TRUE"||e.lunchTaken===true||e.lunchTaken==="true") ? 1 : 0;
+  const totalHrs = Math.min(8, workHrs + lunchHr);
+  const pay = totalHrs > 0 ? (totalHrs/8) * dailyRate : 0;
+  const deduction = Math.max(0, 8 - totalHrs);
+  return { totalHrs, pay, deduction };
+}
+
+// ── AUTO-LOGIN from saved session ──
+window.addEventListener("DOMContentLoaded", async function() {
+  // Close notification panel when clicking outside it
+  document.addEventListener("click", function(e) {
+    const panel = document.getElementById("inline-notif-wrap");
+    const btn = document.getElementById("notif-bell-btn");
+    if (!panel || panel.style.display !== "flex") return;
+    if (!panel.contains(e.target) && (!btn || !btn.contains(e.target))) {
+      panel.style.display = "none";
+    }
+  });
+
+  const saved = localStorage.getItem("j2hub_user");
+  const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 hours
+  if (saved) {
+    try {
+      const user = JSON.parse(saved);
+      // Check session age — expire after 8 hours
+      if (user.loginTime && (Date.now() - user.loginTime) >= SESSION_TTL) {
+        localStorage.removeItem("j2hub_user");
+        return;
+      }
+      // Re-verify user still exists
+      const result = await apiPost({ action: "getUsers", forUserId: user.id });
+      const users = result.users || [];
+      const valid = users.find(u => String(u.id) === String(user.id) && u.name === user.name);
+      if (valid) {
+        currentUser = { id: valid.id, name: valid.name, email: valid.email||"", rate: parseFloat(valid.rate)||0 };
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        document.getElementById("user-chip").textContent = currentUser.name;
+        initApp();
+        return;
+      }
+    } catch(e) {}
+    localStorage.removeItem("j2hub_user");
+  }
+});
+
+async function resubmitTimesheet(tsId) {
+  const alert = document.getElementById("alert-submit");
+  const btn = document.getElementById("btn-submit-ts");
+  if(btn){ btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true; }
+  try {
+    await apiPost({ action: "updateTimesheet", id: tsId, status: "Pending", adminNote: "", disputeNotes: "" });
+    showAlert(alert, "success", "✓ Timesheet resubmitted for approval!");
+    allTimesheets = []; loadSubmitPage();
+  } catch(e) { showAlert(alert, "error", "Could not resubmit: " + e.message); }
+  if(btn){ btn.innerHTML="📤 Resubmit Timesheet"; btn.disabled=false; }
+}
+// ── MANUAL TIMESHEET ENTRY ──
+var _mtsCutoff = '';
+function mtsOpen(cutoffLabel) {
+  _mtsCutoff = cutoffLabel || '';
+  document.getElementById('mts-overlay').style.display = 'flex';
+  document.getElementById('mts-period-label').textContent = cutoffLabel ? 'Cutoff: ' + cutoffLabel : '';
+  ['mts-date','mts-start','mts-end','mts-reason'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('mts-error').style.display = 'none';
+  document.getElementById('mts-submit-btn').disabled = false;
+  document.getElementById('mts-submit-btn').textContent = 'Submit for Review';
+}
+function mtsClose() { document.getElementById('mts-overlay').style.display = 'none'; }
+async function mtsSubmit() {
+  var date=document.getElementById('mts-date').value, start=document.getElementById('mts-start').value,
+      end=document.getElementById('mts-end').value, reason=document.getElementById('mts-reason').value.trim();
+  var errEl=document.getElementById('mts-error'), btn=document.getElementById('mts-submit-btn');
+  if(!date||!start||!end||!reason){errEl.textContent='Please fill in all fields.';errEl.style.display='block';return;}
+  errEl.style.display='none'; btn.disabled=true; btn.textContent='Submitting...';
+  try {
+    var r1=await apiPost({action:'addEntry',sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:start,cutoffPeriod:getCutoffLabel(date)});
+    if(r1&&r1.id){
+      await apiPost({action:'updateEntry',id:r1.id,clockOut:end,billableHrs:'',deduction:'',dailyPay:'',adminNotes:'[Manual Entry] '+reason,disputeStatus:'Manual Request',disputeNotes:reason});
+      mtsClose(); await loadTimesheet();
+    } else { throw new Error('No ID returned'); }
+  } catch(ex){errEl.textContent='Failed: '+ex.message;errEl.style.display='block';btn.disabled=false;btn.textContent='Submit for Review';}
+}
+
+</script>
+
+<!-- ── MANUAL TIMESHEET MODAL ── -->
+<div id="mts-overlay" style="display:none;position:fixed;inset:0;background:rgba(12,10,34,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:32px;width:100%;max-width:460px;margin:20px;box-shadow:0 24px 64px rgba(12,10,34,0.2);">
+    <div style="font-size:19px;font-weight:600;color:#0C0A22;margin-bottom:4px;">Enter Timesheet</div>
+    <div id="mts-period-label" style="font-size:12px;color:#5A5E78;margin-bottom:20px;"></div>
+    <div id="mts-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:13px;margin-bottom:14px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div style="grid-column:1/3;">
+        <label style="font-size:11px;font-weight:700;color:#5A5E78;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">Date *</label>
+        <input type="date" id="mts-date" style="width:100%;padding:10px 12px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:13px;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#5A5E78;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">Start Time *</label>
+        <input type="time" id="mts-start" style="width:100%;padding:10px 12px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:13px;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#5A5E78;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">End Time *</label>
+        <input type="time" id="mts-end" style="width:100%;padding:10px 12px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:13px;box-sizing:border-box;" />
+      </div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:11px;font-weight:700;color:#5A5E78;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">Reason *</label>
+      <textarea id="mts-reason" rows="3" placeholder="Explain why you are filing this timesheet manually..." style="width:100%;padding:10px 12px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button id="mts-submit-btn" onclick="mtsSubmit()" style="flex:1;background:linear-gradient(135deg,#3122D3,#3122D3);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">Submit for Review</button>
+      <button onclick="mtsClose()" style="flex:1;background:#F6F9FA;color:#0C0A22;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+<style id="v2-skin">
+:root{--v2-w:1040px}
+/* ═══════════ J2 Hub v2 skin — matches the VA portal ═══════════ */
+:root{
+  --ink:#0C0A22;--paper:#fff;--volt:#3122D3;--cta:#3A29FF;--lav:#857DE4;--mist:#F6F9FA;--halo:#EFF8FF;
+  --mortar:#5A5E78;--abyss:#08033C;--line:#E2E5EE;--line2:#EDEFF5;
+  --ok:#11734A;--okbg:#E6F5EE;--bad:#B42318;--badbg:#FDEDEC;--warn:#8A5A00;--warnbg:#FFF3D6;
+  --navy:#0C0A22;--navy2:#0C0A22;--navy3:#08033C;--navy4:#08033C;--accent:#3122D3;--accent2:#3A29FF;--accent3:#3122D3;
+  --white:#fff;--off-white:#F6F9FA;--soft:#EFF8FF;--muted:#5A5E78;--text:#0C0A22;--border:#E2E5EE;--border-light:#E2E5EE;
+  --card:#fff;--radius:12px;--shadow:none;--shadow-lg:0 24px 60px rgba(8,3,60,.28);
+  --green:#11734A;--red:#B42318;--amber:#8A5A00;--blue:#3122D3;--gold:#3122D3;--gold-dim:#8A5A00;
+}
+html body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif!important;background:var(--mist)!important;color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body button,body input,body select,body textarea{font-family:inherit}
+body :focus-visible{outline:2px solid var(--volt);outline-offset:2px}
+
+/* Mark */
+.v2-mark{width:40px;height:40px;border-radius:50%;border:1.5px solid currentColor;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;flex:none}
+.v2-mark b{font-size:13px;font-weight:600;letter-spacing:-.02em}
+.v2-mark i{font-style:normal;font-size:5.5px;font-weight:500;letter-spacing:.22em;margin-top:2px;padding-left:.22em}
+
+/* ── Login ── */
+body #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:flex-start;padding:32px;position:relative;
+  background:radial-gradient(circle at 108% 50%,rgba(58,41,255,.7),transparent 46%),linear-gradient(135deg,#0C0A22 0%,#08033C 48%,#3122D3 100%)!important}
+body #login-screen::before,body #login-screen::after{content:none!important;display:none!important}
+body #login-screen .v2-login{width:100%;max-width:440px;margin-left:max(0px,calc((100vw - 1120px)/2));color:#fff}
+body #login-screen .v2-login *{color:inherit}
+body #login-screen .v2-brand{display:flex;align-items:center;gap:12px;margin-bottom:56px;font-weight:500;color:#fff!important}
+body #login-screen h1{font-size:40px;line-height:1.1;font-weight:300;letter-spacing:-.025em;margin:0 0 12px;color:#fff!important}
+body #login-screen .v2-lede{color:rgba(255,255,255,.72)!important;margin:0 0 32px;font-size:15px}
+body #login-screen .field-group{margin-bottom:14px}
+body #login-screen .field-group label{color:rgba(255,255,255,.8)!important;font-size:13px!important;font-weight:400!important;text-transform:none!important;letter-spacing:0!important}
+body #login-screen .field-group input,body #login-screen input{background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:8px!important;padding:12px 14px!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:400!important;width:100%}
+body #login-screen .field-group input::placeholder,body #login-screen input::placeholder{color:rgba(255,255,255,.4)!important;-webkit-text-fill-color:rgba(255,255,255,.4)!important}
+body #login-screen .field-group input:focus,body #login-screen input:focus{border-color:#fff!important;background:rgba(255,255,255,.12)!important;outline:none}
+body #login-screen .btn.btn-primary,body #login-screen .btn-primary{background:#fff!important;color:var(--abyss)!important;-webkit-text-fill-color:var(--abyss)!important;border:0!important;box-shadow:none!important;padding:12px!important;font-weight:600!important;font-size:14px!important;margin-top:4px;letter-spacing:0!important}
+body #login-screen .btn-primary *{color:var(--abyss)!important}
+body #login-screen .btn-primary:hover{background:var(--halo)!important}
+body #login-screen .login-error{background:rgba(255,90,78,.16)!important;border:1px solid rgba(255,140,130,.4)!important;color:#FFD2CE!important;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+body #login-screen .v2-foot,body #login-screen #login-loading{color:rgba(255,255,255,.6)!important;font-size:13px}
+
+/* ── Header + tabs ── */
+body .topbar{background:var(--paper)!important;border-bottom:0!important;box-shadow:none!important;height:64px!important;padding:0 max(24px,calc((100vw - var(--v2-w))/2 + 24px))!important;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+body .topbar .v2-brand{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--ink)}
+body .topbar .v2-mark{width:34px;height:34px;color:var(--ink)}
+body .topbar .v2-mark b{font-size:11px}body .topbar .v2-mark i{font-size:4.6px}
+body .topbar .v2-role{font-size:12px;font-weight:500;color:var(--volt);background:var(--halo);border-radius:99px;padding:2px 10px}
+body .topbar-right{display:flex;align-items:center;gap:18px}
+body .user-chip{background:none!important;border:0!important;padding:0!important;color:var(--mortar)!important;font-weight:500!important;font-size:14px!important}
+body .logout-btn,body .v2-link{background:none!important;border:0!important;color:var(--mortar)!important;cursor:pointer;padding:6px 0!important;font-size:14px!important;font-weight:400!important;box-shadow:none!important}
+body .logout-btn:hover,body .v2-link:hover{color:var(--volt)!important}
+body .nav-tabs{background:var(--paper)!important;border-bottom:1px solid var(--line)!important;box-shadow:none!important;top:64px!important;padding:0 max(14px,calc((100vw - var(--v2-w))/2 + 14px))!important;gap:2px;display:flex;align-items:stretch}
+body .nav-tab{color:var(--mortar)!important;font-size:14px!important;font-weight:500!important;padding:12px 12px!important;border-bottom:2px solid transparent!important;letter-spacing:0!important;text-transform:none!important;background:none!important;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+body .nav-tab:hover{color:var(--ink)!important}
+body .nav-tab.active{color:var(--ink)!important;border-bottom-color:var(--volt)!important}
+body .badge-count{background:var(--volt)!important;color:#fff!important;border-radius:99px!important;font-size:11px!important;font-weight:600!important;padding:1px 7px!important;line-height:1.5!important;border:0!important;box-shadow:none!important}
+#notif-bell-btn.v2-bell{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--mortar);white-space:nowrap;position:relative}
+#notif-bell-btn.v2-bell:hover{border-color:var(--volt);color:var(--volt)}
+#notif-bell-btn.v2-bell svg{width:16px;height:16px}
+#notif-count-badge,#notif-count-badge-panel{background:var(--volt)!important;font-weight:600!important}
+#inline-notif-wrap{border:1px solid var(--line)!important;border-radius:14px!important;box-shadow:0 24px 60px rgba(8,3,60,.2)!important;top:122px!important}
+#inline-notif-wrap > div:first-child{background:var(--mist)!important;border-bottom:1px solid var(--line2)!important}
+
+/* ── Layout ── */
+body .main{max-width:var(--v2-w)!important;margin:0 auto;padding:28px 24px 64px!important}
+body .page-header{margin-bottom:20px!important;align-items:flex-end!important}
+body .page-header h2,body .page-header-left h2{font-size:30px!important;line-height:1.15;font-weight:300!important;letter-spacing:-.025em!important;background:none!important;-webkit-text-fill-color:var(--ink)!important;color:var(--ink)!important;margin-bottom:4px!important}
+body .page-header p,body .page-header-left p{font-size:14px!important;color:var(--mortar)!important}
+body h1,body h2,body h3{letter-spacing:-.02em}
+
+/* ── Cards ── */
+body .card{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:none!important;transform:none!important}
+body .card:hover{box-shadow:none!important;transform:none!important}
+body .card-title{font-size:15px!important;font-weight:600!important;text-transform:none!important;letter-spacing:0!important;color:var(--ink)!important}
+body .card-icon{background:var(--halo)!important;color:var(--volt)!important;border-radius:8px!important}
+body .stat-card,body .mini-card,body .pay-stat{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:none!important}
+body .stat-card .label,body .mini-card .lbl,body .pay-stat .label{font-size:12px!important;text-transform:none!important;letter-spacing:0!important;font-weight:500!important;color:var(--mortar)!important}
+body .stat-card .value,body .mini-card .val,body .pay-stat .value{font-weight:600!important;letter-spacing:-.01em;color:var(--ink)}
+body .stat-card .value.green,body .mini-card .val.green,body .pay-stat .value.green{color:var(--ok)!important}
+body .stat-card .value.red,body .mini-card .val.red,body .pay-stat .value.red{color:var(--bad)!important}
+body .stat-card .value.cyan,body .mini-card .val.gold,body .pay-stat .value.gold,body .stat-card .value.gold{color:var(--volt)!important}
+body .info-row{border-color:var(--line2)!important}
+body .info-row .key{color:var(--mortar)!important}
+body .section-divider,body .modal-divider{background:var(--line2)!important;border-color:var(--line2)!important}
+
+/* ── Buttons ── */
+body .btn{border-radius:8px!important;font-weight:500!important;font-size:14px;letter-spacing:0!important;text-transform:none!important;box-shadow:none!important;transform:none!important;border:1px solid var(--line)!important;background:var(--paper);color:var(--ink);padding:8px 14px}
+body .btn-sm{padding:6px 12px!important;font-size:13px!important}
+body .btn:hover{border-color:#C8CCDA!important}
+body .btn-primary{background:var(--volt)!important;border-color:var(--volt)!important;color:#fff!important}
+body .btn-primary:hover{background:var(--cta)!important;border-color:var(--cta)!important}
+body .btn-primary:disabled,body .btn[disabled]{opacity:.55!important}
+body .btn-secondary{background:var(--paper)!important;color:var(--ink)!important}
+body .btn-danger{background:var(--paper)!important;color:var(--bad)!important}
+body .btn-danger:hover{border-color:var(--bad)!important;background:var(--badbg)!important}
+body .btn-success{background:var(--ok)!important;border-color:var(--ok)!important;color:#fff!important}
+body .btn-success:hover{filter:brightness(1.08)}
+body .btn-refresh{background:var(--paper)!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:8px!important;padding:8px 14px!important;font-size:14px!important;font-weight:500!important;box-shadow:none!important;transform:none!important}
+body .btn-refresh:hover{border-color:#C8CCDA!important;color:var(--volt)!important}
+body .cutoff-btn{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:99px!important;padding:6px 14px!important;font-weight:500!important;font-size:13px!important;color:var(--mortar)!important;box-shadow:none!important}
+body .cutoff-btn.active{background:var(--ink)!important;border-color:var(--ink)!important;color:#fff!important}
+
+/* ── Forms ── */
+body .field-group label{font-size:13px!important;font-weight:500!important;text-transform:none!important;letter-spacing:0!important;color:var(--mortar)!important}
+body .field-group input,body .field-group select,body .field-group textarea{border:1px solid var(--line)!important;border-radius:8px!important;background:#fff!important;color:var(--ink)!important;font-weight:400!important;font-size:14px!important;box-shadow:none!important}
+body .field-group input:focus,body .field-group select:focus,body .field-group textarea:focus{border-color:var(--volt)!important;box-shadow:0 0 0 3px rgba(49,34,211,.12)!important;outline:none}
+body .filter-bar{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:none!important}
+
+/* ── Tables ── */
+body table{font-size:13px}
+body thead tr{background:none!important}
+body th{background:var(--paper)!important;color:var(--mortar)!important;font-size:12px!important;font-weight:500!important;text-transform:none!important;letter-spacing:0!important;border-bottom:1px solid var(--line)!important;padding:12px 12px!important}
+body td{border-bottom:1px solid var(--line2)!important;color:var(--ink)}
+body tr:hover td{background:#FAFBFF}
+body .table-wrap{border-radius:12px}
+
+/* ── Badges + alerts ── */
+body .badge{border-radius:99px!important;font-weight:600!important;font-size:12px!important;padding:2px 10px!important;border:0!important}
+body .badge-green{background:var(--okbg)!important;color:var(--ok)!important}
+body .badge-amber,body .badge-gold{background:var(--warnbg)!important;color:var(--warn)!important}
+body .badge-red{background:var(--badbg)!important;color:var(--bad)!important}
+body .badge-blue{background:var(--halo)!important;color:var(--volt)!important}
+body .badge-gray{background:#EEF0F4!important;color:var(--mortar)!important}
+body .badge-orange{background:#FFF0E5!important;color:#B4510F!important}
+body .alert{border-radius:8px!important;font-size:13px!important}
+body .alert-success{background:var(--okbg)!important;border:1px solid #BFE5D1!important;color:var(--ok)!important}
+body .alert-error{background:var(--badbg)!important;border:1px solid #F5C6C2!important;color:var(--bad)!important}
+body .alert-info{background:var(--halo)!important;border:1px solid #D7E6FB!important;color:var(--abyss)!important}
+body .alert-warning{background:var(--warnbg)!important;border:1px solid #F3DFA9!important;color:var(--warn)!important}
+
+/* ── Modals ── */
+body .modal-overlay{background:rgba(12,10,34,.5)!important}
+body .modal{border-radius:14px!important;box-shadow:0 24px 60px rgba(8,3,60,.28)!important;border:0!important}
+body .modal-title{font-size:22px!important;font-weight:300!important;letter-spacing:-.025em!important;color:var(--ink)!important}
+body .modal-sub{color:var(--mortar)!important}
+
+/* ── Period groups (payroll / timesheets) ── */
+body .cutoff-group-header{background:radial-gradient(circle at 105% 40%,rgba(58,41,255,.55),transparent 50%),linear-gradient(135deg,#0C0A22,#08033C 55%,#3122D3)!important;border-radius:12px 12px 0 0!important;box-shadow:none!important}
+body .cutoff-group-body{border:1px solid var(--line)!important;border-top:0!important;box-shadow:none!important;border-radius:0 0 12px 12px!important}
+
+/* ── States ── */
+body .card-icon:empty{display:none!important}
+body .empty-block .icon,body .empty-block .eicon{display:none!important}
+body .loading-block,body .empty-block{color:var(--mortar)!important}
+body .time-display{font-weight:300!important;letter-spacing:-.02em!important;color:var(--ink)}
+body .spinner{border-color:rgba(49,34,211,.2)!important;border-top-color:var(--volt)!important}
+body .clock-status{box-shadow:none!important;border:1px solid var(--line);border-radius:10px!important}
+body .clocked-in{background:var(--okbg)!important;border-color:#BFE5D1!important}
+body .clocked-out{background:var(--mist)!important;border-color:var(--line)!important}
+
+@media (max-width:720px){
+  body .topbar{padding:0 14px!important}
+  body .topbar .v2-brand span.v2-name{display:none}
+  body .nav-tabs{padding:0 6px!important;overflow-x:auto}
+  body .nav-tab{padding:12px 10px!important;font-size:13px!important}
+  body .main{padding:20px 14px 48px!important}
+  body .page-header h2,body .page-header-left h2{font-size:24px!important}
+  body #login-screen h1{font-size:32px}
+}
+@media (prefers-reduced-motion:reduce){body *{transition:none!important;animation:none!important}}
+
+</style>
+</body>
+</html>
