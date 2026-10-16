@@ -413,8 +413,8 @@ tr:hover td { background: #faf8f4; }
         <div id="entries-loading" class="loading-block">Loading entries…</div>
         <div id="entries-empty" class="empty-block" style="display:none;"><div class="icon"></div><p>No entries match your filters.</p></div>
         <div class="table-wrap" id="entries-table-wrap" style="display:none;">
-          <table>
-            <thead><tr style="background:linear-gradient(135deg,#F6F9FA,#F6F9FA);"><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Action</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Date</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Employee</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Team</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Attendance</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Clock In/Out</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Work Hours</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Admin Note</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Lunch</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Meeting</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Time Off</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Billable</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Ded.</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Status</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Timesheet</th><th style="padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap;">Delete</th></tr></thead>
+          <table class="entries-fit">
+            <thead><tr><th>Action</th><th>Date</th><th>Employee</th><th>Attendance</th><th>Clock In/Out</th><th>Work Hrs</th><th>Admin Note</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Ded.</th><th>Status</th><th>Timesheet</th></tr></thead>
             <tbody id="entries-body"></tbody>
           </table>
         </div>
@@ -947,22 +947,20 @@ function renderEntriesTable() {
     const sub=suburbOf(e);
     const st=tsStateFor(e.sdrName,e.workDate);
     return `<tr${isAbsent?' style="background:#fff5f5;"':''}>
-      <td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;" onclick="openEditModal('${e.id}')">${isPending?"Enter":"Edit"}</button></td>
+      <td class="ef-act"><button class="btn btn-secondary btn-sm" onclick="openEditModal('${e.id}')">${isPending?"Enter":"Edit"}</button><button class="btn btn-sm ef-del" title="Delete entry" onclick="deleteEntry('${e.id}','${jsq(e.sdrName)}','${formatDate(e.workDate)}')">🗑</button></td>
       <td style="font-size:12px;white-space:nowrap">${formatDate(e.workDate)}</td>
-      <td><strong style="font-size:12px;">${esc(e.sdrName||"—")}</strong>${sub?`<div style="font-size:11px;color:var(--muted);">${esc(sub)}</div>`:""}</td>
-      <td>${teamBadge(team)}</td>
+      <td class="ef-name"><strong>${esc(e.sdrName||"—")}</strong><div class="ef-sub">${teamBadge(team)}${sub?` <span>${esc(sub)}</span>`:""}</div></td>
       <td style="white-space:nowrap;">${attendanceCell}</td>
       <td style="font-size:12px;white-space:nowrap">${esc(e.clockIn||"—")} → ${esc(e.clockOut||"—")}</td>
       <td style="font-size:12px;white-space:nowrap">${isAbsent?'0.0h':hasHrs(e)?`${parseFloat(e.billableHrs).toFixed(1)}h`:'<span class="badge badge-amber" style="font-size:10px;">Pending</span>'}</td>
-      <td style="min-width:160px;max-width:240px;white-space:normal;">${noteCellHtml(e.adminNotes)}</td>
+      <td class="ef-note">${noteCellHtml(e.adminNotes)}</td>
       <td style="font-size:11px;">${lunchStr}</td>
       <td style="font-size:11px;">${meetingCell}</td>
       <td style="font-size:11px;">${timeOffCell}</td>
       <td style="font-size:12px;">${billable}</td>
       <td style="font-size:12px;">${ded}</td>
-      <td style="white-space:nowrap;">${isAbsent?'<span class="badge badge-red" style="font-size:10px;">Absent</span>':entryStatusLabel} ${getDisputeBadge(e.disputeStatus)}</td>
+      <td class="ef-status">${isAbsent?'<span class="badge badge-red" style="font-size:10px;">Absent</span>':entryStatusLabel}${e.disputeStatus&&e.disputeStatus!=="None"?" "+getDisputeBadge(e.disputeStatus):""}</td>
       <td style="white-space:nowrap;">${tsStateBadge(st)}</td>
-      <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;" onclick="deleteEntry('${e.id}','${jsq(e.sdrName)}','${formatDate(e.workDate)}')">🗑</button></td>
     </tr>`;
   });
   document.getElementById("entries-body").innerHTML = rows.join("");
@@ -1300,7 +1298,7 @@ function switchTab(tab){
 
 function getDisputeBadge(s){
   if(!s||s==="None"||s==="")return'<span class="badge badge-gray">—</span>';
-  if(s==="Under Review")return'<span class="badge badge-orange">⚠️ Submitted</span>';
+  if(s==="Under Review")return'<span class="badge badge-orange">Review requested</span>';
   if(s==="Under Review")return'<span class="badge badge-blue">🔍 Under Review</span>';
   if(s==="Resolved")return'<span class="badge badge-green">✓ Resolved</span>';
   if(s==="Rejected")return'<span class="badge badge-red">✗ Rejected</span>';
@@ -2845,7 +2843,16 @@ body .clocked-out{background:var(--mist)!important;border-color:var(--line)!impo
 <style id="hub-admin-extra">
 /* Wide tables scroll sideways instead of clipping their last columns */
 #entries-table-wrap table,#timesheets-content table,#leave-content table,#meetings-content table{table-layout:auto}
-#entries-table-wrap table{min-width:1560px}
+#entries-table-wrap table.entries-fit{width:100%;min-width:0;table-layout:auto}
+#entries-table-wrap .entries-fit th,#entries-table-wrap .entries-fit td{padding:9px 6px!important;font-size:12px;white-space:nowrap}
+#entries-table-wrap .entries-fit th{font-size:11.5px!important}
+#entries-table-wrap .entries-fit td.ef-note{white-space:normal;min-width:110px;max-width:220px}
+#entries-table-wrap .entries-fit td.ef-name{white-space:normal;min-width:110px}
+#entries-table-wrap .entries-fit td.ef-status{white-space:normal}
+#entries-table-wrap .entries-fit td.ef-status .badge{margin:1px 0}
+#entries-table-wrap .ef-sub{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:3px;font-size:11px;color:var(--muted)}
+#entries-table-wrap .ef-act .btn{padding:3px 8px!important;font-size:11px!important}
+#entries-table-wrap .ef-del{margin-left:4px;background:#fef2f2!important;color:#dc2626!important;border-color:#fecaca!important}
 #entries-table-wrap td,#entries-table-wrap th,#timesheets-content td,#timesheets-content th{overflow:visible;text-overflow:clip}
 #entries-table-wrap,#timesheets-content .table-wrap{overflow-x:auto}
 body td{vertical-align:top}

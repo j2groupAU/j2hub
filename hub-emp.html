@@ -514,13 +514,20 @@ tr:hover td { background: rgba(100,160,255,0.04); }
     <!-- ══ MY TIMESHEET ══ -->
     <div class="page" id="page-timesheet">
       <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
-        <div><h2>My Timesheet</h2><p>Every day you've worked. Days waiting for payroll show under Current.</p></div>
+        <div><h2>My Timesheet</h2><p>Every day you've worked. Use the filters to find a date or see what still needs submitting.</p></div>
         <div style="display:flex;gap:10px;align-items:center;">
           <button class="btn btn-primary" onclick="mtsOpen()">Manual Timesheet</button>
           <button class="btn-refresh" onclick="loadTimesheet()">Refresh</button>
         </div>
       </div>
       <div id="alert-timesheet" class="alert"></div>
+      <div class="filter-bar">
+        <div class="field-group"><label>Status</label><select id="tsf-status" onchange="renderTimesheet()"><option value="">All</option><option value="pending">Pending entry</option><option value="complete">Complete</option></select></div>
+        <div class="field-group"><label>Timesheet</label><select id="tsf-ts" onchange="renderTimesheet()"><option value="">All</option><option value="none">Not submitted</option><option value="submitted">Submitted</option><option value="approved">Approved</option></select></div>
+        <div class="field-group"><label>Date From</label><input type="date" id="tsf-from" onchange="renderTimesheet()" /></div>
+        <div class="field-group"><label>Date To (optional)</label><input type="date" id="tsf-to" onchange="renderTimesheet()" /></div>
+        <div class="field-group" style="flex:0 0 auto;min-width:0;"><button class="btn btn-secondary" onclick="clearTsDates()">Clear Dates</button></div>
+      </div>
       <div id="timesheet-loading" class="loading-block">Loading your records…</div>
       <div id="timesheet-content"></div>
     </div>
@@ -1206,8 +1213,18 @@ async function submitQuickMeeting() {
 }
 
 // ── MY TIMESHEET ──
-let tsView="current";
-function setTsView(v){ tsView=v; renderTimesheet(); }
+function clearTsDates(){ document.getElementById("tsf-from").value=""; document.getElementById("tsf-to").value=""; renderTimesheet(); }
+// Same rules as the admin filters: only "From" (or only "To") = that single day
+function tsFilterPass(r){
+  const status=document.getElementById("tsf-status").value, tsf=document.getElementById("tsf-ts").value;
+  let from=document.getElementById("tsf-from").value, to=document.getElementById("tsf-to").value;
+  if(from&&!to) to=from; if(!from&&to) from=to; if(from&&to&&from>to) [from,to]=[to,from];
+  if(from&&(r.date<from||r.date>to)) return false;
+  if(tsf&&(dateTsState(r.date)||"none")!==tsf) return false;
+  if(status==="pending"&&!(r.pendingHrs||r.leaves.some(l=>l.status!=="Approved")&&!r.entries.length)) return false;
+  if(status==="complete"&&(r.pendingHrs||(!r.entries.length&&!r.leaves.some(l=>l.status==="Approved")))) return false;
+  return true;
+}
 async function loadTimesheet() {
   document.getElementById("timesheet-loading").style.display="block";
   document.getElementById("timesheet-loading").textContent="Loading your records…";
@@ -1220,12 +1237,10 @@ function renderTimesheet(){
   const content=document.getElementById("timesheet-content");
   const dates=[...new Set([...allEntries.map(e=>e.workDate),...allLeaves.map(l=>l.leaveDate)].filter(Boolean))];
   const rows=dayRows(dates);
-  const counts={current:rows.filter(r=>dateTsState(r.date)!=="approved").length, approved:rows.filter(r=>dateTsState(r.date)==="approved").length};
-  const view=rows.filter(r=>tsView==="approved"?dateTsState(r.date)==="approved":dateTsState(r.date)!=="approved");
-  const b=(v,label)=>`<button class="cutoff-btn${tsView===v?" active":""}" onclick="setTsView('${v}')">${label}</button>`;
-  const toggle=`<div class="cutoff-selector">${b("current",`Current (${counts.current})`)}${b("approved",`Approved (${counts.approved})`)}</div>`;
+  const view=rows.filter(tsFilterPass);
+  const toggle="";
   if(!view.length){
-    content.innerHTML=toggle+`<div class="card empty-block"><p>${tsView==="approved"?"No approved timesheets yet.":(rows.length?"Everything has been approved. Nothing waiting.":"No entries yet. Clock in to get started.")}</p></div>`;
+    content.innerHTML=`<div class="card empty-block"><p>${rows.length?"No days match these filters.":"No entries yet. Clock in to get started."}</p></div>`;
     return;
   }
   const field=isField();
@@ -1254,7 +1269,7 @@ function renderTimesheet(){
       const review=getDisputeBadge(e.disputeStatus)+(canReview?` <button class="btn btn-secondary btn-sm" onclick="openReviewModal('entry','${escHtml(e.id)}','${e.workDate}')">Request Review</button>`:"");
       const meet=first&&r.meet>0?`<strong style="color:var(--volt);">${r.meet.toFixed(1)}h</strong>`:"—";
       const timeOff=first?leaveTag:"—";
-      const common=`<td><strong>${formatDate(e.workDate)}</strong></td><td>${first?stateBadge(st):""}</td><td>${escHtml(e.clockIn||"—")}</td><td>${escHtml(e.clockOut||"—")}</td><td>${hrs}</td><td style="white-space:normal;min-width:140px;">${noteCellHtml(e.adminNotes)}</td>`;
+      const common=`<td><strong>${formatDate(e.workDate)}</strong></td><td>${stateBadge(st)}</td><td>${escHtml(e.clockIn||"—")}</td><td>${escHtml(e.clockOut||"—")}</td><td>${hrs}</td><td style="white-space:normal;min-width:140px;">${noteCellHtml(e.adminNotes)}</td>`;
       if(field){
         const base=hasHrs(e)?parseFloat(e.billableHrs)+(first?r.meet:0):null;
         return `<tr>${common}<td>${suburbOf(e)?escHtml(suburbOf(e)):"—"}</td><td>${meet}</td><td>${timeOff}</td>
@@ -1269,7 +1284,7 @@ function renderTimesheet(){
   }).join("");
   const note=field?`<p class="hub-foot">Base pay is your hours (including approved meetings) × ${money(currentUser.rate||0)}/hr.</p>`
                   :`<p class="hub-foot">Billable hours include 1 hr paid lunch (when punched), approved meetings and paid leave, up to 8 hrs a day.</p>`;
-  content.innerHTML=toggle+summary+`<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table style="min-width:${field?1250:1150}px;"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`+note;
+  content.innerHTML=toggle+summary+`<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table class="ts-fit"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`+note;
 }
 
 // ── REQUEST REVIEW (one day, or a whole submitted timesheet) ──
@@ -1326,7 +1341,7 @@ async function mtsSubmit(){
     try{ await apiPost({action:"updateEntry",id:r.id,disputeNotes:reason}); }catch(_){}   // reason is already in the note
     closeModal("mts-modal");
     showAlert(document.getElementById("alert-timesheet"),"success","✓ Manual timesheet sent for "+formatDate(date)+". Your manager will review it.");
-    tsView="current"; loadTimesheet();
+    loadTimesheet();
   }catch(e){ fail("Could not submit: "+e.message); btn.disabled=false; btn.textContent="Submit for Review"; }
 }
 
@@ -1934,6 +1949,10 @@ body td{vertical-align:top}
 #timesheet-content table,#submit-content table,#my-ts-wrap table{table-layout:auto}
 #timesheet-content td,#timesheet-content th,#submit-content td,#submit-content th,#my-ts-wrap td,#my-ts-wrap th{overflow:visible;text-overflow:clip}
 .mini-card{padding:12px 14px}
+#page-timesheet .filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;padding:14px 16px}
+#page-timesheet .filter-bar .field-group{margin-bottom:0;flex:1;min-width:150px}
+#timesheet-content table.ts-fit{width:100%;table-layout:auto}
+#timesheet-content table.ts-fit th,#timesheet-content table.ts-fit td{padding:9px 8px!important;font-size:12.5px}
 .mini-card .val{font-size:20px}
 </style>
 </body>
