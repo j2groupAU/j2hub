@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J2 Hub</title>
+<style>
+:root {
+  --navy: #0C0A22;
+  --navy2: #0C0A22;
+  --navy3: #08033C;
+  --navy4: #08033C;
+  --accent: #3122D3;
+  --accent2: #3A29FF;
+  --accent3: #3122D3;
+  --white: #FFFFFF;
+  --off-white: #F6F9FA;
+  --soft: #EFF8FF;
+  --muted: #5A5E78;
+  --text: #0C0A22;
+  --border: rgba(49,34,211,0.15);
+  --border-light: #E2E5EE;
+  --card: #FFFFFF;
+  --radius: 12px;
+  --shadow: 0 8px 32px rgba(49,34,211,0.12), 0 2px 8px rgba(49,34,211,0.08);
+  --shadow-lg: 0 16px 48px rgba(49,34,211,0.18), 0 4px 16px rgba(49,34,211,0.10);
+  --green: #00D68F;
+  --red: #FF4D6A;
+  --amber: #FFB800;
+  --blue: #857DE4;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: linear-gradient(160deg, #F6F9FA 0%, #F6F9FA 40%, #E2E5EE 70%, #F6F9FA 100%); min-height: 100vh; color: var(--text); }
+
+/* ── LOGIN ── */
+#login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #E2E5EE 0%, #A8C8FF 30%, #8AB4FF 60%, #6E9EFF 100%);
+  padding: 20px; position: relative; overflow: hidden;
+}
+#login-screen::before {
+  content:''; position:absolute; top:-150px; right:-150px; width:500px; height:500px;
+  border-radius:50%; pointer-events:none;
+  background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 40%, transparent 70%);
+}
+#login-screen::after {
+  content:''; position:absolute; bottom:-100px; left:-100px; width:400px; height:400px;
+  border-radius:50%; pointer-events:none;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+}
+.login-card {
+  background: #FFFFFF;
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 48px 40px 40px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 20px 60px rgba(12,10,34,0.20), 0 4px 16px rgba(12,10,34,0.10), 0 0 0 1px rgba(255,255,255,0.6);
+  position: relative; z-index: 1;
+}
+.login-logo { text-align: center; margin-bottom: 32px; }
+.login-logo .logo-mark {
+  width: 64px; height: 64px; background: var(--navy); border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px; font-size: 24px; font-weight:700; color: var(--gold);
+  letter-spacing: -1px; font-family: Georgia, serif;
+}
+.login-logo h1 { font-size: 26px; font-weight:600; color: #0C0A22; letter-spacing: -0.5px; }
+.login-logo .sub { font-size: 12px; color: #5A5E78; margin-top: 4px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+.field-group { margin-bottom: 18px; }
+.field-group label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.field-group input, .field-group select, .field-group textarea {
+  width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+  border-radius: var(--radius); font-size: 14px; font-family: inherit;
+  color: var(--text); background: var(--off-white); transition: border-color 0.2s; outline: none;
+}
+.field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); background: var(--white); }
+/* Dark form fields inside login card */
+#login-screen .field-group label { color: #0C0A22; font-weight:600; }
+#login-screen .field-group input {
+  background: rgba(255,255,255,0.07); border-color: rgba(133,125,228,0.2);
+  color: #0C0A22;
+}
+#login-screen .field-group input::placeholder { color: rgba(255,255,255,0.25); }
+#login-screen .field-group input:focus { border-color: var(--accent); background: rgba(255,255,255,0.1); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 22px; border-radius: var(--radius); font-size: 13px; font-weight: 700;
+  cursor: pointer; border: none; transition: all 0.18s; font-family: inherit; white-space: nowrap;
+}
+.btn-primary { background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%); color: #0C0A22; border: none; }
+.btn-primary:hover { background: linear-gradient(135deg, #857DE4 0%, #9B7AF7 100%); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-secondary { background: var(--soft); color: var(--navy); border: 1.5px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: #fef2f2; color: var(--red); border: 1.5px solid #fecaca; }
+.btn-danger:hover { background: #fee2e2; }
+.btn-success { background: #f0fdf4; color: #15803d; border: 1.5px solid #bbf7d0; }
+.btn-success:hover { background: #dcfce7; }
+.btn-full { width: 100%; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.login-error { background: rgba(255,77,106,0.12); border: 1px solid rgba(255,77,106,0.25); color: #CC1A35; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+
+/* ── APP ── */
+#app { display: none; }
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  background: linear-gradient(135deg, #0C0A22 0%, #0C0A22 50%, #08033C 100%);
+  padding: 0 24px; height: 62px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid rgba(49,34,211,0.2);
+  box-shadow: 0 4px 20px rgba(12,10,34,0.25);
+}
+.topbar-brand { display: flex; align-items: center; gap: 12px; }
+.topbar-mark { width: 34px; height: 34px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight:700; font-size: 13px; color: var(--navy); font-family: Georgia, serif; }
+.topbar-name { font-size: 16px; font-weight:600; color: #0C0A22; letter-spacing: -0.3px; }
+.topbar-name span { color: var(--accent); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.user-chip { background: rgba(133,125,228,0.1); border: 1px solid rgba(133,125,228,0.25); border-radius: 20px; padding: 5px 14px; font-size: 13px; color: var(--accent); font-weight: 700; }
+.logout-btn { background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.logout-btn:hover { border-color: rgba(255,255,255,0.5); color: #0C0A22; }
+
+/* ── NOTIFICATION BAR ── */
+#notif-bar { display: none !important; }
+.notif-inner { display: flex; gap: 10px; padding: 8px 0; overflow-x: auto; flex-wrap: nowrap; }
+.notif-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+  border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  cursor: pointer; transition: opacity 0.15s; flex-shrink: 0;
+}
+.notif-pill:hover { opacity: 0.85; }
+.notif-success { background: rgba(34,165,94,0.15); border: 1px solid rgba(34,165,94,0.3); color: #4ade80; }
+.notif-warning { background: rgba(229,169,58,0.15); border: 1px solid rgba(229,169,58,0.3); color: var(--gold); }
+.notif-info { background: rgba(46,125,209,0.15); border: 1px solid rgba(46,125,209,0.3); color: #60a5fa; }
+.notif-red { background: rgba(224,62,62,0.15); border: 1px solid rgba(224,62,62,0.3); color: #f87171; }
+.notif-dismiss { margin-left: 4px; opacity: 0.6; font-size: 10px; }
+
+/* ── TABS ── */
+.nav-tabs { position: sticky; top: 62px; z-index: 199; background: linear-gradient(135deg, #0C0A22 0%, #08033C 100%); border-bottom: 1px solid rgba(49,34,211,0.2); display: flex; align-items:center; justify-content:space-between; padding: 0 20px; overflow-x: auto; gap: 0; box-shadow: 0 4px 16px rgba(12,10,34,0.15); }
+.nav-tab { padding: 13px 18px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.2px; }
+.nav-tab:hover { color: rgba(255,255,255,0.8); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── MAIN ── */
+.main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+.page { display: none; }
+.page.active { display: block; }
+
+.page-header { margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.page-header h2 { font-size: 20px; font-weight:600; margin-bottom: 3px; background: linear-gradient(135deg, #0C0A22 0%, #3122D3 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.page-header p { font-size: 13px; color: var(--muted); }
+
+/* ── CARDS ── */
+.card {
+  background: white;
+  border-radius: 16px;
+  border: none;
+  padding: 22px;
+  box-shadow: 0 8px 32px rgba(12,10,34,0.10), 0 2px 8px rgba(12,10,34,0.06), 0 0 0 1px rgba(49,34,211,0.08);
+  margin-bottom: 18px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card:hover {
+  box-shadow: 0 12px 40px rgba(12,10,34,0.14), 0 4px 12px rgba(12,10,34,0.08), 0 0 0 1px rgba(49,34,211,0.12);
+  transform: translateY(-1px);
+}
+.card-title { font-size: 12px; font-weight:600; color: var(--navy); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.8px; }
+.card-icon { width: 30px; height: 30px; background: linear-gradient(135deg, rgba(133,125,228,0.15) 0%, rgba(49,34,211,0.15) 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 8px rgba(49,34,211,0.12); }
+.section-divider { border: none; border-top: 1.5px solid var(--border); margin: 16px 0; }
+
+/* ── CLOCK STATUS ── */
+.clock-status { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+.clocked-out { background: linear-gradient(135deg, #F6F9FA 0%, #E0ECFF 100%); border: none; color: var(--muted); box-shadow: 0 4px 16px rgba(12,10,34,0.08); }
+.clocked-in { background: linear-gradient(135deg, #E8FFF5 0%, #D0F5E8 100%); border: none; color: #0A8050; box-shadow: 0 4px 16px rgba(0,180,100,0.12); }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.clocked-out .status-dot { background: var(--muted); }
+.clocked-in .status-dot { background: var(--green); box-shadow: 0 0 0 3px rgba(34,165,94,0.2); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(34,165,94,0.2);}50%{box-shadow:0 0 0 6px rgba(34,165,94,0.1);} }
+
+/* ── SUMMARY MINI CARDS ── */
+.mini-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 12px; margin-bottom: 16px; }
+.mini-card {
+  background: linear-gradient(145deg, #ffffff 0%, #F6F9FA 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(12,10,34,0.10), 0 1px 4px rgba(12,10,34,0.06), 0 0 0 1px rgba(49,34,211,0.10);
+}
+.mini-card .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; }
+.mini-card .val { font-size: 18px; font-weight:600; color: var(--navy); }
+.mini-card .val.gold { color: var(--accent); }
+.mini-card .val.green { color: var(--green); }
+.mini-card .val.red { color: var(--red); }
+.mini-card .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; border-radius: 8px; width: 100%; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+th { background: linear-gradient(135deg, #F6F9FA 0%, #F6F9FA 100%); padding: 8px 10px; text-align: left; font-size: 10px; font-weight:600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid rgba(49,34,211,0.15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+td { padding: 10px 10px; border-bottom: 1px solid #EDEFF5; color: var(--text); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+tr:last-child td { border-bottom: none; }
+.pay-table { table-layout: auto; }
+/* My Timesheet and Pay use more of the screen than the other pages */
+#page-timesheet, #page-pay { width: min(1700px, calc(100vw - 40px)); margin-left: 50%; transform: translateX(-50%); }
+@media (max-width: 600px) { #page-timesheet, #page-pay { width: auto; margin-left: 0; transform: none; } }
+.ts-table { table-layout: auto; }
+.ts-table th { white-space: nowrap; overflow: visible; }
+.ts-table td { overflow: visible; text-overflow: clip; }
+.ts-table td:nth-child(5) { min-width: 180px; max-width: 260px; }
+.ann-card { position:relative; background:#fff; border-radius:16px; padding:22px 24px 20px 28px; margin-bottom:16px;
+  box-shadow:0 4px 24px rgba(12,10,34,0.08); border:1.5px solid var(--ann-border); overflow:hidden; animation:annIn .35s ease; }
+.ann-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--ann-accent); }
+.ann-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+.ann-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; background:var(--ann-soft); flex-shrink:0; }
+.ann-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ann-accent); }
+.ann-title { font-size:17px; font-weight:600; color:var(--navy); line-height:1.3; }
+.ann-date { margin-left:auto; font-size:11px; color:var(--muted); white-space:nowrap; }
+.ann-body { font-size:14px; color:var(--text); line-height:1.65; white-space:pre-wrap; word-break:break-word; margin:0 0 16px 52px; }
+.ann-foot { display:flex; justify-content:flex-end; }
+.ann-btn { background:var(--ann-accent); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px var(--ann-soft); }
+.ann-btn:disabled { opacity:.6; cursor:default; }
+.ann-card.ann-out { transition:all .35s ease; opacity:0; transform:translateY(-6px); }
+.ann-popup-card { margin:0; box-shadow:0 24px 70px rgba(12,10,34,0.35); animation:annPop .3s ease; }
+@keyframes annPop { from { opacity:0; transform:scale(.96) translateY(10px); } to { opacity:1; transform:none; } }
+.pay-table td { overflow: visible; text-overflow: clip; vertical-align: top; }
+.pay-table td.pay-desc { white-space: normal; min-width: 150px; }
+.pay-table td.pay-desc div { word-break: break-word; }
+tr:hover td { background: rgba(100,160,255,0.04); }
+
+/* ── BADGES ── */
+.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-green { background: #dcfce7; color: #15803d; }
+.badge-amber { background: #fef9c3; color: #92400e; }
+.badge-red { background: #fee2e2; color: #b91c1c; }
+.badge-blue { background: #EFF8FF; color: #3122D3; }
+.badge-gray { background: #F6F9FA; color: #5A5E78; }
+.badge-gold { background: rgba(200,146,42,0.12); color: var(--gold-dim); }
+
+/* ── CUTOFF GROUP ── */
+.cutoff-group { margin-bottom: 24px; }
+.cutoff-group-header {
+  background: linear-gradient(135deg, #0C0A22 0%, #0C0A22 60%, #08033C 100%);
+  border-top: none;
+  color: #0C0A22; padding: 12px 18px; border-radius: 12px 12px 0 0;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+  box-shadow: 0 4px 16px rgba(12,10,34,0.2);
+}
+.cutoff-group-header .title { font-size: 13px; font-weight:600; letter-spacing: 0.3px; }
+.cutoff-group-header .meta { font-size: 11px; color: rgba(255,255,255,0.6); }
+.cutoff-group-body { border: none; border-radius: 0 0 12px 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(12,10,34,0.10), 0 0 0 1px rgba(49,34,211,0.08); }
+
+/* ── PAY STATS ── */
+.pay-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; margin-bottom: 18px; }
+.pay-stat {
+  background: linear-gradient(145deg, #ffffff 0%, #F6F9FA 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(12,10,34,0.10), 0 1px 4px rgba(12,10,34,0.06), 0 0 0 1px rgba(49,34,211,0.10);
+}
+.pay-stat .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 5px; }
+.pay-stat .value { font-size: 22px; font-weight:600; color: var(--navy); }
+.pay-stat .value.gold { color: var(--accent); }
+.pay-stat .value.green { color: var(--green); }
+.pay-stat .value.red { color: var(--red); }
+.pay-stat .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── CUTOFF SELECTOR ── */
+.cutoff-selector { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.cutoff-btn { padding: 7px 16px; border-radius: 8px; border: none; background: white; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); transition: all 0.15s; box-shadow: 0 2px 8px rgba(12,10,34,0.10), 0 0 0 1px rgba(49,34,211,0.12); }
+.cutoff-btn.active { border: none; color: #0C0A22; background: linear-gradient(135deg, #3122D3 0%, #857DE4 100%); box-shadow: 0 4px 14px rgba(49,34,211,0.35); }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(12,10,34,0.6); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: 18px; padding: 28px; width: 100%; max-width: 500px; box-shadow: 0 20px 60px rgba(12,10,34,0.20), 0 0 0 1px rgba(49,34,211,0.10); max-height: 90vh; overflow-y: auto; }
+.modal-title { font-size: 16px; font-weight:600; color: var(--navy); margin-bottom: 4px; }
+.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+
+/* ── ALERTS ── */
+.alert { padding: 11px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: none; }
+.alert.show { display: block; }
+.alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+.alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+.alert-info { background: #EFF8FF; border: 1px solid #E2E5EE; color: #3122D3; }
+.alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+
+/* ── SPINNER ── */
+.spinner { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #0C0A22; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-block { text-align: center; padding: 36px; color: var(--muted); font-size: 14px; }
+.empty-block { text-align: center; padding: 40px; color: var(--muted); }
+.empty-block .eicon { font-size: 32px; margin-bottom: 10px; }
+
+/* ── TIME DISPLAY ── */
+.time-display { font-size: 32px; font-weight:600; color: var(--navy); font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+.time-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* ── PAYSLIP ── */
+.payslip-wrap { background: white; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
+.payslip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 3px solid var(--navy); flex-wrap: wrap; gap: 16px; }
+.payslip-logo-area .co-name { font-size: 20px; font-weight:700; color: var(--navy); }
+.payslip-logo-area .co-name span { color: var(--gold); }
+.payslip-logo-area .doc-type { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-top: 3px; }
+.payslip-meta { text-align: right; }
+.payslip-meta .pm-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.payslip-meta .pm-value { font-size: 14px; font-weight: 700; color: var(--navy); }
+.payslip-meta .pm-pay { font-size: 14px; font-weight: 700; color: var(--gold); margin-top: 2px; }
+.ps-section-title { font-size: 10px; font-weight:600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 10px; }
+.ps-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+.ps-net { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: linear-gradient(135deg, #0C0A22 0%, #0C0A22 100%); border: none; border-radius: 12px; margin-top: 14px; box-shadow: 0 8px 24px rgba(12,10,34,0.25); }
+.ps-net .nl { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); }
+.ps-net .nv { font-size: 22px; font-weight:700; color: var(--accent); }
+
+/* ── TWO COL ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } .topbar { padding: 0 14px; } .main { padding: 16px 14px; } .nav-tab { padding: 12px 12px; font-size: 11px; } .login-card {
+  background: #FFFFFF;
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 48px 40px 40px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 20px 60px rgba(12,10,34,0.20), 0 4px 16px rgba(12,10,34,0.10), 0 0 0 1px rgba(255,255,255,0.6);
+  position: relative; z-index: 1;
+} }
+
+  /* FORCE LOGIN OVERRIDES */
+  #login-screen * { color: #0C0A22; }
+  #login-screen h1 span:first-child { color: #0C0A22 !important; }
+  #login-screen h1 span:last-child { color: #3122D3 !important; }
+  #login-screen input { background: #ffffff !important; color: #0C0A22 !important; -webkit-text-fill-color: #0C0A22 !important; }
+  #login-screen input::placeholder { color: #5A5E78 !important; -webkit-text-fill-color: #5A5E78 !important; }
+  #login-screen .field-group label { color: #0C0A22 !important; }
+  #login-screen .login-error { color: #CC1A35 !important; }
+  #login-screen p { color: #5A5E78 !important; }
+
+.btn-refresh {
+  background: linear-gradient(135deg, #3122D3 0%, #3122D3 100%);
+  color: white; border: none; border-radius: 12px;
+  padding: 10px 22px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(49,34,211,0.35);
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-refresh:hover {
+  background: linear-gradient(135deg, #3A29FF 0%, #3122D3 100%);
+  box-shadow: 0 6px 20px rgba(49,34,211,0.45);
+  transform: translateY(-1px);
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="v2-login">
+    <div class="v2-brand"><div class="v2-mark"><b>J2</b><i>GROUP</i></div><span>J2 Hub</span></div>
+    <h1>Your time, pay and leave in one place.</h1>
+    <p class="v2-lede">Clock in, track your hours and submit your timesheet.</p>
+    <div id="login-loading" style="display:none;margin-bottom:12px;">Verifying credentials…</div>
+    <div class="login-error" id="login-error">Incorrect name or password.</div>
+    <div class="field-group"><label>Your name</label><input type="text" id="login-name" placeholder="e.g. James Mitchell" autocomplete="name" /></div>
+    <div class="field-group"><label>Password</label><input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" /></div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()" id="btn-login">Sign In to J2 Hub</button>
+    <p class="v2-foot" style="margin-top:16px;">Contact your admin if you need access.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="v2-brand"><div class="v2-mark"><b>J2</b><i>GROUP</i></div><span class="v2-name">J2 Hub</span><span class="v2-role" id="role-chip">SDR</span></div>
+    <div class="topbar-right">
+      <div class="user-chip" id="user-chip">—</div>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <div style="display:flex;align-items:center;overflow-x:auto;flex:1;">
+      <div class="nav-tab active" onclick="switchTab('time')" id="tab-time">Time Management</div>
+      <div class="nav-tab" onclick="switchTab('timesheet')" id="tab-timesheet">My Timesheet</div>
+      <div class="nav-tab" onclick="switchTab('meetings')" id="tab-meetings">Meetings</div>
+      <div class="nav-tab" onclick="switchTab('submit')" id="tab-submit">Submit Timesheet</div>
+      <div class="nav-tab" onclick="switchTab('leave')" id="tab-leave">Leave</div>
+      <div class="nav-tab" onclick="switchTab('pay')" id="tab-pay">Pay</div>
+    </div>
+    <!-- Bell button aligned to nav bar -->
+    <div style="flex-shrink:0;padding:0 6px 0 10px;display:flex;align-items:center;">
+      <button id="notif-bell-btn" class="v2-bell" onclick="toggleNotifPanel()" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Notifications</span><span id="notif-count-badge" style="display:none;background:#3122D3;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:600;min-width:18px;text-align:center;"></span></button>
+    </div>
+  </div>
+
+  <!-- ══ FIXED NOTIFICATION PANEL (outside all pages so it's always accessible) ══ -->
+  <div id="inline-notif-wrap" style="
+      position:fixed;
+      top:112px;
+      right:20px;
+      width:340px;
+      max-height:calc(100vh - 130px);
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 8px 40px rgba(12,10,34,0.18), 0 2px 12px rgba(12,10,34,0.10);
+      border:1.5px solid rgba(133,125,228,0.25);
+      z-index:1200;
+      display:none;
+      flex-direction:column;
+      overflow:hidden;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px 18px;border-bottom:1px solid #F6F9FA;background:linear-gradient(135deg,#F6F9FA,#F6F9FA);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;"></span>
+        <span style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:#0C0A22;">Notifications</span>
+        <span id="notif-count-badge-panel" style="display:none;background:#E53935;color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;min-width:18px;text-align:center;"></span>
+      </div>
+      <button onclick="toggleNotifPanel()" title="Close" style="background:none;border:none;cursor:pointer;font-size:18px;color:#5A5E78;padding:2px 4px;line-height:1;border-radius:6px;"
+        aria-label="Close" onmouseover="this.style.background='#F6F9FA';" onmouseout="this.style.background='none';">✕</button>
+    </div>
+    <!-- Scrollable body -->
+    <div id="inline-notif-inner" style="
+        flex:1;
+        overflow-y:auto;
+        padding:12px 14px;
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        max-height:calc(100vh - 200px);
+        scrollbar-width:thin;
+        scrollbar-color:#E2E5EE transparent;">
+    </div>
+    <!-- Footer: clear all -->
+    <div id="notif-footer" style="display:none;padding:10px 14px;border-top:1px solid #F6F9FA;text-align:center;flex-shrink:0;">
+      <button onclick="clearAllNotifs()" style="background:none;border:1px solid #E2E5EE;color:#5A5E78;border-radius:8px;padding:5px 18px;font-size:11px;font-weight:700;cursor:pointer;"
+        onmouseover="this.style.background='#F6F9FA';" onmouseout="this.style.background='none';">Clear all</button>
+    </div>
+  </div>
+  <div class="main">
+
+    <!-- ══ TIME MANAGEMENT ══ -->
+    <div class="page active" id="page-time">
+      <div class="page-header">
+        <div><h2>Time Management</h2><p>Clock in, clock out and log meetings.</p></div>
+      </div>
+
+      <div id="clock-status-block" class="clock-status clocked-out" style="width:calc(960px + 18px);max-width:100%;">
+        <div class="status-dot"></div><span id="clock-status-text">You are currently clocked out.</span>
+      </div>
+      <div id="alert-clock" class="alert"></div>
+
+      <div style="display:flex;gap:18px;align-items:stretch;flex-wrap:wrap;margin-bottom:0;">
+        <div style="width:480px;max-width:100%;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="card" id="clock-card-in" style="flex:1;display:flex;flex-direction:column;">
+            <div class="card-title"><div class="card-icon"></div> Clock In</div>
+            <div class="field-group"><label>Date</label><input type="date" id="clock-in-date" disabled /></div>
+            <div style="margin-bottom:16px;">
+              <div class="time-display" id="live-time">--:--:--</div>
+              <div class="time-sub">Current AEST time, recorded on clock in</div>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="submitClockIn()" id="btn-clock-in" style="margin-top:auto;">Clock In Now</button>
+          </div>
+          <div class="card" id="clock-card-out" style="display:none;flex:1;flex-direction:column;">
+            <div class="card-title"><div class="card-icon"></div> Clock Out</div>
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Clocked in at</div>
+              <div style="font-size:16px;font-weight:600;color:var(--navy);" id="clock-in-time-display">—</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;display:none;" id="clock-in-suburb-display"></div>
+            </div>
+            <div style="margin-bottom:16px;">
+              <div class="time-display" id="live-time-2">--:--:--</div>
+              <div class="time-sub">Current AEST time, recorded on clock out</div>
+            </div>
+            <!-- Lunch: SDR team only -->
+            <div id="lunch-section" class="sdr-only" style="margin-bottom:14px;">
+              <div id="lunch-not-started">
+                <button class="btn btn-full" onclick="startLunch()" id="btn-start-lunch">Start Lunch Break</button>
+              </div>
+              <div id="lunch-in-progress" style="display:none;">
+                <div class="hub-note hub-note-warn" style="margin-bottom:8px;">On lunch break since <strong id="lunch-start-display">—</strong></div>
+                <button class="btn btn-full" onclick="endLunch()" id="btn-end-lunch">End Lunch Break</button>
+              </div>
+              <div id="lunch-done" style="display:none;">
+                <div class="hub-note hub-note-ok">Lunch taken <span id="lunch-time-display">—</span> · 1 hr paid</div>
+              </div>
+            </div>
+            <button class="btn btn-danger btn-full" onclick="submitClockOut()" id="btn-clock-out" style="margin-top:auto;">Clock Out Now</button>
+          </div>
+        </div>
+
+        <div style="width:480px;max-width:100%;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="card" id="quick-meeting-card" style="flex:1;display:flex;flex-direction:column;">
+            <div class="card-title"><div class="card-icon"></div> Log Meeting</div>
+            <div class="two-col">
+              <div class="field-group"><label>Start Time</label><input type="time" id="qm-start" /></div>
+              <div class="field-group"><label>End Time</label><input type="time" id="qm-end" /></div>
+            </div>
+            <div class="field-group">
+              <label>Meeting Type</label>
+              <select id="qm-type">
+                <option value="">— Select type —</option>
+                <option value="Coaching">Coaching</option>
+                <option value="Team Huddle">Team Huddle</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" onclick="submitQuickMeeting()" id="btn-qm" style="margin-top:auto;">Submit for Approval</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="announcements-area" style="width:calc(960px + 18px);max-width:100%;margin-top:18px;"></div>
+    </div>
+
+    <!-- ══ MY TIMESHEET ══ -->
+    <div class="page" id="page-timesheet">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
+        <div><h2>My Timesheet</h2><p>Every day you've worked. Days waiting for payroll show under Current.</p></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-primary" onclick="mtsOpen()">Manual Timesheet</button>
+          <button class="btn-refresh" onclick="loadTimesheet()">Refresh</button>
+        </div>
+      </div>
+      <div id="alert-timesheet" class="alert"></div>
+      <div id="timesheet-loading" class="loading-block">Loading your records…</div>
+      <div id="timesheet-content"></div>
+    </div>
+
+    <!-- ══ MEETINGS ══ -->
+    <div class="page" id="page-meetings">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div><h2>Meetings</h2><p>Log meeting time for approval. Approved meetings add to your hours in My Timesheet.</p></div>
+        <button class="btn-refresh" onclick="loadMeetings()">Refresh</button>
+      </div>
+      <div id="alert-meetings" class="alert"></div>
+      <div class="card">
+        <div class="card-title"><div class="card-icon"></div> Log a Meeting</div>
+        <div class="two-col">
+          <div class="field-group"><label>Date</label><input type="date" id="meeting-date" /></div>
+          <div class="field-group"><label>Meeting Type</label>
+            <select id="meeting-type">
+              <option value="">— Select type —</option>
+              <option value="Coaching">Coaching</option>
+              <option value="Team Huddle">Team Huddle</option>
+            </select>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-group"><label>Start Time</label><input type="time" id="meeting-start" /></div>
+          <div class="field-group"><label>End Time</label><input type="time" id="meeting-end" /></div>
+        </div>
+        <button class="btn btn-primary" onclick="submitMeeting()" id="btn-submit-meeting" style="width:100%;">Submit for Approval</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);"><div class="card-title" style="margin-bottom:0;">My Submissions</div></div>
+        <div id="meetings-loading" class="loading-block">Loading…</div>
+        <div id="meetings-empty" class="empty-block" style="display:none;"><p>No meeting submissions yet.</p></div>
+        <div class="table-wrap" id="meetings-table-wrap" style="display:none;">
+          <table><thead><tr><th>Date</th><th>Type</th><th>Start</th><th>End</th><th>Duration</th><th>Status</th></tr></thead>
+          <tbody id="meetings-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SUBMIT TIMESHEET ══ -->
+    <div class="page" id="page-submit">
+      <div class="page-header">
+        <div><h2>Submit Timesheet</h2><p>Choose the dates you're claiming, check the days, then submit for payroll.</p></div>
+      </div>
+      <div id="alert-submit" class="alert"></div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:14px;">Dates you're submitting</div>
+        <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field-group" style="flex:1;min-width:160px;margin-bottom:0;"><label>From</label><input type="date" id="submit-from" onchange="renderSubmitPage()" /></div>
+          <div class="field-group" style="flex:1;min-width:160px;margin-bottom:0;"><label>To</label><input type="date" id="submit-to" onchange="renderSubmitPage()" /></div>
+        </div>
+        <div id="submit-range-hint" style="font-size:13px;color:var(--muted);margin-top:12px;"></div>
+      </div>
+
+      <div id="submit-loading" class="loading-block">Loading…</div>
+      <div id="submit-content" style="display:none;"></div>
+
+      <div class="card" style="padding:0;overflow:hidden;margin-top:18px;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);"><div class="card-title" style="margin-bottom:0;">My submitted timesheets</div></div>
+        <div id="my-ts-wrap"></div>
+      </div>
+    </div>
+
+    <!-- ══ LEAVE ══ -->
+    <div class="page" id="page-leave">
+      <div class="page-header"><div><h2>Leave</h2></div></div>
+      <div id="alert-leave" class="alert"></div>
+      <div class="card">
+        <div class="card-title"><div class="card-icon"></div> New Leave Request</div>
+        <div class="two-col">
+          <div class="field-group"><label>From</label><input type="date" id="leave-date" onchange="updateLeavePreview()" /></div>
+          <div class="field-group"><label>To (leave blank for one day)</label><input type="date" id="leave-date-to" onchange="updateLeavePreview()" /></div>
+        </div>
+        <div id="leave-preview" style="display:none;font-size:12px;color:var(--muted);background:#F6F9FA;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:-4px 0 14px;line-height:1.5;"></div>
+        <div class="two-col">
+          <div class="field-group"><label>Leave Type</label>
+            <select id="leave-type">
+              <option value="">— Select —</option>
+              <option value="Full Day">Full Day</option>
+              <option value="Half Day AM">Half Day (AM)</option>
+              <option value="Half Day PM">Half Day (PM)</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+        <div class="field-group"><label>Reason</label><textarea id="leave-reason" rows="3" placeholder="Briefly describe your reason…"></textarea></div>
+        <button class="btn btn-primary btn-full" onclick="submitLeave()" id="btn-submit-leave">Submit Leave Request</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title" style="margin-bottom:0;">My Leave Requests</div>
+          <button class="btn-refresh" onclick="loadLeave()">Refresh</button>
+        </div>
+        <div id="leave-loading" class="loading-block">Loading…</div>
+        <div id="leave-empty" class="empty-block" style="display:none;"><p>No leave requests yet.</p></div>
+        <div class="table-wrap" id="leave-table-wrap" style="display:none;">
+          <table><thead><tr><th>Date</th><th>Type</th><th>Reason</th><th>Status</th><th>Pay Type</th><th>Paid Hrs</th><th>Admin Note</th></tr></thead>
+          <tbody id="leave-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAY ══ -->
+    <div class="page" id="page-pay">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div><h2>My Pay</h2><p>All your approved timesheets and what was paid.</p></div>
+        <button class="btn-refresh" onclick="loadPay()">Refresh</button>
+      </div>
+      <div id="alert-pay" class="alert"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="pay-loading" class="loading-block">Loading your pay…</div>
+        <div id="pay-empty" class="empty-block" style="display:none;"><p>No approved timesheets yet.</p></div>
+        <div class="table-wrap" id="pay-table-wrap" style="display:none;"></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══ FIELD: SUBURB ON CLOCK IN ══ -->
+<div class="modal-overlay" id="suburb-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Where are you working from?</div>
+    <div class="modal-sub" style="margin-bottom:18px;">Enter your suburb before clocking in.</div>
+    <div class="field-group"><label>Suburb</label><input type="text" id="suburb-input" placeholder="e.g. Parramatta" onkeydown="if(event.key==='Enter')submitSuburbAndClockIn()" /></div>
+    <div id="suburb-error" class="alert alert-error">Please enter your suburb.</div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="submitSuburbAndClockIn()">Clock In Now</button>
+      <button class="btn btn-secondary" onclick="closeModal('suburb-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MANUAL TIMESHEET ══ -->
+<div class="modal-overlay" id="mts-modal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-title">Manual Timesheet</div>
+    <div class="modal-sub" style="margin-bottom:18px;">For a day you worked but couldn't clock in. Your manager reviews it.</div>
+    <div id="mts-error" class="alert alert-error"></div>
+    <div class="field-group"><label>Date</label><input type="date" id="mts-date" /></div>
+    <div class="two-col">
+      <div class="field-group"><label>Start Time</label><input type="time" id="mts-start" /></div>
+      <div class="field-group"><label>End Time</label><input type="time" id="mts-end" /></div>
+    </div>
+    <div class="field-group field-only"><label>Suburb</label><input type="text" id="mts-suburb" placeholder="e.g. Parramatta" /></div>
+    <div class="field-group"><label>Reason</label><textarea id="mts-reason" rows="3" placeholder="e.g. Forgot to clock in"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="mts-submit-btn" onclick="mtsSubmit()">Submit for Review</button>
+      <button class="btn btn-secondary" onclick="closeModal('mts-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REQUEST REVIEW (a day, or a whole submitted timesheet) ══ -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-title">Request Review</div>
+    <div class="modal-sub" id="review-sub" style="margin-bottom:18px;">—</div>
+    <div id="alert-review" class="alert"></div>
+    <div class="field-group"><label>What needs correcting?</label><textarea id="review-text" rows="4" placeholder="Describe the issue…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-review" onclick="submitReview()">Submit Request</button>
+      <button class="btn btn-secondary" onclick="closeModal('review-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// J2 Hub — merged employee portal (SDR + Field SDR). Backend: hub-Code.gs
+const API = "https://script.google.com/macros/s/AKfycbz5-_MCJwy-sTr6JvDO6PX6DWu5zkU1v4JdV1iecDw-a8yUouKP_dJoFPoUNHXrOXYjLQ/exec";
+let currentUser = null;
+let openClockInEntry = null;
+let allEntries = [], allTimesheets = [], allMeetings = [], allLeaves = [];
+const AUTO_CLOCK_OUT_HOURS = 10;
+let lunchStartTime = null;
+let lunchTaken = false;
+
+// ── API ──
+// SDRs only receive their own entries, meetings, timesheets and leave
+function apiDecorate(p){
+  if(["getEntries","getMeetings","getTimesheets","getLeaves"].includes(p.action)){
+    const n=p.forUser||(currentUser&&currentUser.name);
+    if(n) p.forUser=String(n).toLowerCase().trim();      // same key whether typed "jesse" or "Jesse", so prefetched data is reused
+  }
+  return p;
+}
+// ── API (fast + resilient) ─────────────────────────────────────────────────
+// • Reads that happen at the same moment are sent together in one request
+// • Reads are remembered for 15s and identical requests share one call
+// • Failed reads and safe saves are retried automatically
+const READ_ACTIONS=new Set(["getUsers","getEntries","getMeetings","getTimesheets","getLeaves","getCoverage","getAnnouncements","version"]);
+const _apiMem={}, _apiInflight={}; let _apiQueue=[], _apiTimer=null, _apiBatchOK=true;
+const _apiWait=ms=>new Promise(r=>setTimeout(r,ms));
+async function apiRaw(payload){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),30000);
+  try{
+    const res=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload),signal:ctl.signal});
+    const txt=await res.text();
+    try{ return JSON.parse(txt); }catch(e){ throw new Error("Google's server didn't respond properly. Please try again."); }
+  }catch(e){
+    if(e.name==="AbortError") throw new Error("The server took too long to respond. Please try again.");
+    throw e;
+  }finally{ clearTimeout(t); }
+}
+function _apiFlush(){
+  const q=_apiQueue; _apiQueue=[]; _apiTimer=null;
+  const single=it=>apiRaw(it.p).then(it.ok,it.fail);
+  if(q.length===1||!_apiBatchOK){ q.forEach(single); return; }
+  apiRaw({action:"batch",requests:q.map(it=>it.p)}).then(r=>{
+    if(r&&Array.isArray(r.results)&&r.results.length===q.length) q.forEach((it,i)=>it.ok(r.results[i]));
+    else { _apiBatchOK=false; q.forEach(single); }            // older script without batch support
+  },err=>q.forEach(it=>it.fail(err)));
+}
+function _apiQueued(p){ return new Promise((ok,fail)=>{ _apiQueue.push({p,ok,fail}); if(!_apiTimer) _apiTimer=setTimeout(_apiFlush,20); }); }
+async function _apiRetry(fn,tries){
+  let err; for(let i=0;i<tries;i++){ try{ return await fn(); }catch(e){ err=e; if(i<tries-1) await _apiWait(700*(i+1)); } } throw err;
+}
+async function apiPost(payload){
+  payload=apiDecorate({...payload});
+  if(!READ_ACTIONS.has(payload.action)){
+    // saves: retry only the ones that are safe to repeat (never "add…", which would duplicate)
+    const safe=!/^add/.test(payload.action)&&!(payload.action==="saveAnnouncement"&&!payload.id);
+    Object.keys(_apiMem).forEach(k=>delete _apiMem[k]);
+    const r=await _apiRetry(()=>apiRaw(payload),safe?3:1);
+    Object.keys(_apiMem).forEach(k=>delete _apiMem[k]);
+    return r;
+  }
+  const key=JSON.stringify(payload);
+  const hit=_apiMem[key]; if(hit&&Date.now()-hit.t<15000) return JSON.parse(hit.v);
+  if(!_apiInflight[key]){
+    _apiInflight[key]=_apiRetry(async()=>{ const r=await _apiQueued(payload); if(r&&r.error&&/busy|try again/i.test(r.error)) throw new Error(r.error); return r; },3)
+      .then(r=>{ if(r&&!r.error) _apiMem[key]={t:Date.now(),v:JSON.stringify(r)}; return JSON.stringify(r); })
+      .finally(()=>{ delete _apiInflight[key]; });
+  }
+  return JSON.parse(await _apiInflight[key]);
+}
+
+
+// ── AUTH ──
+
+// ── AUTH ──
+const SESSION_KEY = "j2hub_hub_user";      // separate from the old SDR/Field portals so their sessions aren't touched
+const SESSION_TTL = 8 * 60 * 60 * 1000;    // 8 hours
+
+function normTeam(t){ return String(t||"").toLowerCase().trim()==="field" ? "Field" : "SDR"; }
+function isField(){ return !!currentUser && currentUser.team==="Field"; }
+function userFrom(u){ return { id:u.id, name:u.name, email:u.email||"", rate:parseFloat(u.rate)||0, team:normTeam(u.team) }; }
+
+function enterApp(){
+  document.getElementById("login-screen").style.display="none";
+  document.getElementById("app").style.display="block";
+  document.getElementById("user-chip").textContent=currentUser.name;
+  document.getElementById("role-chip").textContent=isField()?"Field SDR":"SDR";
+  document.body.classList.toggle("team-field", isField());
+  document.body.classList.toggle("team-sdr", !isField());
+  initApp();
+}
+
+async function doLogin() {
+  const name = document.getElementById("login-name").value.trim();
+  const pass = document.getElementById("login-password").value.trim();
+  const err = document.getElementById("login-error");
+  const loading = document.getElementById("login-loading");
+  const btn = document.getElementById("btn-login");
+  if (!name || !pass) { err.style.display="block"; err.textContent="Please enter your name and password."; return; }
+  err.style.display="none"; loading.style.display="block"; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Signing in…';
+  const reset=()=>{ loading.style.display="none"; btn.disabled=false; btn.innerHTML="Sign In to J2 Hub"; };
+  try {
+    // Start loading this person's data while the password is checked, so the portal opens faster
+    ["getEntries","getMeetings","getTimesheets","getLeaves"].forEach(a=>apiPost({action:a,forUser:name}).catch(()=>{}));
+    apiPost({action:"getAnnouncements"}).catch(()=>{});
+    const lr = await apiPost({ action: "login", name, password: pass });
+    if (lr && lr.error && lr.success===undefined) throw new Error(lr.error);
+    if (!lr || !lr.success) { err.style.display="block"; err.textContent=(lr&&lr.error)||"Incorrect name or password."; reset(); return; }
+    currentUser = userFrom(lr.user);
+    localStorage.setItem(SESSION_KEY, JSON.stringify({...currentUser, loginTime: Date.now()}));
+    reset();
+    enterApp();
+  } catch(e) {
+    err.style.display="block"; err.textContent="Could not connect to J2 Hub: "+e.message;
+    reset();
+  }
+}
+document.addEventListener("keydown", e => { if(e.key==="Enter" && document.getElementById("login-screen").style.display!=="none") doLogin(); });
+function doLogout() {
+  currentUser=null; openClockInEntry=null; allEntries=[]; allTimesheets=[]; allMeetings=[]; allLeaves=[];
+  localStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
+// ── ANNOUNCEMENTS ──────────────────────────────────────────────────────────
+const ANN_STYLE={
+  Info:     {icon:"📢", accent:"#2563eb", soft:"rgba(37,99,235,0.12)",  border:"#EFF8FF", label:"Announcement"},
+  Important:{icon:"⭐", accent:"#d97706", soft:"rgba(217,119,6,0.14)",  border:"#fde68a", label:"Important"},
+  Urgent:   {icon:"🚨", accent:"#dc2626", soft:"rgba(220,38,38,0.12)",  border:"#fecaca", label:"Urgent"}
+};
+const escHtml=t=>String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let annQueue=[];
+function annCardHtml(a,popup){
+  const st=ANN_STYLE[a.type]||ANN_STYLE.Info;
+  const when=a.createdAt?new Date(a.createdAt).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}):"";
+  return `<div class="ann-card${popup?" ann-popup-card":""}" style="--ann-accent:${st.accent};--ann-soft:${st.soft};--ann-border:${st.border};">
+    <div class="ann-head"><div class="ann-icon">${st.icon}</div>
+      <div><div class="ann-label">${st.label}</div><div class="ann-title">${escHtml(a.title)}</div></div>
+      <div class="ann-date">${when}</div></div>
+    <div class="ann-body"${popup?"":' style="margin-bottom:0;"'}>${escHtml(a.message)}</div>
+    ${popup?`<div class="ann-foot"><span id="ann-popup-count" style="margin-right:auto;font-size:12px;color:var(--muted);align-self:center;"></span><button class="ann-btn" id="ann-popup-btn" onclick="confirmAnnouncement('${escHtml(a.id)}',this)">✓ Got it, confirm</button></div>`:""}
+  </div>`;
+}
+async function loadAnnouncements(){
+  const area=document.getElementById("announcements-area"); if(!area||!currentUser) return;
+  try{
+    const r=await apiPost({action:"getAnnouncements"});
+    const me=currentUser.name.toLowerCase();
+    const acked=new Set((r.acks||[]).filter(a=>(a.sdrName||"").toLowerCase()===me).map(a=>String(a.id)));
+    const live=(r.announcements||[]).filter(a=>a.active).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    area.innerHTML=live.map(a=>annCardHtml(a,false)).join("");
+    annQueue=live.filter(a=>!acked.has(String(a.id))).reverse();
+    showNextAnnouncement();
+  }catch(e){ area.innerHTML=""; }
+}
+function showNextAnnouncement(){
+  let ov=document.getElementById("ann-popup");
+  if(!annQueue.length){ if(ov) ov.remove(); return; }
+  if(!ov){
+    ov=document.createElement("div"); ov.id="ann-popup";
+    ov.style.cssText="position:fixed;inset:0;background:rgba(12,10,34,0.55);backdrop-filter:blur(3px);z-index:4000;display:flex;align-items:center;justify-content:center;padding:20px;";
+    document.body.appendChild(ov);
+  }
+  const total=annQueue.length;
+  ov.innerHTML=`<div style="width:100%;max-width:620px;max-height:90vh;overflow-y:auto;">${annCardHtml(annQueue[0],true)}</div>`;
+  const c=document.getElementById("ann-popup-count"); if(c) c.textContent=total>1?`${total} announcements to read`:"";
+}
+async function confirmAnnouncement(id,btn){
+  btn.disabled=true; btn.textContent="Confirming…";
+  try{
+    const r=await apiPost({action:"ackAnnouncement",id,sdrName:currentUser.name});
+    if(!r||!r.success) throw new Error("not saved");
+    annQueue=annQueue.filter(a=>String(a.id)!==String(id));
+    showNextAnnouncement();
+  }catch(e){ btn.disabled=false; btn.textContent="✓ Got it, confirm"; alert("Couldn't confirm right now. Please try again."); }
+}
+
+// ── INIT ──
+let _clockTimers=false;
+function initApp() {
+  loadAnnouncements();
+  startLiveClock();
+  setTodayDate();
+  checkOpenClockIn();
+  loadNotifications();
+}
+
+function startLiveClock() {
+  if(_clockTimers) return; _clockTimers=true;
+  function update() {
+    const t = new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false});
+    ["live-time","live-time-2"].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=t; });
+  }
+  update(); setInterval(update, 1000);
+  setInterval(checkAutoClockOut, 60000);
+  setInterval(setTodayDate, 60000);     // keep "today" right if the tab stays open past a Sydney midnight
+}
+function currentSydneyDate() { return new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Sydney"}); }
+function sydneyTimeHM() { return new Date().toLocaleTimeString("en-AU",{timeZone:"Australia/Sydney",hour12:false,hour:"2-digit",minute:"2-digit"}); }
+function setTodayDate() {
+  const el=document.getElementById("clock-in-date"); if(el) el.value=currentSydneyDate();
+  const m=document.getElementById("meeting-date"); if(m && !m.value) m.value=currentSydneyDate();
+}
+
+// ── LUNCH (SDR team) ──
+function startLunch() {
+  lunchStartTime = sydneyTimeHM();
+  document.getElementById("lunch-not-started").style.display = "none";
+  document.getElementById("lunch-in-progress").style.display = "block";
+  document.getElementById("lunch-start-display").textContent = lunchStartTime;
+}
+async function endLunch() {
+  const t = sydneyTimeHM();
+  const btn=document.getElementById("btn-end-lunch"); btn.disabled=true;
+  try {
+    if (openClockInEntry) await apiPost({action:"updateEntry", id:openClockInEntry.itemId, lunchStart:lunchStartTime, lunchEnd:t, lunchTaken:"TRUE"});
+    lunchTaken = true;
+    document.getElementById("lunch-in-progress").style.display = "none";
+    document.getElementById("lunch-done").style.display = "block";
+    document.getElementById("lunch-time-display").textContent = lunchStartTime + " – " + t;
+  } catch(e) { showAlert(document.getElementById("alert-clock"),"error","Your lunch break couldn't be saved: "+e.message+" Please press End Lunch Break again."); }
+  btn.disabled=false;
+}
+function resetLunchUI() {
+  lunchStartTime = null; lunchTaken = false;
+  document.getElementById("lunch-not-started").style.display = "block";
+  document.getElementById("lunch-in-progress").style.display = "none";
+  document.getElementById("lunch-done").style.display = "none";
+}
+
+// ── AUTO CLOCK OUT after 10 hours ──
+async function checkAutoClockOut() {
+  if (!openClockInEntry || !openClockInEntry.clockInTime) return;
+  const [h,m] = openClockInEntry.clockInTime.split(":").map(Number);
+  const aest = new Date(new Date().toLocaleString("en-US",{timeZone:"Australia/Sydney"}));
+  const elapsed = (aest.getHours()*60+aest.getMinutes()) - (h*60+m);
+  if (elapsed >= AUTO_CLOCK_OUT_HOURS * 60) {
+    try {
+      const t = String(aest.getHours()).padStart(2,"0")+":"+String(aest.getMinutes()).padStart(2,"0");
+      await apiPost({action:"updateEntry", id:openClockInEntry.itemId, clockOut:t, billableHrs:0, deduction:8, dailyPay:0});
+      openClockInEntry = null;
+      if(!isField()) resetLunchUI();
+      showClockedOut();
+      showAlert(document.getElementById("alert-clock"), "warning", "⚠️ You were automatically clocked out after 10 hours. Billable hours for that day were set to 0. Ask your manager if this needs correcting.");
+    } catch(e) {}
+  }
+}
+
+// ── TIMESHEET PERIODS (date ranges instead of cutoffs) ──────────────────────
+function tsRange(t){
+  if(t.periodStart && t.periodEnd) return [t.periodStart, t.periodEnd];
+  const m=String(t.cutoffLabel||"").match(/(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/);
+  return m?[m[1],m[2]]:null;
+}
+// Same rule as the script: a rejected/returned timesheet frees its days up again
+function tsFreesDays(t){ return /reject|declin|return|cancel|withdraw/i.test(String(t.status||"")); }
+function tsIsApproved(t){ return /approv|process|paid/i.test(String(t.status||"")); }
+function tsLabel(t){ const r=tsRange(t); return r?fmtRange(r[0],r[1]):(t.cutoffLabel||t.cutoffKey||"—"); }
+function fmtRange(a,b){ return a===b?formatDate(a):formatDate(a)+" – "+formatDate(b); }
+// "approved" · "submitted" (waiting for approval) · "" (not submitted yet)
+function dateTsState(date){
+  let state="";
+  (allTimesheets||[]).forEach(t=>{
+    if(tsFreesDays(t)) return;
+    const r=tsRange(t); if(!r||date<r[0]||date>r[1]) return;
+    if(tsIsApproved(t)) state="approved"; else if(state!=="approved") state="submitted";
+  });
+  return state;
+}
+function tsForDate(date){
+  return (allTimesheets||[]).find(t=>{ if(tsFreesDays(t)) return false; const r=tsRange(t); return r&&date>=r[0]&&date<=r[1]; })||null;
+}
+function stateBadge(s){
+  if(s==="approved") return '<span class="badge badge-green">Approved</span>';
+  if(s==="submitted") return '<span class="badge badge-blue">Submitted</span>';
+  return '<span class="badge badge-gray">Not submitted</span>';
+}
+function addDays(d,n){ const x=new Date(d+"T12:00:00"); x.setDate(x.getDate()+n); return x.toLocaleDateString("en-CA"); }
+function datesBetween(a,b){ const out=[]; for(let d=a; d<=b; d=addDays(d,1)) out.push(d); return out; }
+function isWeekday(d){ const w=new Date(d+"T12:00:00").getDay(); return w!==0&&w!==6; }
+
+// ── PAY MATHS ──────────────────────────────────────────────────────────────
+const isTrue = v => v===true || /^(true|1)$/i.test(String(v||""));
+const hasHrs = e => e.billableHrs!=null && e.billableHrs!=="";
+function suburbOf(e){ const m=(e.adminNotes||"").match(/\[Suburb:([^\]]+)\]/); return m?m[1]:""; }
+function meetingHrsOn(date){
+  return (allMeetings||[]).filter(m=>m.status==="Approved"&&m.date===date).reduce((s,m)=>s+calcMins(m.startTime,m.endTime)/60,0);
+}
+function paidLeaveHrsOn(date){
+  return (allLeaves||[]).filter(l=>l.leaveDate===date&&l.status==="Approved"&&l.payType==="Paid").reduce((s,l)=>s+getLeaveHours(l.leaveType),0);
+}
+// SDR: monthly rate spread over a standard year of weekdays (52 weeks × 5 days)
+function sdrDailyRate(){ return (currentUser.rate||0)*12/260; }
+
+// One row per worked/leave date with everything the tables and totals need
+function dayRows(dates){
+  const byDate={};
+  dates.forEach(d=>byDate[d]={date:d,entries:[],leaves:[]});
+  (allEntries||[]).forEach(e=>{ if(byDate[e.workDate]) byDate[e.workDate].entries.push(e); });
+  (allLeaves||[]).forEach(l=>{ if(byDate[l.leaveDate] && l.status!=="Rejected") byDate[l.leaveDate].leaves.push(l); });
+  return Object.values(byDate).filter(r=>r.entries.length||r.leaves.length).map(r=>{
+    const worked=r.entries.filter(hasHrs);
+    const phone=worked.reduce((s,e)=>s+parseFloat(e.billableHrs||0),0);
+    const lunch=worked.some(e=>isTrue(e.lunchTaken))?1:0;
+    const meet=meetingHrsOn(r.date);
+    const leave=paidLeaveHrsOn(r.date);
+    const pendingHrs=r.entries.some(e=>e.clockIn&&!hasHrs(e));
+    const openShift=r.entries.some(e=>e.clockIn&&!e.clockOut);
+    let hrs, pay, ded=0;
+    if(isField()){
+      hrs=phone+meet;
+      pay=hrs*(currentUser.rate||0);
+    } else {
+      const raw=(worked.length?phone+lunch+meet:0)+leave;
+      hrs=Math.min(8,raw);
+      pay=hrs/8*sdrDailyRate();
+      ded=worked.length?Math.max(0,8-hrs):0;
+    }
+    return {...r, phone, lunch, meet, leave, hrs, pay, ded, pendingHrs, openShift};
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+// ── NOTIFICATIONS ──
+async function loadNotifications() {
+  const notifs = [];
+  try {
+    await refreshMyData();
+    allTimesheets.forEach(t => {
+      const period = tsLabel(t);
+      if (t.status==="Approved") notifs.push({type:"success", text:"✓ Timesheet approved: "+period+(t.payDate?" · pay date "+formatDate(t.payDate):"")});
+      if (t.status==="Rejected") notifs.push({type:"red", text:"✗ Timesheet rejected: "+period+(t.adminNote?" · "+t.adminNote:"")+". Those days can be submitted again."});
+      if (t.status==="Disputed") notifs.push({type:"warning", text:"⚠️ Timesheet under review: "+period});
+      if (t.status==="Processed") notifs.push({type:"info", text:"💳 Timesheet processed (paid): "+period});
+    });
+    allEntries.forEach(e => {
+      const d = e.workDate ? formatDate(e.workDate) : "entry";
+      if (e.disputeStatus==="Resolved") notifs.push({type:"success", text:"✓ Review request resolved ("+d+")"+(cleanAdminNote(e.adminNotes)?" · "+cleanAdminNote(e.adminNotes):"")});
+      if (e.disputeStatus==="Rejected") notifs.push({type:"red", text:"✗ Review request rejected ("+d+")"+(cleanAdminNote(e.adminNotes)?" · "+cleanAdminNote(e.adminNotes):"")});
+      if (e.disputeStatus==="Under Review") notifs.push({type:"warning", text:"⏳ Review request waiting for your manager ("+d+")"});
+      if (e.disputeStatus==="Manual Request") notifs.push({type:"info", text:"📋 Manual timesheet waiting for approval ("+d+")"});
+      if (/deleted/i.test(e.adminNotes||"")) notifs.push({type:"red", text:"🗑️ Entry deleted by admin ("+d+")"});
+    });
+    allLeaves.forEach(l => {
+      const d = l.leaveDate ? formatDate(l.leaveDate) : "leave";
+      if (l.status==="Pending") notifs.push({type:"info", text:"📨 Leave request pending: "+d+" ("+(l.leaveType||"")+")"});
+      if (l.status==="Approved") notifs.push({type:"success", text:"✓ Leave approved"+(l.payType?" ("+l.payType+")":"")+": "+d});
+      if (l.status==="Rejected") notifs.push({type:"red", text:"✗ Leave rejected: "+d+(l.adminNote?" · "+l.adminNote:"")});
+    });
+    allMeetings.forEach(m => {
+      const label = (m.meetingType||"Meeting")+" on "+formatDate(m.date);
+      if (m.status==="Pending") notifs.push({type:"info", text:"📨 Meeting request pending: "+label});
+      if (m.status==="Approved") notifs.push({type:"success", text:"✓ Meeting approved: "+label});
+      if (m.status==="Rejected") notifs.push({type:"red", text:"✗ Meeting rejected: "+label});
+    });
+  } catch(e) { console.warn("loadNotifications error:", e); }
+  renderNotifications(notifs);
+}
+function toggleNotifPanel() {
+  const panel = document.getElementById("inline-notif-wrap"); if (!panel) return;
+  panel.style.display = panel.style.display === "flex" ? "none" : "flex";
+}
+function clearAllNotifs() {
+  document.getElementById("inline-notif-inner").innerHTML = "";
+  document.getElementById("notif-footer").style.display = "none";
+  _updateNotifBadge(0);
+  document.getElementById("inline-notif-wrap").style.display = "none";
+}
+function _updateNotifBadge(count) {
+  ["notif-count-badge","notif-count-badge-panel"].forEach(id=>{ const b=document.getElementById(id); if(b){ b.textContent=count>0?count:""; b.style.display=count>0?"inline-block":"none"; } });
+}
+const NOTIF_EMPTY='<div style="text-align:center;color:#99AABB;font-size:13px;padding:24px 12px;">All clear. No new notifications.</div>';
+function renderNotifications(notifs) {
+  const inner = document.getElementById("inline-notif-inner"), footer = document.getElementById("notif-footer");
+  if(!inner) return;
+  if (!notifs.length) { inner.innerHTML = NOTIF_EMPTY; footer.style.display = "none"; _updateNotifBadge(0); return; }
+  const order = {red:0, warning:1, info:2, success:3};
+  notifs.sort((a,b)=>(order[a.type]??4)-(order[b.type]??4));
+  _updateNotifBadge(notifs.length);
+  footer.style.display = "block";
+  const colors = {
+    success:'background:#E6F5EE;border-left:3px solid #11734A;color:#11734A;',
+    red:'background:#FDEDEC;border-left:3px solid #B42318;color:#B42318;',
+    warning:'background:#FFF3D6;border-left:3px solid #8A5A00;color:#8A5A00;',
+    info:'background:#EFF8FF;border-left:3px solid #3122D3;color:#08033C;'
+  };
+  inner.innerHTML = notifs.map((n,i) => `<div class="notif-item" style="${colors[n.type]||colors.info}border-radius:10px;padding:10px 12px;font-size:12px;font-weight:600;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-shrink:0;" id="notif-${i}">
+      <span style="line-height:1.4;flex:1;">${escHtml(n.text)}</span>
+      <button onclick="dismissNotif(${i})" aria-label="Dismiss" style="background:none;border:none;cursor:pointer;opacity:0.45;font-size:13px;padding:0;line-height:1;flex-shrink:0;margin-top:1px;color:inherit;">✕</button>
+    </div>`).join("");
+}
+function dismissNotif(i) {
+  const el = document.getElementById("notif-"+i); if(el) el.remove();
+  const remaining = document.querySelectorAll(".notif-item").length;
+  _updateNotifBadge(remaining);
+  if (!remaining) { document.getElementById("inline-notif-inner").innerHTML = NOTIF_EMPTY; document.getElementById("notif-footer").style.display = "none"; }
+}
+
+// ── DATA ──
+async function fetchEntries() {
+  const r=await apiPost({action:"getEntries"});
+  if(r&&r.error) throw new Error(r.error);
+  return (r.entries||[]).filter(e=>e.sdrName&&e.sdrName.toLowerCase()===currentUser.name.toLowerCase());
+}
+const mine = list => (list||[]).filter(x=>(x.sdrName||"").toLowerCase().trim()===currentUser.name.toLowerCase().trim());
+async function refreshMyData(){
+  const [er,tr,mr,lr]=await Promise.all(["getEntries","getTimesheets","getMeetings","getLeaves"].map(a=>apiPost({action:a})));
+  const bad=[er,tr,mr,lr].find(r=>r&&r.error); if(bad) throw new Error(bad.error);
+  allEntries=mine(er.entries); allTimesheets=mine(tr.timesheets); allMeetings=mine(mr.meetings); allLeaves=mine(lr.leaves);
+}
+
+// ── CLOCK IN/OUT ──
+async function checkOpenClockIn() {
+  try {
+    const today=currentSydneyDate();
+    const entries=await fetchEntries();
+    const open=entries.find(e=>e.workDate===today&&e.clockIn&&!e.clockOut);
+    if (open) { openClockInEntry={itemId:open.id, clockInTime:open.clockIn, adminNotes:open.adminNotes||""}; showClockedIn(open.clockIn, open); }
+    else showClockedOut();
+  } catch(e) { showClockedOut(); }
+}
+function showClockedIn(t, entry) {
+  document.getElementById("clock-status-block").className="clock-status clocked-in";
+  document.getElementById("clock-status-text").textContent="Clocked in at "+t+". Remember to clock out before finishing.";
+  document.getElementById("clock-card-in").style.display="none";
+  document.getElementById("clock-card-out").style.display="flex";
+  document.getElementById("clock-in-time-display").textContent=t;
+  const sub=document.getElementById("clock-in-suburb-display"), s=suburbOf(entry||openClockInEntry||{});
+  sub.style.display=s?"block":"none"; sub.textContent=s?"Working from "+s:"";
+  if(entry && isTrue(entry.lunchTaken)) {
+    lunchTaken=true;
+    document.getElementById("lunch-not-started").style.display="none";
+    document.getElementById("lunch-in-progress").style.display="none";
+    document.getElementById("lunch-done").style.display="block";
+    document.getElementById("lunch-time-display").textContent=(entry.lunchStart||"")+" – "+(entry.lunchEnd||"");
+  }
+}
+function showClockedOut() {
+  document.getElementById("clock-status-block").className="clock-status clocked-out";
+  document.getElementById("clock-status-text").textContent="You are currently clocked out.";
+  document.getElementById("clock-card-in").style.display="flex";
+  document.getElementById("clock-card-out").style.display="none";
+}
+
+function submitClockIn() {
+  if(isField()){                          // Field asks where they're working first
+    document.getElementById("suburb-input").value="";
+    hideAlert(document.getElementById("suburb-error"));
+    openModal("suburb-modal"); setTimeout(()=>document.getElementById("suburb-input").focus(),50);
+    return;
+  }
+  doClockIn("");
+}
+function submitSuburbAndClockIn(){
+  const suburb=document.getElementById("suburb-input").value.trim();
+  if(!suburb){ document.getElementById("suburb-error").className="alert show alert-error"; return; }
+  closeModal("suburb-modal");
+  doClockIn(suburb);
+}
+async function doClockIn(suburb) {
+  const btn=document.getElementById("btn-clock-in"), al=document.getElementById("alert-clock");
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    const t=sydneyTimeHM(), date=currentSydneyDate();
+    document.getElementById("clock-in-date").value=date;
+    await refreshMyData();
+    if(allEntries.find(e=>e.workDate===date&&e.clockIn&&!e.clockOut)) throw new Error("You already have an open clock-in for today.");
+    const st=dateTsState(date);
+    if(st) throw new Error("Today is already in a "+(st==="approved"?"approved":"submitted")+" timesheet, so you can't clock in for it. Ask your manager to return that timesheet first.");
+    const notes=suburb?"[Suburb:"+suburb+"]":"";
+    const r=await apiPost({action:"addEntry",sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:t,adminNotes:notes});
+    if(!r||!r.success) throw new Error((r&&r.error)||"The script didn't confirm the save.");
+    openClockInEntry={itemId:r.id,clockInTime:t,adminNotes:notes};
+    showClockedIn(t);
+    showAlert(al,"success","✓ Clocked in at "+t+(suburb?" from "+suburb:"")+".");
+  } catch(e){ showAlert(al,"error","Could not clock in. "+e.message); }
+  btn.innerHTML="Clock In Now"; btn.disabled=false;
+}
+
+function submitClockOut() {
+  if(!openClockInEntry) return;
+  doClockOut();
+}
+async function doClockOut() {
+  const btn=document.getElementById("btn-clock-out"), al=document.getElementById("alert-clock");
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    const t=sydneyTimeHM();
+    const r=await apiPost({action:"updateEntry",id:openClockInEntry.itemId,clockOut:t});
+    if(r&&r.error) throw new Error(r.error);
+    openClockInEntry=null;
+    if(!isField()) resetLunchUI();
+    showClockedOut();
+    showAlert(al,"success","✓ Clocked out at "+t+". Great work!");
+  } catch(e){ showAlert(al,"error","Could not clock out. "+e.message); }
+  btn.innerHTML="Clock Out Now"; btn.disabled=false;
+}
+
+// ── QUICK MEETING ──
+async function submitQuickMeeting() {
+  const start=document.getElementById("qm-start").value, end=document.getElementById("qm-end").value, type=document.getElementById("qm-type").value;
+  const al=document.getElementById("alert-clock"), btn=document.getElementById("btn-qm");
+  if(!start||!end||!type){showAlert(al,"error","Please fill in all meeting fields.");return;}
+  if(start>=end){showAlert(al,"error","End time must be after start time.");return;}
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    const r=await apiPost({action:"addMeeting",sdrName:currentUser.name,email:currentUser.email,date:currentSydneyDate(),startTime:start,endTime:end,meetingType:type,status:"Pending"});
+    if(!r||!r.success) throw new Error((r&&r.error)||"The script didn't confirm the save.");
+    showAlert(al,"success","✓ Meeting submitted for approval.");
+    ["qm-start","qm-end","qm-type"].forEach(id=>document.getElementById(id).value="");
+  } catch(e){showAlert(al,"error","Could not submit. "+e.message);}
+  btn.innerHTML="Submit for Approval"; btn.disabled=false;
+}
+
+// ── MY TIMESHEET ──
+let tsView="current";
+function setTsView(v){ tsView=v; renderTimesheet(); }
+async function loadTimesheet() {
+  document.getElementById("timesheet-loading").style.display="block";
+  document.getElementById("timesheet-loading").textContent="Loading your records…";
+  document.getElementById("timesheet-content").innerHTML="";
+  try { await refreshMyData(); renderTimesheet(); }
+  catch(e){ document.getElementById("timesheet-loading").textContent="Could not load your records: "+e.message; }
+}
+function renderTimesheet(){
+  document.getElementById("timesheet-loading").style.display="none";
+  const content=document.getElementById("timesheet-content");
+  const dates=[...new Set([...allEntries.map(e=>e.workDate),...allLeaves.map(l=>l.leaveDate)].filter(Boolean))];
+  const rows=dayRows(dates);
+  const counts={current:rows.filter(r=>dateTsState(r.date)!=="approved").length, approved:rows.filter(r=>dateTsState(r.date)==="approved").length};
+  const view=rows.filter(r=>tsView==="approved"?dateTsState(r.date)==="approved":dateTsState(r.date)!=="approved");
+  const b=(v,label)=>`<button class="cutoff-btn${tsView===v?" active":""}" onclick="setTsView('${v}')">${label}</button>`;
+  const toggle=`<div class="cutoff-selector">${b("current",`Current (${counts.current})`)}${b("approved",`Approved (${counts.approved})`)}</div>`;
+  if(!view.length){
+    content.innerHTML=toggle+`<div class="card empty-block"><p>${tsView==="approved"?"No approved timesheets yet.":(rows.length?"Everything has been approved. Nothing waiting.":"No entries yet. Clock in to get started.")}</p></div>`;
+    return;
+  }
+  const field=isField();
+  const tot=view.reduce((t,r)=>({hrs:t.hrs+r.hrs,pay:t.pay+r.pay,ded:t.ded+r.ded}),{hrs:0,pay:0,ded:0});
+  const stat=(l,v,cls)=>`<div class="mini-card"><div class="lbl">${l}</div><div class="val${cls?" "+cls:""}">${v}</div></div>`;
+  const summary=`<div class="mini-grid">${stat("Days",view.length)}${stat(field?"Hours":"Billable hrs",tot.hrs.toFixed(2),"gold")}`
+    +(field?stat("Base pay",money(tot.pay),"green")
+           :stat("Deduction",tot.ded?"-"+tot.ded.toFixed(2)+"h":"0h",tot.ded?"red":""))+`</div>`;
+
+  const head=field
+    ?"<th>Date</th><th>Status</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>Admin Note</th><th>Suburb</th><th>Meeting</th><th>Time Off</th><th>Base Pay</th><th>Request Review</th>"
+    :"<th>Date</th><th>Status</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>Admin Note</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Request Review</th>";
+  const body=view.map(r=>{
+    const st=dateTsState(r.date);
+    const leaveTag=r.leaves.length?r.leaves.map(l=>`<span class="hub-tag">${escHtml(l.leaveType||"Leave")} · ${l.status==="Approved"?(l.payType||"Approved"):"Pending"}</span>`).join(" "):"—";
+    if(!r.entries.length){                // leave-only day
+      const desc=`On leave: ${leaveTag}${r.leaves[0]&&r.leaves[0].adminNote?` <span style="color:var(--muted);font-size:12px;">· ${escHtml(r.leaves[0].adminNote)}</span>`:""}`;
+      const lead=`<tr class="hub-leave-row"><td><strong>${formatDate(r.date)}</strong></td><td>${stateBadge(st)}</td>`;
+      if(field) return lead+`<td colspan="8" style="white-space:normal;">${desc}</td><td>—</td></tr>`;
+      return lead+`<td colspan="7" style="white-space:normal;">${desc}</td><td>${r.hrs?`<strong>${r.hrs.toFixed(2)} hrs</strong>`:"0 hrs"}</td><td>—</td><td>—</td></tr>`;
+    }
+    return r.entries.map((e,i)=>{
+      const first=i===0;
+      const hrs=hasHrs(e)?parseFloat(e.billableHrs).toFixed(2)+" hrs":(e.clockIn&&!e.clockOut?'<span style="color:var(--muted)">Clocked in</span>':'<span style="color:var(--muted)">Pending</span>');
+      const canReview=st!=="approved"&&!["Under Review","Resolved","Manual Request"].includes(e.disputeStatus);
+      const review=getDisputeBadge(e.disputeStatus)+(canReview?` <button class="btn btn-secondary btn-sm" onclick="openReviewModal('entry','${escHtml(e.id)}','${e.workDate}')">Request Review</button>`:"");
+      const meet=first&&r.meet>0?`<strong style="color:var(--volt);">${r.meet.toFixed(1)}h</strong>`:"—";
+      const timeOff=first?leaveTag:"—";
+      const common=`<td><strong>${formatDate(e.workDate)}</strong></td><td>${first?stateBadge(st):""}</td><td>${escHtml(e.clockIn||"—")}</td><td>${escHtml(e.clockOut||"—")}</td><td>${hrs}</td><td style="white-space:normal;min-width:140px;">${noteCellHtml(e.adminNotes)}</td>`;
+      if(field){
+        const base=hasHrs(e)?parseFloat(e.billableHrs)+(first?r.meet:0):null;
+        return `<tr>${common}<td>${suburbOf(e)?escHtml(suburbOf(e)):"—"}</td><td>${meet}</td><td>${timeOff}</td>
+          <td>${base!==null?`<strong style="color:var(--ok);">${money(base*(currentUser.rate||0))}</strong><div style="font-size:11px;color:var(--muted);">${base.toFixed(2)}h × ${money(currentUser.rate||0)}</div>`:'<span style="color:var(--muted)">Pending</span>'}</td>
+          <td style="white-space:nowrap;">${review}</td></tr>`;
+      }
+      const lunch=isTrue(e.lunchTaken)?`<span style="font-size:12px;color:var(--ok);font-weight:600;">${e.lunchStart||e.lunchEnd?escHtml(e.lunchStart||"")+"–"+escHtml(e.lunchEnd||""):"1 hr"}</span>`:'<span style="color:var(--muted);font-size:12px;">None</span>';
+      const billable=first?(r.entries.some(hasHrs)||r.leave?`<strong>${r.hrs.toFixed(2)} hrs</strong>`:'<span style="color:var(--muted)">Pending</span>'):"";
+      const ded=first&&r.ded>0?`<span style="color:var(--red)">-${r.ded.toFixed(2)}h</span>`:"—";
+      return `<tr>${common}<td>${lunch}</td><td>${meet}</td><td>${timeOff}</td><td>${billable}</td><td>${ded}</td><td style="white-space:nowrap;">${review}</td></tr>`;
+    }).join("");
+  }).join("");
+  const note=field?`<p class="hub-foot">Base pay is your hours (including approved meetings) × ${money(currentUser.rate||0)}/hr.</p>`
+                  :`<p class="hub-foot">Billable hours include 1 hr paid lunch (when punched), approved meetings and paid leave, up to 8 hrs a day.</p>`;
+  content.innerHTML=toggle+summary+`<div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table style="min-width:${field?1250:1150}px;"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`+note;
+}
+
+// ── REQUEST REVIEW (one day, or a whole submitted timesheet) ──
+let reviewTarget=null;
+function openReviewModal(kind,id,label){
+  reviewTarget={kind,id};
+  document.getElementById("review-sub").textContent=kind==="entry"?"Day: "+formatDate(label):"Timesheet: "+label;
+  document.getElementById("review-text").value="";
+  hideAlert(document.getElementById("alert-review"));
+  openModal("review-modal");
+}
+async function submitReview(){
+  const notes=document.getElementById("review-text").value.trim(), al=document.getElementById("alert-review"), btn=document.getElementById("btn-review");
+  if(!notes){showAlert(al,"error","Please describe what needs correcting.");return;}
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const r=reviewTarget.kind==="entry"
+      ?await apiPost({action:"updateEntry",id:reviewTarget.id,disputeStatus:"Under Review",disputeNotes:notes})
+      :await apiPost({action:"updateTimesheet",id:reviewTarget.id,status:"Disputed",disputeNotes:notes});
+    if(r&&r.error) throw new Error(r.error);
+    closeModal("review-modal");
+    if(reviewTarget.kind==="entry"){ showAlert(document.getElementById("alert-timesheet"),"success","✓ Review request sent. Your manager will look at it."); loadTimesheet(); }
+    else { showAlert(document.getElementById("alert-submit"),"success","✓ Review request sent for that timesheet."); loadSubmitPage(); }
+  }catch(e){ showAlert(al,"error","Could not send: "+e.message); }
+  btn.disabled=false; btn.textContent="Submit Request";
+}
+
+// ── MANUAL TIMESHEET ──
+function mtsOpen(){
+  document.getElementById("mts-date").value=currentSydneyDate();
+  document.getElementById("mts-date").max=currentSydneyDate();
+  ["mts-start","mts-end","mts-suburb","mts-reason"].forEach(id=>document.getElementById(id).value="");
+  hideAlert(document.getElementById("mts-error"));
+  const b=document.getElementById("mts-submit-btn"); b.disabled=false; b.textContent="Submit for Review";
+  openModal("mts-modal");
+}
+async function mtsSubmit(){
+  const v=id=>document.getElementById(id).value.trim();
+  const date=v("mts-date"), start=v("mts-start"), end=v("mts-end"), reason=v("mts-reason"), suburb=v("mts-suburb");
+  const errEl=document.getElementById("mts-error"), btn=document.getElementById("mts-submit-btn");
+  const fail=m=>showAlert(errEl,"error",m);
+  if(!date||!start||!end||!reason) return fail("Please fill in the date, start time, end time and reason.");
+  if(isField()&&!suburb) return fail("Please enter the suburb you worked in.");
+  if(end<=start) return fail("End time must be after start time.");
+  if(date>currentSydneyDate()) return fail("You can't enter a timesheet for a future date.");
+  try{ await refreshMyData(); }catch(e){ return fail("Couldn't check your timesheets: "+e.message); }
+  const st=dateTsState(date);
+  if(st) return fail(formatDate(date)+" is already in a "+st+" timesheet, so it can't be changed here. Use Request Review on that day instead.");
+  btn.disabled=true; btn.textContent="Submitting…";
+  try{
+    const notes=(isField()?"[Suburb:"+suburb+"] ":"")+"[Manual Entry] "+reason;
+    const r=await apiPost({action:"addEntry",sdrName:currentUser.name,email:currentUser.email,workDate:date,clockIn:start,clockOut:end,adminNotes:notes,disputeStatus:"Manual Request"});
+    if(!r||!r.success||!r.id) throw new Error((r&&r.error)||"The script didn't confirm the save.");
+    try{ await apiPost({action:"updateEntry",id:r.id,disputeNotes:reason}); }catch(_){}   // reason is already in the note
+    closeModal("mts-modal");
+    showAlert(document.getElementById("alert-timesheet"),"success","✓ Manual timesheet sent for "+formatDate(date)+". Your manager will review it.");
+    tsView="current"; loadTimesheet();
+  }catch(e){ fail("Could not submit: "+e.message); btn.disabled=false; btn.textContent="Submit for Review"; }
+}
+
+// ── MEETINGS ──
+async function loadMeetings() {
+  document.getElementById("meetings-loading").style.display="block";
+  document.getElementById("meetings-empty").style.display="none";
+  document.getElementById("meetings-table-wrap").style.display="none";
+  try {
+    const r=await apiPost({action:"getMeetings"});
+    if(r&&r.error) throw new Error(r.error);
+    allMeetings=mine(r.meetings);
+    renderMeetings();
+  } catch(e){ document.getElementById("meetings-loading").textContent="Could not load meetings: "+e.message; }
+}
+function renderMeetings(){
+  document.getElementById("meetings-loading").style.display="none";
+  if(!allMeetings.length){document.getElementById("meetings-empty").style.display="block";return;}
+  document.getElementById("meetings-table-wrap").style.display="block";
+  document.getElementById("meetings-body").innerHTML=allMeetings.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(m=>{
+    const hrs=calcMins(m.startTime,m.endTime)/60;
+    const note=m.status==="Approved"&&hrs>0?`<span style="font-size:12px;color:var(--ok);font-weight:600;margin-left:6px;">+${hrs.toFixed(2)}h added</span>`:"";
+    return `<tr><td>${formatDate(m.date)}</td><td><strong>${escHtml(m.meetingType||"—")}</strong></td><td>${escHtml(m.startTime||"—")}</td><td>${escHtml(m.endTime||"—")}</td><td>${calcDuration(m.startTime,m.endTime)}${note}</td><td>${getMeetingBadge(m.status)}</td></tr>`;
+  }).join("");
+}
+async function submitMeeting(){
+  const start=document.getElementById("meeting-start").value,end=document.getElementById("meeting-end").value;
+  const type=document.getElementById("meeting-type").value,date=document.getElementById("meeting-date").value;
+  const al=document.getElementById("alert-meetings"),btn=document.getElementById("btn-submit-meeting");
+  if(!date){showAlert(al,"error","Please choose the meeting date.");return;}
+  if(!start||!end){showAlert(al,"error","Please enter start and end time.");return;}
+  if(!type){showAlert(al,"error","Please select a meeting type.");return;}
+  if(start>=end){showAlert(al,"error","End time must be after start time.");return;}
+  try{ await refreshMyData(); }catch(e){ showAlert(al,"error","Couldn't check your timesheets: "+e.message); return; }
+  if(dateTsState(date)) {showAlert(al,"error",formatDate(date)+" is already in a submitted or approved timesheet, so a meeting can't be added to it.");return;}
+  btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  try {
+    const r=await apiPost({action:"addMeeting",sdrName:currentUser.name,email:currentUser.email,date,startTime:start,endTime:end,meetingType:type,status:"Pending"});
+    if(!r||!r.success) throw new Error((r&&r.error)||"The script didn't confirm the save.");
+    showAlert(al,"success","✓ Meeting submitted for admin approval.");
+    ["meeting-start","meeting-end","meeting-type"].forEach(id=>document.getElementById(id).value="");
+    loadMeetings();
+  } catch(e){showAlert(al,"error","Could not submit. "+e.message);}
+  btn.innerHTML="Submit for Approval"; btn.disabled=false;
+}
+function getMeetingBadge(s){
+  if(s==="Approved") return '<span class="badge badge-green">Approved</span>';
+  if(s==="Rejected") return '<span class="badge badge-red">Rejected</span>';
+  return '<span class="badge badge-amber">Pending</span>';
+}
+function calcMins(s,e){
+  if(!s||!e) return 0;
+  const [sh,sm]=String(s).split(":").map(Number),[eh,em]=String(e).split(":").map(Number);
+  return Math.max(0,(eh*60+em)-(sh*60+sm));
+}
+function calcDuration(s,e){
+  const mins=calcMins(s,e); if(mins<=0) return "—";
+  const h=Math.floor(mins/60),m=mins%60;
+  return h>0?h+"h "+m+"m":m+"m";
+}
+
+// ── SUBMIT TIMESHEET (date range, no cutoffs) ──────────────────────────────
+let _submitReady=null;   // the exact payload the Submit button will send
+async function loadSubmitPage(){
+  document.getElementById("submit-loading").style.display="block";
+  document.getElementById("submit-loading").textContent="Loading…";
+  document.getElementById("submit-content").style.display="none";
+  try{ await refreshMyData(); }
+  catch(e){ document.getElementById("submit-loading").textContent="Could not load your records: "+e.message; return; }
+  const today=currentSydneyDate(), from=document.getElementById("submit-from"), to=document.getElementById("submit-to");
+  from.max=today; to.max=today;
+  if(!from.value||!to.value){ const d=defaultSubmitRange(); from.value=d?d[0]:""; to.value=d?d[1]:""; }
+  renderSubmitPage();
+  renderMyTimesheets();
+}
+// Start the day after your last submitted period (or your first unsubmitted day), end today
+function defaultSubmitRange(){
+  const today=currentSydneyDate();
+  const ends=allTimesheets.filter(t=>!tsFreesDays(t)).map(tsRange).filter(Boolean).map(r=>r[1]).sort();
+  let from;
+  if(ends.length) from=addDays(ends[ends.length-1],1);
+  else {
+    const open=[...allEntries.map(e=>e.workDate),...allLeaves.filter(l=>l.status==="Approved").map(l=>l.leaveDate)].filter(d=>d&&!dateTsState(d)).sort();
+    from=open[0]||addDays(today,-13);
+  }
+  if(from>today) return null;                 // everything up to today is already submitted
+  return [from,today];
+}
+function setSubmitRange(a,b){ document.getElementById("submit-from").value=a; document.getElementById("submit-to").value=b; renderSubmitPage(); }
+
+function renderSubmitPage(){
+  document.getElementById("submit-loading").style.display="none";
+  const content=document.getElementById("submit-content"), hint=document.getElementById("submit-range-hint");
+  const from=document.getElementById("submit-from").value, to=document.getElementById("submit-to").value, today=currentSydneyDate();
+  _submitReady=null;
+  content.style.display="block";
+  const block=msg=>{ content.innerHTML=`<div class="hub-note hub-note-warn" style="margin-bottom:16px;">${msg}</div>`; };
+  hint.textContent="";
+  if(!from&&!to&&!defaultSubmitRange()){
+    const last=allTimesheets.filter(t=>!tsFreesDays(t)).map(tsRange).filter(Boolean).map(r=>r[1]).sort().pop();
+    content.innerHTML=`<div class="hub-note hub-note-ok" style="margin-bottom:16px;">You're all caught up: everything up to ${formatDate(last)} has been submitted.</div>`;
+    return;
+  }
+  if(!from||!to) return block("Choose both a From and a To date.");
+  if(from>to) return block("The From date is after the To date.");
+  if(to>today) return block("You can't submit dates after today ("+formatDate(today)+").");
+  const weekdays=datesBetween(from,to).filter(isWeekday).length;
+  hint.textContent=fmtRange(from,to)+" · "+weekdays+" weekday"+(weekdays===1?"":"s");
+
+  // Overlap with a timesheet you already have (the script blocks this too)
+  const clashes=allTimesheets.filter(t=>{ if(tsFreesDays(t)) return false; const r=tsRange(t); return r&&!(to<r[0]||from>r[1]); });
+  if(clashes.length){
+    const maxEnd=clashes.map(t=>tsRange(t)[1]).sort().pop(), minStart=clashes.map(t=>tsRange(t)[0]).sort()[0];
+    let fix="";
+    if(addDays(maxEnd,1)<=to) fix=`<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="setSubmitRange('${addDays(maxEnd,1)}','${to}')">Start from ${formatDate(addDays(maxEnd,1))} instead</button>`;
+    else if(addDays(minStart,-1)>=from) fix=`<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="setSubmitRange('${from}','${addDays(minStart,-1)}')">End on ${formatDate(addDays(minStart,-1))} instead</button>`;
+    return block(`These dates overlap a timesheet you've already submitted: <strong>${clashes.map(t=>escHtml(tsLabel(t))+" ("+escHtml(t.status||"Pending")+")").join(", ")}</strong>. Each day can only be claimed once, so choose dates outside it.<br>${fix}`);
+  }
+
+  const rows=dayRows(datesBetween(from,to));
+  if(!rows.length) return block("You have no clock-ins or approved leave between these dates, so there's nothing to submit.");
+  const field=isField();
+  const open=rows.filter(r=>r.openShift), pending=rows.filter(r=>r.pendingHrs&&!r.openShift), manual=rows.filter(r=>r.entries.some(e=>e.disputeStatus==="Manual Request"));
+  const tot=rows.reduce((t,r)=>({hrs:t.hrs+r.hrs,pay:t.pay+r.pay,ded:t.ded+r.ded}),{hrs:0,pay:0,ded:0});
+
+  let warn="";
+  if(open.length) warn+=`<div class="hub-note hub-note-bad" style="margin-bottom:10px;">You're still clocked in on ${open.map(r=>formatDate(r.date)).join(", ")}. Clock out (or end the date range the day before) before submitting.</div>`;
+  if(pending.length) warn+=`<div class="hub-note hub-note-warn" style="margin-bottom:10px;">${pending.length} day${pending.length===1?" is":"s are"} still waiting for your manager to confirm hours (${pending.map(r=>formatDate(r.date)).join(", ")}). They're included, and pay is confirmed on approval.</div>`;
+  if(manual.length) warn+=`<div class="hub-note hub-note-warn" style="margin-bottom:10px;">Manual timesheets still waiting for approval: ${manual.map(r=>formatDate(r.date)).join(", ")}.</div>`;
+
+  _submitReady=open.length?null:{
+    action:"addTimesheet", sdrName:currentUser.name, email:currentUser.email, team:currentUser.team,
+    periodStart:from, periodEnd:to, cutoffKey:from, cutoffLabel:from+" to "+to,
+    totalDays:rows.length, totalPay:tot.pay.toFixed(2), status:"Pending"
+  };
+  const stat=(l,v,cls)=>`<div class="mini-card"><div class="lbl">${l}</div><div class="val${cls?" "+cls:""}">${v}</div></div>`;
+  const summary=`<div class="mini-grid">${stat("Days",rows.length)}${stat(field?"Hours":"Billable hrs",tot.hrs.toFixed(2),"gold")}`
+    +(field?stat("Base pay",money(tot.pay),"green")
+           :stat("Deduction",tot.ded?"-"+tot.ded.toFixed(2)+"h":"0h",tot.ded?"red":"")+stat("Est. base pay",money(tot.pay),"green"))+`</div>`;
+  const head=field?"<th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>Meeting</th><th>Base Pay</th><th>Status</th>"
+                  :"<th>Date</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>Lunch</th><th>Meeting</th><th>Time Off</th><th>Billable</th><th>Deduction</th><th>Status</th>";
+  const body=rows.slice().reverse().map(r=>{
+    const ins=r.entries.map(e=>escHtml(e.clockIn||"—")).join("<br>")||"—", outs=r.entries.map(e=>escHtml(e.clockOut||"—")).join("<br>")||"—";
+    const work=r.entries.length?r.entries.map(e=>hasHrs(e)?parseFloat(e.billableHrs).toFixed(2)+" hrs":'<span style="color:var(--muted)">Pending</span>').join("<br>"):"—";
+    const status=r.openShift?'<span class="badge badge-red">Still clocked in</span>':r.pendingHrs?'<span class="badge badge-amber">Hours pending</span>':'<span class="badge badge-green">Complete</span>';
+    const leave=r.leaves.length?r.leaves.map(l=>`<span class="hub-tag">${escHtml(l.leaveType||"Leave")} · ${l.status==="Approved"?(l.payType||"Approved"):"Pending"}</span>`).join(" "):"—";
+    if(field) return `<tr><td><strong>${formatDate(r.date)}</strong></td><td>${ins}</td><td>${outs}</td><td>${work}</td><td>${r.meet>0?r.meet.toFixed(1)+"h":"—"}</td><td>${money(r.pay)}</td><td>${r.entries.length?status:leave}</td></tr>`;
+    return `<tr><td><strong>${formatDate(r.date)}</strong></td><td>${ins}</td><td>${outs}</td><td>${work}</td><td>${r.lunch?"1h":"—"}</td><td>${r.meet>0?r.meet.toFixed(1)+"h":"—"}</td><td>${leave}</td><td>${r.hrs?r.hrs.toFixed(2)+" hrs":"—"}</td><td>${r.ded?`<span style="color:var(--red)">-${r.ded.toFixed(2)}h</span>`:"—"}</td><td>${r.entries.length?status:'<span class="badge badge-gray">Leave</span>'}</td></tr>`;
+  }).join("");
+  const payNote=field
+    ?`Base pay is your hours (including approved meetings) × ${money(currentUser.rate||0)}/hr. Your manager adds any incentives or allowances when approving.`
+    :`Estimated from your monthly rate (${money(currentUser.rate||0)}) as a daily rate of ${money(sdrDailyRate())} per full 8-hour day. Your manager confirms the final amount when approving.`;
+  content.innerHTML=warn+`
+    <div class="card hub-submit-bar">
+      <div><div style="font-weight:600;">Ready to submit ${fmtRange(from,to)}?</div><div style="font-size:13px;color:var(--muted);margin-top:2px;">Once submitted, these dates are locked until your manager approves or returns them.</div></div>
+      <button class="btn btn-primary" id="btn-submit-ts" onclick="submitTimesheet()"${_submitReady?"":" disabled"}>Submit Timesheet</button>
+    </div>
+    ${summary}
+    <div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table style="min-width:900px;"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>
+    <p class="hub-foot">${payNote}</p>`;
+}
+
+async function submitTimesheet(){
+  if(!_submitReady) return;
+  const btn=document.getElementById("btn-submit-ts"), al=document.getElementById("alert-submit");
+  const payload=_submitReady;
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Submitting…';
+  try{
+    const r=await apiPost(payload);
+    if(!r||!r.success) throw new Error((r&&r.error)||"The script didn't confirm the save.");
+    showAlert(al,"success","✓ Timesheet for "+fmtRange(payload.periodStart,payload.periodEnd)+" submitted. Your manager will review it.");
+    document.getElementById("submit-from").value=""; document.getElementById("submit-to").value="";
+    loadSubmitPage();
+  }catch(e){
+    showAlert(al,"error","Could not submit: "+e.message);
+    btn.disabled=false; btn.textContent="Submit Timesheet";
+  }
+}
+
+function renderMyTimesheets(){
+  const wrap=document.getElementById("my-ts-wrap");
+  if(!allTimesheets.length){ wrap.innerHTML='<div class="empty-block"><p>You haven\'t submitted a timesheet yet.</p></div>'; return; }
+  const list=allTimesheets.slice().sort((a,b)=>String((tsRange(b)||[""])[0]).localeCompare(String((tsRange(a)||[""])[0])));
+  wrap.innerHTML=`<div class="table-wrap"><table style="min-width:760px;"><thead><tr><th>Dates</th><th>Days</th><th>Submitted pay</th><th>Status</th><th>Notes</th><th></th></tr></thead><tbody>${list.map(t=>{
+    const canReview=["Pending","Rejected"].includes(t.status);
+    const notes=[t.adminNote?"Manager: "+t.adminNote:"",t.disputeNotes?"Your review request: "+t.disputeNotes:""].filter(Boolean).map(escHtml).join("<br>")||"—";
+    return `<tr><td><strong>${escHtml(tsLabel(t))}</strong></td><td>${escHtml(t.totalDays||"—")}</td><td>${money(parseFloat(t.grandTotal||t.totalPay)||0)}</td>
+      <td>${getTsBadge(t.status)}</td><td style="white-space:normal;font-size:12px;max-width:260px;">${notes}</td>
+      <td style="white-space:nowrap;">${canReview?`<button class="btn btn-secondary btn-sm" onclick="openReviewModal('ts','${escHtml(t.id)}','${escHtml(tsLabel(t))}')">Request Review</button>`:""}</td></tr>`;
+  }).join("")}</tbody></table></div>
+  <p class="hub-foot" style="padding:0 18px 14px;">A rejected timesheet frees its dates, so you can submit them again.</p>`;
+}
+function getTsBadge(status) {
+  if(status==="Approved") return '<span class="badge badge-green">Approved</span>';
+  if(status==="Processed") return '<span class="badge badge-green">Paid</span>';
+  if(status==="Rejected") return '<span class="badge badge-red">Rejected</span>';
+  if(status==="Disputed") return '<span class="badge badge-amber">Review requested</span>';
+  if(status==="Pending") return '<span class="badge badge-blue">Pending</span>';
+  return `<span class="badge badge-gray">${escHtml(status||"—")}</span>`;
+}
+
+// ── LEAVE ──
+async function loadLeave(){
+  document.getElementById("leave-loading").style.display="block";
+  document.getElementById("leave-empty").style.display="none";
+  document.getElementById("leave-table-wrap").style.display="none";
+  try{
+    const r=await apiPost({action:"getLeaves"});
+    if(r&&r.error) throw new Error(r.error);
+    allLeaves=mine(r.leaves);
+    renderLeave();
+  }catch(e){document.getElementById("leave-loading").textContent="Could not load your leave: "+e.message;}
+}
+function renderLeave(){
+  document.getElementById("leave-loading").style.display="none";
+  if(!allLeaves.length){document.getElementById("leave-empty").style.display="block";return;}
+  document.getElementById("leave-table-wrap").style.display="block";
+  document.getElementById("leave-body").innerHTML=allLeaves.slice().sort((a,b)=>b.leaveDate.localeCompare(a.leaveDate)).map(l=>{
+    const hrs=getLeaveHours(l.leaveType);
+    const payBadge=l.status==="Approved"?(l.payType==="Paid"?'<span class="badge badge-green">Paid</span>':'<span class="badge badge-red">Unpaid</span>'):'<span class="badge badge-gray">Pending</span>';
+    const paidHrs=l.status==="Approved"?(l.payType==="Paid"?`<strong style="color:var(--ok);">${hrs}h</strong>`:'<span style="color:var(--muted);">0h</span>'):'<span style="color:var(--muted);">—</span>';
+    return `<tr><td><strong>${formatDate(l.leaveDate)}</strong></td><td>${escHtml(l.leaveType||"—")}</td><td style="font-size:12px;max-width:220px;white-space:normal;">${escHtml(l.reason||"—")}</td>
+      <td>${getLeaveBadge(l.status)}</td><td>${payBadge}</td><td style="text-align:center;">${paidHrs}</td><td style="font-size:12px;color:var(--muted);white-space:normal;">${escHtml(l.adminNote||"—")}</td></tr>`;
+  }).join("");
+}
+// Weekdays (Mon–Fri) between two dates, inclusive
+function leaveWorkdays(from,to){
+  if(!from) return [];
+  if(!to) to=from;
+  if(to<from) [from,to]=[to,from];
+  return datesBetween(from,to).filter(isWeekday);
+}
+function leaveAlreadyFiled(date){ return (allLeaves||[]).some(l=>l.leaveDate===date&&l.status!=="Rejected"); }
+function updateLeavePreview(){
+  const el=document.getElementById("leave-preview");
+  const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
+  const days=leaveWorkdays(from,to);
+  if(!from||(!to||to===from)&&days.length===1){el.style.display="none";return;}
+  el.style.display="block";
+  if(!days.length){el.innerHTML="⚠ That range only covers a weekend, so there are no leave days to request.";return;}
+  const dup=days.filter(leaveAlreadyFiled), fresh=days.filter(d=>!leaveAlreadyFiled(d));
+  const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"});
+  el.innerHTML=`This will request <strong>${fresh.length} leave day${fresh.length===1?"":"s"}</strong> (weekends skipped): ${fresh.map(fmt).join(", ")||"—"}`
+    +(dup.length?`<br><span style="color:#b45309;">Already requested, will be skipped: ${dup.map(fmt).join(", ")}</span>`:"");
+}
+// Google's servers sometimes reject quick back-to-back saves with an error page.
+// Retry a few times, and before each retry check whether the day actually saved (so we never duplicate it).
+async function addLeaveDayWithRetry(payload){
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  for(let attempt=1;attempt<=4;attempt++){
+    try{
+      const r=await apiPost(payload);
+      if(r&&r.error) throw new Error(r.error);
+      return;
+    }catch(e){
+      await wait(1500*attempt);
+      try{
+        const lr=await apiPost({action:"getLeaves"});
+        if((lr.leaves||[]).some(l=>l.sdrName===payload.sdrName&&l.leaveDate===payload.leaveDate&&l.status!=="Rejected")) return;
+      }catch(_){}
+    }
+  }
+  throw new Error("Google's server didn't respond for "+payload.leaveDate+" after several tries. Please submit again. Days already saved will be skipped.");
+}
+async function submitLeave(){
+  const from=document.getElementById("leave-date").value, to=document.getElementById("leave-date-to").value;
+  const type=document.getElementById("leave-type").value, reason=document.getElementById("leave-reason").value.trim();
+  const al=document.getElementById("alert-leave"), btn=document.getElementById("btn-submit-leave");
+  if(!from){showAlert(al,"error","Please select a leave date.");return;}
+  if(!type){showAlert(al,"error","Please select a leave type.");return;}
+  if(!reason){showAlert(al,"error","Please provide a reason.");return;}
+  try{ await refreshMyData(); }catch(e){ showAlert(al,"error","Couldn't check your existing leave and timesheets: "+e.message); return; }
+  const all=leaveWorkdays(from,to);
+  if(!all.length){showAlert(al,"error","That range only covers a weekend. Pick at least one weekday.");return;}
+  const locked=all.filter(d=>dateTsState(d));
+  if(locked.length){showAlert(al,"error","These days are already in a submitted or approved timesheet: "+locked.map(formatDate).join(", ")+". Leave can't be added to them.");return;}
+  const days=all.filter(d=>!leaveAlreadyFiled(d));
+  if(!days.length){showAlert(al,"error","You've already requested leave for "+(all.length===1?"that day.":"all of those days."));return;}
+  const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
+  const note=all.length>1?` [Part of leave ${fmt(all[0])} – ${fmt(all[all.length-1])}]`:"";
+  btn.disabled=true;
+  let done=0;
+  try{
+    for(const d of days){
+      btn.innerHTML=`<span class="spinner"></span> Submitting ${done+1} of ${days.length}…`;
+      await addLeaveDayWithRetry({action:"addLeave",sdrName:currentUser.name,email:currentUser.email,leaveDate:d,leaveType:type,reason:reason+note,status:"Pending"});
+      done++;
+      if(done<days.length) await new Promise(r=>setTimeout(r,700));
+    }
+    const skipped=all.length-days.length;
+    showAlert(al,"success",`✓ Leave request submitted for ${done} day${done===1?"":"s"}.`+(skipped?` ${skipped} day${skipped===1?" was":"s were"} already requested and skipped.`:""));
+    ["leave-date","leave-date-to","leave-type","leave-reason"].forEach(id=>document.getElementById(id).value="");
+    document.getElementById("leave-preview").style.display="none";
+    loadLeave();
+  }catch(e){
+    showAlert(al,"error",`Could not submit${done?` (${done} of ${days.length} days were saved)`:""}: `+e.message);
+    if(done) loadLeave();
+  }
+  btn.innerHTML="Submit Leave Request"; btn.disabled=false;
+}
+function getLeaveHours(t){ if(!t) return 0; if(t==="Full Day") return 8; if(String(t).startsWith("Half Day")) return 4; return 0; }
+function getLeaveBadge(s){
+  if(s==="Approved") return '<span class="badge badge-green">Approved</span>';
+  if(s==="Rejected") return '<span class="badge badge-red">Rejected</span>';
+  return '<span class="badge badge-amber">Pending</span>';
+}
+
+// ── MY PAY ──
+function parsePayItems(ts){
+  let items=[]; try{items=JSON.parse(ts.incentives||"[]");}catch(e){}
+  if(!Array.isArray(items)) items=[];
+  const g={"Incentive":[],"Allowance":[],"Additional Pay":[],"Deduction":[]};
+  let baseAdj=0;
+  items.forEach(i=>{
+    const type=i.type||"Incentive";
+    const total=parseFloat(i.total)||0;
+    if(type==="Base Pay Adjustment"){baseAdj+=total;return;}
+    (g[type]||g["Additional Pay"]).push({desc:i.desc||"",units:parseFloat(i.units)||0,total:Math.abs(total)});
+  });
+  return {g,baseAdj};
+}
+async function loadPay(){
+  const load=document.getElementById("pay-loading"),empty=document.getElementById("pay-empty"),wrap=document.getElementById("pay-table-wrap");
+  load.style.display="block";load.textContent="Loading your pay…";empty.style.display="none";wrap.style.display="none";
+  try{
+    const r=await apiPost({action:"getTimesheets"});
+    if(r&&r.error) throw new Error(r.error);
+    const paid=mine(r.timesheets).filter(t=>t.status==="Approved"||t.status==="Processed");
+    load.style.display="none";
+    if(!paid.length){empty.style.display="block";return;}
+    paid.sort((a,b)=>(b.payDate||"").localeCompare(a.payDate||"")||(b.id||"").localeCompare(a.id||""));
+    const descs=list=>list.length?`<div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4;">${list.map(i=>`${escHtml(i.desc)} (${money(i.total)})`).join("<br>")}</div>`:"";
+    const sum=list=>list.reduce((s,i)=>s+i.total,0);
+    let tot={base:0,qty:0,inc:0,alw:0,add:0,ded:0,pay:0};
+    const rows=paid.map(ts=>{
+      const {g,baseAdj}=parsePayItems(ts);
+      const base=(parseFloat(ts.totalPay)||0)+baseAdj;
+      const qty=g["Incentive"].reduce((s,i)=>s+i.units,0);
+      const inc=sum(g["Incentive"]),alw=sum(g["Allowance"]),add=sum(g["Additional Pay"]),ded=sum(g["Deduction"]);
+      const pay=parseFloat(ts.grandTotal)||(base+inc+alw+add-ded);
+      tot.base+=base;tot.qty+=qty;tot.inc+=inc;tot.alw+=alw;tot.add+=add;tot.ded+=ded;tot.pay+=pay;
+      return `<tr>
+        <td style="white-space:nowrap;"><strong>${ts.payDate?formatDate(ts.payDate):'<span style="color:var(--muted);font-weight:500;">Not set yet</span>'}</strong></td>
+        <td style="white-space:nowrap;font-size:12px;">${escHtml(tsLabel(ts))}</td>
+        <td>${money(base)}</td>
+        <td style="text-align:center;">${qty||"—"}</td>
+        <td>${inc?`<span style="color:var(--volt);font-weight:600;">${money(inc)}</span>`:"—"}${descs(g["Incentive"])}</td>
+        <td>${alw?`<span style="color:var(--volt);font-weight:600;">${money(alw)}</span>`:"—"}${descs(g["Allowance"])}</td>
+        <td>${add?`<span style="color:var(--volt);font-weight:600;">${money(add)}</span>`:"—"}${descs(g["Additional Pay"])}</td>
+        <td>${ded?`<span style="color:var(--red);font-weight:600;">−${money(ded)}</span>`:"—"}${descs(g["Deduction"])}</td>
+        <td><strong style="color:var(--ok);font-size:14px;">${money(pay)}</strong></td>
+      </tr>`;
+    }).join("");
+    wrap.innerHTML=`<table class="pay-table" style="min-width:1100px;">
+      <thead><tr><th>Pay Date</th><th>Dates</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive Amount</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="background:#F6F9FA;font-weight:700;">
+        <td colspan="2">Total (${paid.length} timesheet${paid.length===1?"":"s"})</td>
+        <td>${money(tot.base)}</td><td style="text-align:center;">${tot.qty||"—"}</td><td>${money(tot.inc)}</td><td>${money(tot.alw)}</td><td>${money(tot.add)}</td>
+        <td style="color:var(--red);">${tot.ded?"−"+money(tot.ded):"$0.00"}</td><td style="color:var(--ok);">${money(tot.pay)}</td>
+      </tr></tfoot></table>`;
+    wrap.style.display="block";
+  }catch(e){load.textContent="Could not load your pay: "+e.message;}
+}
+
+// ── TAB SWITCHING ──
+function switchTab(tab){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("page-"+tab).classList.add("active");
+  document.getElementById("tab-"+tab).classList.add("active");
+  if(tab==="time") loadAnnouncements();
+  if(tab==="timesheet") loadTimesheet();
+  if(tab==="meetings") loadMeetings();
+  if(tab==="submit") loadSubmitPage();
+  if(tab==="leave") loadLeave();
+  if(tab==="pay") loadPay();
+}
+
+// ── HELPERS ──
+function openModal(id){ document.getElementById(id).classList.add("open"); }
+function closeModal(id){ document.getElementById(id).classList.remove("open"); }
+document.addEventListener("click",e=>{ if(e.target.classList&&e.target.classList.contains("modal-overlay")) e.target.classList.remove("open"); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.querySelectorAll(".modal-overlay.open").forEach(m=>m.classList.remove("open")); });
+
+// Admin note without the system tags the portal stores alongside it ([Leads:N], [Suburb:X])
+function cleanAdminNote(n){
+  return String(n||"").replace(/\[(Leads|Suburb):[^\]]*\]/g,"").replace(/\s*\|\s*(\|\s*)+/g," | ").replace(/^\s*\|\s*|\s*\|\s*$/g,"").trim();
+}
+function noteCellHtml(n){
+  const t=cleanAdminNote(n);
+  if(!t) return '<span style="color:#aaa;">—</span>';
+  return '<div style="font-size:11px;line-height:1.4;white-space:normal;word-break:break-word;color:var(--text);">'+escHtml(t)+'</div>';
+}
+function getDisputeBadge(s){
+  if(!s||s==="None") return "";
+  if(s==="Under Review") return '<span class="badge badge-amber">Under Review</span>';
+  if(s==="Manual Request") return '<span class="badge badge-blue">Manual, awaiting approval</span>';
+  if(s==="Resolved") return '<span class="badge badge-green">Resolved</span>';
+  if(s==="Rejected") return '<span class="badge badge-red">Review rejected</span>';
+  return `<span class="badge badge-gray">${escHtml(s)}</span>`;
+}
+function money(v){ return "$"+(Number(v)||0).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function formatDate(d){if(!d)return"—";try{const x=new Date(d+"T12:00:00");if(isNaN(x))return d;return x.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});}catch(e){return d;}}
+function showAlert(el,type,msg){el.className="alert show alert-"+type;el.innerHTML=escHtml(msg);}
+function hideAlert(el){el.className="alert";el.textContent="";}
+
+// ── AUTO-LOGIN from saved session ──
+window.addEventListener("DOMContentLoaded", async function() {
+  document.addEventListener("click", function(e) {
+    const panel = document.getElementById("inline-notif-wrap"), btn = document.getElementById("notif-bell-btn");
+    if (!panel || panel.style.display !== "flex") return;
+    if (!panel.contains(e.target) && (!btn || !btn.contains(e.target))) panel.style.display = "none";
+  });
+  const saved = localStorage.getItem(SESSION_KEY);
+  if (!saved) return;
+  try {
+    const user = JSON.parse(saved);
+    if (!user.loginTime || Date.now() - user.loginTime >= SESSION_TTL) { localStorage.removeItem(SESSION_KEY); return; }
+    const r = await apiPost({ action: "getUsers", forUserId: user.id });
+    const valid = (r.users || []).find(u => String(u.id) === String(user.id) && u.name === user.name);
+    if (valid) { currentUser = userFrom(valid); enterApp(); return; }
+  } catch(e) {}
+  localStorage.removeItem(SESSION_KEY);
+});
+
+</script>
+<style id="v2-skin">
+:root{--v2-w:1040px}
+/* ═══════════ J2 Hub v2 skin — matches the VA portal ═══════════ */
+:root{
+  --ink:#0C0A22;--paper:#fff;--volt:#3122D3;--cta:#3A29FF;--lav:#857DE4;--mist:#F6F9FA;--halo:#EFF8FF;
+  --mortar:#5A5E78;--abyss:#08033C;--line:#E2E5EE;--line2:#EDEFF5;
+  --ok:#11734A;--okbg:#E6F5EE;--bad:#B42318;--badbg:#FDEDEC;--warn:#8A5A00;--warnbg:#FFF3D6;
+  --navy:#0C0A22;--navy2:#0C0A22;--navy3:#08033C;--navy4:#08033C;--accent:#3122D3;--accent2:#3A29FF;--accent3:#3122D3;
+  --white:#fff;--off-white:#F6F9FA;--soft:#EFF8FF;--muted:#5A5E78;--text:#0C0A22;--border:#E2E5EE;--border-light:#E2E5EE;
+  --card:#fff;--radius:12px;--shadow:none;--shadow-lg:0 24px 60px rgba(8,3,60,.28);
+  --green:#11734A;--red:#B42318;--amber:#8A5A00;--blue:#3122D3;--gold:#3122D3;--gold-dim:#8A5A00;
+}
+html body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif!important;background:var(--mist)!important;color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body button,body input,body select,body textarea{font-family:inherit}
+body :focus-visible{outline:2px solid var(--volt);outline-offset:2px}
+
+/* Mark */
+.v2-mark{width:40px;height:40px;border-radius:50%;border:1.5px solid currentColor;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;flex:none}
+.v2-mark b{font-size:13px;font-weight:600;letter-spacing:-.02em}
+.v2-mark i{font-style:normal;font-size:5.5px;font-weight:500;letter-spacing:.22em;margin-top:2px;padding-left:.22em}
+
+/* ── Login ── */
+body #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:flex-start;padding:32px;position:relative;
+  background:radial-gradient(circle at 108% 50%,rgba(58,41,255,.7),transparent 46%),linear-gradient(135deg,#0C0A22 0%,#08033C 48%,#3122D3 100%)!important}
+body #login-screen::before,body #login-screen::after{content:none!important;display:none!important}
+body #login-screen .v2-login{width:100%;max-width:440px;margin-left:max(0px,calc((100vw - 1120px)/2));color:#fff}
+body #login-screen .v2-login *{color:inherit}
+body #login-screen .v2-brand{display:flex;align-items:center;gap:12px;margin-bottom:56px;font-weight:500;color:#fff!important}
+body #login-screen h1{font-size:40px;line-height:1.1;font-weight:300;letter-spacing:-.025em;margin:0 0 12px;color:#fff!important}
+body #login-screen .v2-lede{color:rgba(255,255,255,.72)!important;margin:0 0 32px;font-size:15px}
+body #login-screen .field-group{margin-bottom:14px}
+body #login-screen .field-group label{color:rgba(255,255,255,.8)!important;font-size:13px!important;font-weight:400!important;text-transform:none!important;letter-spacing:0!important}
+body #login-screen .field-group input,body #login-screen input{background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:8px!important;padding:12px 14px!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:400!important;width:100%}
+body #login-screen .field-group input::placeholder,body #login-screen input::placeholder{color:rgba(255,255,255,.4)!important;-webkit-text-fill-color:rgba(255,255,255,.4)!important}
+body #login-screen .field-group input:focus,body #login-screen input:focus{border-color:#fff!important;background:rgba(255,255,255,.12)!important;outline:none}
+body #login-screen .btn.btn-primary,body #login-screen .btn-primary{background:#fff!important;color:var(--abyss)!important;-webkit-text-fill-color:var(--abyss)!important;border:0!important;box-shadow:none!important;padding:12px!important;font-weight:600!important;font-size:14px!important;margin-top:4px;letter-spacing:0!important}
+body #login-screen .btn-primary *{color:var(--abyss)!important}
+body #login-screen .btn-primary:hover{background:var(--halo)!important}
+body #login-screen .login-error{background:rgba(255,90,78,.16)!important;border:1px solid rgba(255,140,130,.4)!important;color:#FFD2CE!important;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+body #login-screen .v2-foot,body #login-screen #login-loading{color:rgba(255,255,255,.6)!important;font-size:13px}
+
+/* ── Header + tabs ── */
+body .topbar{background:var(--paper)!important;border-bottom:0!important;box-shadow:none!important;height:64px!important;padding:0 max(24px,calc((100vw - var(--v2-w))/2 + 24px))!important;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+body .topbar .v2-brand{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--ink)}
+body .topbar .v2-mark{width:34px;height:34px;color:var(--ink)}
+body .topbar .v2-mark b{font-size:11px}body .topbar .v2-mark i{font-size:4.6px}
+body .topbar .v2-role{font-size:12px;font-weight:500;color:var(--volt);background:var(--halo);border-radius:99px;padding:2px 10px}
+body .topbar-right{display:flex;align-items:center;gap:18px}
+body .user-chip{background:none!important;border:0!important;padding:0!important;color:var(--mortar)!important;font-weight:500!important;font-size:14px!important}
+body .logout-btn,body .v2-link{background:none!important;border:0!important;color:var(--mortar)!important;cursor:pointer;padding:6px 0!important;font-size:14px!important;font-weight:400!important;box-shadow:none!important}
+body .logout-btn:hover,body .v2-link:hover{color:var(--volt)!important}
+body .nav-tabs{background:var(--paper)!important;border-bottom:1px solid var(--line)!important;box-shadow:none!important;top:64px!important;padding:0 max(14px,calc((100vw - var(--v2-w))/2 + 14px))!important;gap:2px;display:flex;align-items:stretch}
+body .nav-tab{color:var(--mortar)!important;font-size:14px!important;font-weight:500!important;padding:12px 12px!important;border-bottom:2px solid transparent!important;letter-spacing:0!important;text-transform:none!important;background:none!important;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+body .nav-tab:hover{color:var(--ink)!important}
+body .nav-tab.active{color:var(--ink)!important;border-bottom-color:var(--volt)!important}
+body .badge-count{background:var(--volt)!important;color:#fff!important;border-radius:99px!important;font-size:11px!important;font-weight:600!important;padding:1px 7px!important;line-height:1.5!important;border:0!important;box-shadow:none!important}
+#notif-bell-btn.v2-bell{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--mortar);white-space:nowrap;position:relative}
+#notif-bell-btn.v2-bell:hover{border-color:var(--volt);color:var(--volt)}
+#notif-bell-btn.v2-bell svg{width:16px;height:16px}
+#notif-count-badge,#notif-count-badge-panel{background:var(--volt)!important;font-weight:600!important}
+#inline-notif-wrap{border:1px solid var(--line)!important;border-radius:14px!important;box-shadow:0 24px 60px rgba(8,3,60,.2)!important;top:122px!important}
+#inline-notif-wrap > div:first-child{background:var(--mist)!important;border-bottom:1px solid var(--line2)!important}
+
+/* ── Layout ── */
+body .main{max-width:var(--v2-w)!important;margin:0 auto;padding:28px 24px 64px!important}
+body .page-header{margin-bottom:20px!important;align-items:flex-end!important}
+body .page-header h2,body .page-header-left h2{font-size:30px!important;line-height:1.15;font-weight:300!important;letter-spacing:-.025em!important;background:none!important;-webkit-text-fill-color:var(--ink)!important;color:var(--ink)!important;margin-bottom:4px!important}
+body .page-header p,body .page-header-left p{font-size:14px!important;color:var(--mortar)!important}
+body h1,body h2,body h3{letter-spacing:-.02em}
+
+/* ── Cards ── */
+body .card{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:none!important;transform:none!important}
+body .card:hover{box-shadow:none!important;transform:none!important}
+body .card-title{font-size:15px!important;font-weight:600!important;text-transform:none!important;letter-spacing:0!important;color:var(--ink)!important}
+body .card-icon{background:var(--halo)!important;color:var(--volt)!important;border-radius:8px!important}
+body .stat-card,body .mini-card,body .pay-stat{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:none!important}
+body .stat-card .label,body .mini-card .lbl,body .pay-stat .label{font-size:12px!important;text-transform:none!important;letter-spacing:0!important;font-weight:500!important;color:var(--mortar)!important}
+body .stat-card .value,body .mini-card .val,body .pay-stat .value{font-weight:600!important;letter-spacing:-.01em;color:var(--ink)}
+body .stat-card .value.green,body .mini-card .val.green,body .pay-stat .value.green{color:var(--ok)!important}
+body .stat-card .value.red,body .mini-card .val.red,body .pay-stat .value.red{color:var(--bad)!important}
+body .stat-card .value.cyan,body .mini-card .val.gold,body .pay-stat .value.gold,body .stat-card .value.gold{color:var(--volt)!important}
+body .info-row{border-color:var(--line2)!important}
+body .info-row .key{color:var(--mortar)!important}
+body .section-divider,body .modal-divider{background:var(--line2)!important;border-color:var(--line2)!important}
+
+/* ── Buttons ── */
+body .btn{border-radius:8px!important;font-weight:500!important;font-size:14px;letter-spacing:0!important;text-transform:none!important;box-shadow:none!important;transform:none!important;border:1px solid var(--line)!important;background:var(--paper);color:var(--ink);padding:8px 14px}
+body .btn-sm{padding:6px 12px!important;font-size:13px!important}
+body .btn:hover{border-color:#C8CCDA!important}
+body .btn-primary{background:var(--volt)!important;border-color:var(--volt)!important;color:#fff!important}
+body .btn-primary:hover{background:var(--cta)!important;border-color:var(--cta)!important}
+body .btn-primary:disabled,body .btn[disabled]{opacity:.55!important}
+body .btn-secondary{background:var(--paper)!important;color:var(--ink)!important}
+body .btn-danger{background:var(--paper)!important;color:var(--bad)!important}
+body .btn-danger:hover{border-color:var(--bad)!important;background:var(--badbg)!important}
+body .btn-success{background:var(--ok)!important;border-color:var(--ok)!important;color:#fff!important}
+body .btn-success:hover{filter:brightness(1.08)}
+body .btn-refresh{background:var(--paper)!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:8px!important;padding:8px 14px!important;font-size:14px!important;font-weight:500!important;box-shadow:none!important;transform:none!important}
+body .btn-refresh:hover{border-color:#C8CCDA!important;color:var(--volt)!important}
+body .cutoff-btn{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:99px!important;padding:6px 14px!important;font-weight:500!important;font-size:13px!important;color:var(--mortar)!important;box-shadow:none!important}
+body .cutoff-btn.active{background:var(--ink)!important;border-color:var(--ink)!important;color:#fff!important}
+
+/* ── Forms ── */
+body .field-group label{font-size:13px!important;font-weight:500!important;text-transform:none!important;letter-spacing:0!important;color:var(--mortar)!important}
+body .field-group input,body .field-group select,body .field-group textarea{border:1px solid var(--line)!important;border-radius:8px!important;background:#fff!important;color:var(--ink)!important;font-weight:400!important;font-size:14px!important;box-shadow:none!important}
+body .field-group input:focus,body .field-group select:focus,body .field-group textarea:focus{border-color:var(--volt)!important;box-shadow:0 0 0 3px rgba(49,34,211,.12)!important;outline:none}
+body .filter-bar{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:none!important}
+
+/* ── Tables ── */
+body table{font-size:13px}
+body thead tr{background:none!important}
+body th{background:var(--paper)!important;color:var(--mortar)!important;font-size:12px!important;font-weight:500!important;text-transform:none!important;letter-spacing:0!important;border-bottom:1px solid var(--line)!important;padding:12px 12px!important}
+body td{border-bottom:1px solid var(--line2)!important;color:var(--ink)}
+body tr:hover td{background:#FAFBFF}
+body .table-wrap{border-radius:12px}
+
+/* ── Badges + alerts ── */
+body .badge{border-radius:99px!important;font-weight:600!important;font-size:12px!important;padding:2px 10px!important;border:0!important}
+body .badge-green{background:var(--okbg)!important;color:var(--ok)!important}
+body .badge-amber,body .badge-gold{background:var(--warnbg)!important;color:var(--warn)!important}
+body .badge-red{background:var(--badbg)!important;color:var(--bad)!important}
+body .badge-blue{background:var(--halo)!important;color:var(--volt)!important}
+body .badge-gray{background:#EEF0F4!important;color:var(--mortar)!important}
+body .badge-orange{background:#FFF0E5!important;color:#B4510F!important}
+body .alert{border-radius:8px!important;font-size:13px!important}
+body .alert-success{background:var(--okbg)!important;border:1px solid #BFE5D1!important;color:var(--ok)!important}
+body .alert-error{background:var(--badbg)!important;border:1px solid #F5C6C2!important;color:var(--bad)!important}
+body .alert-info{background:var(--halo)!important;border:1px solid #D7E6FB!important;color:var(--abyss)!important}
+body .alert-warning{background:var(--warnbg)!important;border:1px solid #F3DFA9!important;color:var(--warn)!important}
+
+/* ── Modals ── */
+body .modal-overlay{background:rgba(12,10,34,.5)!important}
+body .modal{border-radius:14px!important;box-shadow:0 24px 60px rgba(8,3,60,.28)!important;border:0!important}
+body .modal-title{font-size:22px!important;font-weight:300!important;letter-spacing:-.025em!important;color:var(--ink)!important}
+body .modal-sub{color:var(--mortar)!important}
+
+/* ── Period groups (payroll / timesheets) ── */
+body .cutoff-group-header{background:radial-gradient(circle at 105% 40%,rgba(58,41,255,.55),transparent 50%),linear-gradient(135deg,#0C0A22,#08033C 55%,#3122D3)!important;border-radius:12px 12px 0 0!important;box-shadow:none!important}
+body .cutoff-group-body{border:1px solid var(--line)!important;border-top:0!important;box-shadow:none!important;border-radius:0 0 12px 12px!important}
+
+/* ── States ── */
+body .card-icon:empty{display:none!important}
+body .empty-block .icon,body .empty-block .eicon{display:none!important}
+body .loading-block,body .empty-block{color:var(--mortar)!important}
+body .time-display{font-weight:300!important;letter-spacing:-.02em!important;color:var(--ink)}
+body .spinner{border-color:rgba(49,34,211,.2)!important;border-top-color:var(--volt)!important}
+body .clock-status{box-shadow:none!important;border:1px solid var(--line);border-radius:10px!important}
+body .clocked-in{background:var(--okbg)!important;border-color:#BFE5D1!important}
+body .clocked-out{background:var(--mist)!important;border-color:var(--line)!important}
+
+@media (max-width:720px){
+  body .topbar{padding:0 14px!important}
+  body .topbar .v2-brand span.v2-name{display:none}
+  body .nav-tabs{padding:0 6px!important;overflow-x:auto}
+  body .nav-tab{padding:12px 10px!important;font-size:13px!important}
+  body .main{padding:20px 14px 48px!important}
+  body .page-header h2,body .page-header-left h2{font-size:24px!important}
+  body #login-screen h1{font-size:32px}
+}
+@media (prefers-reduced-motion:reduce){body *{transition:none!important;animation:none!important}}
+
+</style>
+<style id="hub-extra">
+/* Team-specific bits: body gets team-sdr or team-field after sign-in */
+body.team-field .sdr-only{display:none!important}
+body:not(.team-field) .field-only{display:none!important}
+body .modal-overlay{z-index:3000!important}
+.hub-note{border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.5;border:1px solid var(--line)}
+.hub-note-ok{background:var(--okbg);border-color:#BFE5D1;color:var(--ok)}
+.hub-note-warn{background:var(--warnbg);border-color:#F3DFA9;color:var(--warn)}
+.hub-note-bad{background:var(--badbg);border-color:#F5C6C2;color:var(--bad)}
+.hub-tag{display:inline-block;font-size:11px;font-weight:600;background:var(--warnbg);color:var(--warn);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.hub-leave-row td{background:#FFFBF0}
+.hub-foot{font-size:12px;color:var(--muted);margin:10px 2px 0}
+.hub-submit-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+#btn-start-lunch,#btn-end-lunch{border-color:#F3DFA9!important;color:var(--warn)!important;background:var(--warnbg)!important}
+body td{vertical-align:top}
+#timesheet-content table,#submit-content table,#my-ts-wrap table{table-layout:auto}
+#timesheet-content td,#timesheet-content th,#submit-content td,#submit-content th,#my-ts-wrap td,#my-ts-wrap th{overflow:visible;text-overflow:clip}
+.mini-card{padding:12px 14px}
+.mini-card .val{font-size:20px}
+</style>
+</body>
+</html>
