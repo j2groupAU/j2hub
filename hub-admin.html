@@ -456,7 +456,7 @@ tr:hover td { background: #faf8f4; }
     <!-- ANNOUNCEMENTS -->
     <div class="page" id="page-announcements">
       <div class="page-header">
-        <div class="page-header-left"><h2>Announcements</h2><p>Post a message to everyone (SDR and Field). It pops up when they sign in until they confirm it.</p></div>
+        <div class="page-header-left"><h2>Announcements</h2><p>Post a message to one team or both. It pops up when they sign in until they confirm it.</p></div>
         <button class="btn-refresh" onclick="loadAdminAnnouncements()">Refresh</button>
       </div>
       <div id="alert-ann" class="alert"></div>
@@ -465,6 +465,13 @@ tr:hover td { background: #faf8f4; }
         <div class="two-col">
           <div class="field-group"><label>Title</label><input type="text" id="ann-title" maxlength="120" placeholder="e.g. Office closed on Friday" /></div>
           <div class="field-group"><label>Type</label><select id="ann-type"><option value="Info">Announcement</option><option value="Important">Important</option><option value="Urgent">Urgent</option></select></div>
+        </div>
+        <div class="field-group"><label>Send to</label>
+          <div id="ann-audience" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <label class="ann-aud"><input type="radio" name="ann-aud" value="All" checked> Both teams</label>
+            <label class="ann-aud"><input type="radio" name="ann-aud" value="SDR"> SDR only</label>
+            <label class="ann-aud"><input type="radio" name="ann-aud" value="Field"> Field only</label>
+          </div>
         </div>
         <div class="field-group"><label>Message</label><textarea id="ann-message" rows="5" placeholder="Write your message… Line breaks are kept."></textarea></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -2454,6 +2461,12 @@ async function saveClient(){
 // ── ANNOUNCEMENTS (admin) ──────────────────────────────────────────────────
 let annData={announcements:[],acks:[]}, annEditId=null;
 const ANN_BADGE={Info:'<span class="badge badge-blue">📢 Announcement</span>',Important:'<span class="badge badge-amber">⭐ Important</span>',Urgent:'<span class="badge badge-red">🚨 Urgent</span>'};
+// Which team an announcement is for is kept in the Type column after a "|": "Info|SDR", "Urgent|Field". No suffix = both teams.
+function splitAnnType(t){ const [type,aud]=String(t||"Info").split("|"); return {type:type||"Info", audience:aud==="SDR"||aud==="Field"?aud:"All"}; }
+function joinAnnType(type,aud){ return aud==="SDR"||aud==="Field"?type+"|"+aud:type; }
+function annAudBadge(a){ return a==="SDR"?'<span class="badge badge-blue">SDR only</span>':a==="Field"?'<span class="badge badge-orange">Field only</span>':'<span class="badge badge-gray">Both teams</span>'; }
+function annAud(){ const r=document.querySelector('input[name="ann-aud"]:checked'); return r?r.value:"All"; }
+function setAnnAud(v){ const r=document.querySelector('input[name="ann-aud"][value="'+v+'"]'); if(r) r.checked=true; }
 const escA=t=>String(t||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function loadAdminAnnouncements(){
   const el=document.getElementById("ann-list");
@@ -2465,22 +2478,23 @@ async function loadAdminAnnouncements(){
       let v="unknown"; try{ v=(await apiPost({action:"version"})).version||"an old version (no version number)"; }catch(_){}
       throw new Error(`The script this page connects to (address ending …${API.slice(-14,-5)}) reports ${v}. Announcements need 2026-10-01.`);
     }
-    annData=r; allUsers=u.users||allUsers; renderAdminAnnouncements();
+    annData={...r, announcements:(r.announcements||[]).map(a=>({...a,...splitAnnType(a.type)}))}; allUsers=u.users||allUsers; renderAdminAnnouncements();
   }catch(e){ el.innerHTML=""; showAlert(document.getElementById("alert-ann"),"error",e.message); }
 }
 function renderAdminAnnouncements(){
   const el=document.getElementById("ann-list");
-  const sdrs=(allUsers||[]).filter(u=>u.name).map(u=>u.name);
+  const everyone=(allUsers||[]).filter(u=>u.name);
   const list=[...annData.announcements].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
   if(!list.length){el.innerHTML='<div class="empty-block"><div class="icon">📢</div><p>No announcements yet.</p></div>';return;}
   el.innerHTML=list.map(a=>{
+    const sdrs=everyone.filter(u=>a.audience==="All"||teamOf(u.name)===a.audience).map(u=>u.name);
     const conf=annData.acks.filter(k=>String(k.id)===String(a.id));
     const confNames=new Set(conf.map(k=>(k.sdrName||"").toLowerCase()));
     const pending=sdrs.filter(n=>!confNames.has(n.toLowerCase()));
     const when=a.createdAt?new Date(a.createdAt).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"}):"";
     return `<div class="card" style="${a.active?"":"opacity:.65;"}">
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
-        <div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${ANN_BADGE[a.type]||ANN_BADGE.Info} ${a.active?'<span class="badge badge-green">Live</span>':'<span class="badge badge-gray">Hidden</span>'}</div>
+        <div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${ANN_BADGE[a.type]||ANN_BADGE.Info} ${annAudBadge(a.audience)} ${a.active?'<span class="badge badge-green">Live</span>':'<span class="badge badge-gray">Hidden</span>'}</div>
           <div style="font-size:16px;font-weight:600;color:var(--navy);margin-top:8px;">${escA(a.title)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">Posted ${when}</div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -2498,26 +2512,26 @@ function renderAdminAnnouncements(){
     </div>`;}).join("");
 }
 function resetAnnForm(){
-  annEditId=null; ["ann-title","ann-message"].forEach(i=>document.getElementById(i).value=""); document.getElementById("ann-type").value="Info";
+  annEditId=null; ["ann-title","ann-message"].forEach(i=>document.getElementById(i).value=""); document.getElementById("ann-type").value="Info"; setAnnAud("All");
   document.getElementById("ann-form-title").textContent="➕ New Announcement";
   document.getElementById("btn-ann-save").textContent="Post Announcement"; document.getElementById("btn-ann-cancel").style.display="none";
 }
 function editAnn(id){
   const a=annData.announcements.find(x=>String(x.id)===String(id)); if(!a) return;
-  annEditId=id; document.getElementById("ann-title").value=a.title; document.getElementById("ann-message").value=a.message; document.getElementById("ann-type").value=a.type||"Info";
+  annEditId=id; document.getElementById("ann-title").value=a.title; document.getElementById("ann-message").value=a.message; document.getElementById("ann-type").value=a.type||"Info"; setAnnAud(a.audience||"All");
   document.getElementById("ann-form-title").textContent="✏️ Edit Announcement";
   document.getElementById("btn-ann-save").textContent="Save Changes"; document.getElementById("btn-ann-cancel").style.display="inline-flex";
   window.scrollTo({top:0,behavior:"smooth"});
 }
 async function saveAdminAnnouncement(){
   const alertEl=document.getElementById("alert-ann"), btn=document.getElementById("btn-ann-save");
-  const title=document.getElementById("ann-title").value.trim(), message=document.getElementById("ann-message").value.trim(), type=document.getElementById("ann-type").value;
+  const title=document.getElementById("ann-title").value.trim(), message=document.getElementById("ann-message").value.trim(), type=joinAnnType(document.getElementById("ann-type").value, annAud()), aud=annAud();
   if(!title||!message){showAlert(alertEl,"error","Please add a title and a message.");return;}
   const label=btn.textContent; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Saving…';
   try{
     const r=await apiPost({action:"saveAnnouncement",id:annEditId||"",title,message,type});
     if(!r||!r.success) throw new Error(r&&r.error?r.error:"The script doesn't support announcements yet. Update it to the latest version.");
-    showAlert(alertEl,"success",annEditId?"✓ Announcement updated.":"✓ Announcement posted. Everyone sees it as a pop-up the next time they open the portal.");
+    showAlert(alertEl,"success",annEditId?"✓ Announcement updated.":`✓ Announcement posted to ${aud==="All"?"both teams":aud==="SDR"?"the SDR team":"the Field team"}. They'll see it as a pop-up the next time they open the portal.`);
     resetAnnForm(); loadAdminAnnouncements();
   }catch(e){showAlert(alertEl,"error","Could not save: "+e.message);}
   btn.disabled=false; if(btn.textContent.includes("Saving")) btn.textContent=label;
@@ -2835,6 +2849,9 @@ body .clocked-out{background:var(--mist)!important;border-color:var(--line)!impo
 #entries-table-wrap td,#entries-table-wrap th,#timesheets-content td,#timesheets-content th{overflow:visible;text-overflow:clip}
 #entries-table-wrap,#timesheets-content .table-wrap{overflow-x:auto}
 body td{vertical-align:top}
+.ann-aud{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:6px 14px;font-size:13px;cursor:pointer;background:#fff;color:var(--ink)!important;text-transform:none!important;letter-spacing:0!important;font-weight:500!important}
+.ann-aud:has(input:checked){border-color:var(--volt);background:var(--halo);color:var(--volt)!important}
+.ann-aud input{margin:0;width:auto}
 </style>
 </body>
 </html>

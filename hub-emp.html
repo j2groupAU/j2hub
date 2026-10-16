@@ -838,7 +838,10 @@ async function loadAnnouncements(){
     const r=await apiPost({action:"getAnnouncements"});
     const me=currentUser.name.toLowerCase();
     const acked=new Set((r.acks||[]).filter(a=>(a.sdrName||"").toLowerCase()===me).map(a=>String(a.id)));
-    const live=(r.announcements||[]).filter(a=>a.active).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    // Team is stored after a "|" in Type ("Important|Field"); no team = everyone
+    const live=(r.announcements||[]).map(a=>{ const [type,aud]=String(a.type||"Info").split("|"); return {...a,type:type||"Info",audience:aud||"All"}; })
+      .filter(a=>a.active&&(a.audience==="All"||a.audience===currentUser.team))
+      .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
     area.innerHTML=live.map(a=>annCardHtml(a,false)).join("");
     annQueue=live.filter(a=>!acked.has(String(a.id))).reverse();
     showNextAnnouncement();
