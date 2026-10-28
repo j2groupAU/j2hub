@@ -1542,6 +1542,89 @@ function buildTsCard(t) {
 }
 function useRecalc(tid,v){ const el=document.getElementById("base-pay-"+tid); if(el){ el.value=Number(v).toFixed(2); updateIncentiveTotal(tid); el.focus(); } }
 
+// ── PAYROLL: line items + PDF export ───────────────────────────────────────
+let payrollView=null;
+function togglePayItems(btn){
+  const open=btn.dataset.open!=="1";
+  document.querySelectorAll("#timesheets-content details.pr-items").forEach(d=>d.open=open);
+  btn.dataset.open=open?"1":""; btn.textContent=open?"Hide line items":"Show all line items";
+}
+function loadScriptOnce(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector(`script[src="${src}"]`)&&window.html2pdf) return res();
+    const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=()=>rej(new Error("Couldn't load the PDF tool"));
+    document.head.appendChild(s);
+  });
+}
+// The approved view as a self-contained, print-styled page (every line item written out)
+function payrollPdfHtml(){
+  const v=payrollView, f=x=>"$"+x.toFixed(2);
+  const e=x=>escA(x==null?"":x);
+  const teamTxt=v.tf?(v.tf==="Field"?"Field team":"SDR team"):"Both teams";
+  const pdTxt=!v.pd?"All pay dates":v.pd==="none"?"No pay date set":formatDate(v.pd);
+  const now=new Date().toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric",timeZone:"Australia/Sydney"});
+  const items=(list,neg,qty)=>{const s=list.reduce((a,i)=>a+i.total,0); if(!s) return '<span style="color:#9AA0B4;">—</span>';
+    return `<div style="font-weight:700;color:${neg?"#B42318":"#3122D3"};">${neg?"−":""}${f(s)}</div>`+(qty?`<div style="font-size:9px;color:#5A5E78;">${qty} qty</div>`:"")
+      +list.map(i=>`<div style="font-size:9px;color:#5A5E78;line-height:1.35;margin-top:2px;">${e(i.desc||"(no description)")} (${f(i.total)})</div>`).join("");};
+  const th='style="text-align:left;font-weight:500;font-size:9.5px;color:#5A5E78;padding:7px 6px;border-bottom:1px solid #E3E6EE;background:#F6F9FA;"';
+  const td='style="padding:7px 6px;border-bottom:1px solid #EEF0F5;vertical-align:top;font-size:10.5px;color:#0C0A22;"';
+  const rows=v.rows.map(r=>{const t=r.t, rg=tsRange(t);
+    return `<tr style="page-break-inside:avoid;">
+      <td ${td}><b>${e(t.sdrName)}</b><div style="font-size:9px;color:${tsTeam(t)==="Field"?"#B54708":"#3122D3"};margin-top:2px;">${tsTeam(t)}</div></td>
+      <td ${td}>${rg?fmtRange(rg[0],rg[1]):e(tsLabel(t))}<div style="font-size:9px;color:#5A5E78;">${e(t.totalDays)} days</div></td>
+      <td ${td}>${f(r.base)}${r.baseAdj?`<div style="font-size:9px;color:#92400e;">adjusted ${r.baseAdj>0?"+":"−"}${f(Math.abs(r.baseAdj))}</div>`:""}</td>
+      <td ${td}>${items(r.g["Incentive"],false,r.qty)}</td>
+      <td ${td}>${items(r.g["Allowance"])}</td>
+      <td ${td}>${items(r.g["Additional Pay"])}</td>
+      <td ${td}>${items(r.g["Deduction"],true)}</td>
+      <td ${td}><b>${f(r.grand)}</b></td>
+      <td ${td}>${t.payDate?formatDate(t.payDate):'<span style="color:#B42318;">Not set</span>'}</td>
+      <td ${td}><div style="font-size:9.5px;color:#5A5E78;line-height:1.4;">${e(t.adminNote||"—")}</div></td>
+    </tr>`;}).join("");
+  const card=(l,val,c,sub)=>`<div style="flex:1;border:1px solid #E3E6EE;border-radius:10px;padding:10px 12px;background:#fff;"><div style="font-size:9.5px;color:#5A5E78;">${l}</div><div style="font-size:16px;font-weight:600;color:${c};margin-top:3px;">${val}</div>${sub?`<div style="font-size:9px;color:#5A5E78;">${sub}</div>`:""}</div>`;
+  const T=v.T;
+  return `<div style="width:1060px;padding:6px 4px;font-family:Inter,'Helvetica Neue',Arial,sans-serif;color:#0C0A22;background:#fff;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #E3E6EE;padding-bottom:12px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;border:1.5px solid #0C0A22;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;"><b style="font-size:13px;">J2</b><i style="font-size:5px;font-style:normal;letter-spacing:1px;">GROUP</i></div>
+        <div><div style="font-size:9px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:#5A5E78;">J2 Hub · Payroll</div><div style="font-size:24px;font-weight:300;letter-spacing:-.02em;">Approved pay</div></div>
+      </div>
+      <div style="text-align:right;font-size:10px;color:#5A5E78;line-height:1.6;">Pay date: <b style="color:#0C0A22;">${pdTxt}</b><br>${teamTxt} · ${v.rows.length} timesheet${v.rows.length===1?"":"s"}<br>Generated ${now}</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      ${card("Timesheets",v.rows.length,"#0C0A22")}${card("Base Pay",f(T.base),"#0C0A22")}${card("Incentives",f(T.inc),"#3122D3",T.qty+" qty")}
+      ${card("Allowances + Additional",f(T.alw+T.add),"#3122D3")}${card("Deductions",(T.ded?"−":"")+f(T.ded),"#B42318")}${card("Total Pay",f(T.pay),"#11734A")}
+    </div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #E3E6EE;">
+      <thead><tr><th ${th}>Employee</th><th ${th}>Dates</th><th ${th}>Base Pay</th><th ${th}>Incentive</th><th ${th}>Allowance</th><th ${th}>Additional Pay</th><th ${th}>Deduction</th><th ${th}>Total Pay</th><th ${th}>Pay Date</th><th ${th}>Admin Note</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tr style="page-break-inside:avoid;background:#F6F9FA;font-weight:700;"><td ${td} colspan="2"><b>Total</b></td><td ${td}><b>${f(T.base)}</b></td><td ${td}><b>${f(T.inc)}</b></td><td ${td}><b>${f(T.alw)}</b></td><td ${td}><b>${f(T.add)}</b></td><td ${td}><b style="color:#B42318;">${T.ded?"−":""}${f(T.ded)}</b></td><td ${td}><b style="color:#11734A;">${f(T.pay)}</b></td><td ${td} colspan="2"></td></tr>
+    </table>
+  </div>`;
+}
+async function downloadPayrollPdf(){
+  if(!payrollView||!payrollView.rows.length) return;
+  const btn=document.getElementById("btn-payroll-pdf"), label=btn.textContent;
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Building PDF…';
+  const name="J2-Payroll-"+(payrollView.pd&&payrollView.pd!=="none"?payrollView.pd:"all")+(payrollView.tf?"-"+payrollView.tf:"")+".pdf";
+  try{
+    const keepY=window.scrollY; window.scrollTo(0,0);          // html2canvas measures from the top of the window
+    await loadScriptOnce("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js");
+    await window.html2pdf().set({
+      margin:[8,8,10,8], filename:name, image:{type:"jpeg",quality:0.96},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:"#ffffff",scrollX:0,scrollY:0},
+      jsPDF:{unit:"mm",format:"a4",orientation:"landscape"},
+      pagebreak:{mode:["css","legacy"],avoid:"tr"}
+    }).from(payrollPdfHtml(),"string").save();
+    window.scrollTo(0,keepY);
+  }catch(err){
+    // Fallback: open the same layout in a new tab and let the browser save it as PDF
+    const w=window.open("","_blank");
+    if(w){ w.document.write(`<title>${name}</title><style>@page{size:A4 landscape;margin:8mm}body{margin:0}</style>`+payrollPdfHtml()); w.document.close(); setTimeout(()=>w.print(),400); }
+    else alert("The PDF couldn't be created: "+err.message);
+  }finally{ btn.disabled=false; btn.textContent=label; }
+}
+
 function renderTimesheets() {
   document.getElementById("timesheets-loading").style.display="none";
   const empty=document.getElementById("timesheets-empty"), content=document.getElementById("timesheets-content");
@@ -1580,32 +1663,35 @@ function renderTimesheets() {
     html+=`<div class="card" style="text-align:center;color:var(--muted);font-size:13px;">No approved timesheets${pd?" for this pay date":""}.</div>`;
   } else {
     const T={base:0,qty:0,inc:0,alw:0,add:0,ded:0,pay:0};
-    const rowsHtml=approved.map(t=>{
-      const grand=parseFloat(t.grandTotal||t.totalPay||0);
+    const sum=l=>l.reduce((s,i)=>s+i.total,0);
+    const rowsData=approved.map(t=>{
       const {g,baseAdj}=parsePayItems(t);
-      const base=(parseFloat(t.totalPay)||0)+baseAdj;
-      const qty=g["Incentive"].reduce((s,i)=>s+i.units,0);
-      const sum=l=>l.reduce((s,i)=>s+i.total,0);
-      T.base+=base;T.qty+=qty;T.inc+=sum(g["Incentive"]);T.alw+=sum(g["Allowance"]);T.add+=sum(g["Additional Pay"]);T.ded+=sum(g["Deduction"]);T.pay+=grand;
-      const cell=(list,neg)=>{const v=sum(list);if(!v)return"—";
-        return `<span style="font-weight:600;color:${neg?"var(--red)":"#3122D3"};">${neg?"−":""}$${v.toFixed(2)}</span><div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;white-space:normal;">${list.map(i=>`${i.desc} ($${i.total.toFixed(2)})`).join("<br>")}</div>`;};
+      const r={t, g, baseAdj, base:(parseFloat(t.totalPay)||0)+baseAdj, qty:g["Incentive"].reduce((s,i)=>s+i.units,0),
+        inc:sum(g["Incentive"]), alw:sum(g["Allowance"]), add:sum(g["Additional Pay"]), ded:sum(g["Deduction"]), grand:parseFloat(t.grandTotal||t.totalPay||0)};
+      T.base+=r.base;T.qty+=r.qty;T.inc+=r.inc;T.alw+=r.alw;T.add+=r.add;T.ded+=r.ded;T.pay+=r.grand;
+      return r;
+    });
+    payrollView={rows:rowsData,T,pd,tf};
+    // A money cell: the total, plus the line items folded away behind "N items"
+    const cell=(list,neg,extra)=>{const v=sum(list); if(!v) return '<span class="pr-dash">—</span>';
+      const items=list.map(i=>`<li><span>${escA(i.desc||"(no description)")}</span><b>${neg?"−":""}$${i.total.toFixed(2)}</b></li>`).join("");
+      return `<div class="pr-amt ${neg?"neg":"pos"}">${neg?"−":""}$${v.toFixed(2)}</div>${extra||""}<details class="pr-items"><summary>${list.length} item${list.length===1?"":"s"}</summary><ul>${items}</ul></details>`;};
+    const rowsHtml=rowsData.map(r=>{const t=r.t;
+      const rg=tsRange(t);
+      const dates=rg?`${formatDate(rg[0]).replace(/ \d{4}$/,rg[0].slice(0,4)===rg[1].slice(0,4)?"":"$&")} – ${formatDate(rg[1])}`:tsLabel(t);
+      const note=t.adminNote?`<div class="pr-note" title="${escA(t.adminNote)}">${escA(t.adminNote)}</div>`:'<span class="pr-dash">—</span>';
       return `<tr>
         <td><strong>${escA(t.sdrName)}</strong><div style="margin-top:3px;">${teamBadge(tsTeam(t))}</div></td>
-        <td style="font-size:12px;white-space:nowrap;">${tsLabel(t)}</td>
-        <td>${t.totalDays}</td>
-        <td>$${base.toFixed(2)}${baseAdj?`<div style="font-size:10px;color:#92400e;">adjusted ${baseAdj>0?"+":"−"}$${Math.abs(baseAdj).toFixed(2)}</div>`:""}</td>
-        <td style="text-align:center;">${qty||"—"}</td>
-        <td>${cell(g["Incentive"])}</td>
-        <td>${cell(g["Allowance"])}</td>
-        <td>${cell(g["Additional Pay"])}</td>
-        <td>${cell(g["Deduction"],true)}</td>
-        <td><strong>$${grand.toFixed(2)}</strong></td>
-        <td style="white-space:nowrap;"><div style="display:flex;gap:6px;align-items:center;"><input type="date" id="rpd-${t.id}" value="${t.payDate||""}" oninput="document.getElementById('rpd-btn-${t.id}').style.display='inline-block'" style="padding:4px 6px;border:1.5px solid ${t.payDate?"var(--border)":"#fca5a5"};border-radius:6px;font-size:12px;" /><button id="rpd-btn-${t.id}" class="btn btn-primary btn-sm" style="padding:4px 10px;font-size:11px;display:none;" onclick="savePayDate('${t.id}',document.getElementById('rpd-${t.id}'),this)">Save</button></div>${t.payDate?"":'<div style="font-size:10px;color:var(--red);margin-top:2px;">Not set</div>'}</td>
-        <td style="font-size:12px;color:var(--muted);">${t.adminNote||"—"}</td>
-        <td style="white-space:nowrap;">
-          <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:6px;cursor:pointer;" onclick="reopenTimesheet('${t.id}','${jsq(t.sdrName)}')">↩ Back to Submitted</button>
-          <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;margin-left:4px;" onclick="deleteTimesheet('${t.id}','${jsq(t.sdrName)}')">🗑 Delete</button>
-        </td>
+        <td class="pr-dates">${dates}<div class="pr-sub">${escA(t.totalDays)} days</div></td>
+        <td class="pr-money">$${r.base.toFixed(2)}${r.baseAdj?`<div class="pr-sub" style="color:#92400e;">adjusted ${r.baseAdj>0?"+":"−"}$${Math.abs(r.baseAdj).toFixed(2)}</div>`:""}</td>
+        <td class="pr-money">${cell(r.g["Incentive"],false,r.qty?`<div class="pr-sub">${r.qty} qty</div>`:"")}</td>
+        <td class="pr-money">${cell(r.g["Allowance"])}</td>
+        <td class="pr-money">${cell(r.g["Additional Pay"])}</td>
+        <td class="pr-money">${cell(r.g["Deduction"],true)}</td>
+        <td class="pr-money"><strong>$${r.grand.toFixed(2)}</strong></td>
+        <td class="pr-paydate"><input type="date" id="rpd-${t.id}" value="${t.payDate||""}" oninput="document.getElementById('rpd-btn-${t.id}').style.display='inline-block'" style="border-color:${t.payDate?"var(--border)":"#fca5a5"};" /><button id="rpd-btn-${t.id}" class="btn btn-primary btn-sm" style="display:none;" onclick="savePayDate('${t.id}',document.getElementById('rpd-${t.id}'),this)">Save</button>${t.payDate?"":'<div class="pr-sub" style="color:var(--red);">Not set</div>'}</td>
+        <td>${note}</td>
+        <td class="pr-act"><button class="btn btn-sm pr-ic" title="Move back to Submitted" onclick="reopenTimesheet('${t.id}','${jsq(t.sdrName)}')">↩</button><button class="btn btn-sm pr-ic pr-del" title="Delete timesheet" onclick="deleteTimesheet('${t.id}','${jsq(t.sdrName)}')">🗑</button></td>
       </tr>`;
     }).join("");
     const f=v=>"$"+v.toFixed(2);
@@ -1617,14 +1703,18 @@ function renderTimesheets() {
       <div class="stat-card"><div class="label">Deductions</div><div class="value red" style="font-size:20px;">${T.ded?"−":""}${f(T.ded)}</div></div>
       <div class="stat-card"><div class="label">Total Pay</div><div class="value green" style="font-size:20px;">${f(T.pay)}</div></div>
     </div>
-    <div class="card" style="padding:0;overflow:hidden;"><div class="table-wrap"><table style="min-width:1250px;">
-      <thead><tr><th>Employee</th><th>Dates</th><th>Days</th><th>Base Pay</th><th style="text-align:center;">Incentive (Qty)</th><th>Incentive</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th><th>Pay Date</th><th>Admin Note</th><th></th></tr></thead>
+    <div class="pr-bar">
+      <button class="btn btn-secondary btn-sm" onclick="togglePayItems(this)">Show all line items</button>
+      <button class="btn btn-primary btn-sm" id="btn-payroll-pdf" onclick="downloadPayrollPdf()">⬇ Download PDF</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;"><table class="payroll-fit">
+      <thead><tr><th>Employee</th><th>Dates</th><th>Base Pay</th><th>Incentive</th><th>Allowance</th><th>Additional Pay</th><th>Deduction</th><th>Total Pay</th><th>Pay Date</th><th>Admin Note</th><th></th></tr></thead>
       <tbody>${rowsHtml}</tbody>
-      <tfoot><tr style="background:#F6F9FA;font-weight:700;">
-        <td colspan="3">Total</td><td>${f(T.base)}</td><td style="text-align:center;">${T.qty||"—"}</td><td>${f(T.inc)}</td><td>${f(T.alw)}</td><td>${f(T.add)}</td>
-        <td style="color:var(--red);">${T.ded?"−"+f(T.ded):"$0.00"}</td><td style="color:#15803d;">${f(T.pay)}</td><td colspan="3"></td>
+      <tfoot><tr>
+        <td colspan="2">Total</td><td class="pr-money">${f(T.base)}</td><td class="pr-money">${f(T.inc)}${T.qty?`<div class="pr-sub">${T.qty} qty</div>`:""}</td><td class="pr-money">${f(T.alw)}</td><td class="pr-money">${f(T.add)}</td>
+        <td class="pr-money" style="color:var(--red);">${T.ded?"−"+f(T.ded):"$0.00"}</td><td class="pr-money" style="color:#15803d;">${f(T.pay)}</td><td colspan="3"></td>
       </tr></tfoot>
-    </table></div></div>`;
+    </table></div>`;
   }
 
   // Rejected (kept out of the way, but still reachable)
@@ -2859,6 +2949,28 @@ body td{vertical-align:top}
 .ann-aud{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:6px 14px;font-size:13px;cursor:pointer;background:#fff;color:var(--ink)!important;text-transform:none!important;letter-spacing:0!important;font-weight:500!important}
 .ann-aud:has(input:checked){border-color:var(--volt);background:var(--halo);color:var(--volt)!important}
 .ann-aud input{margin:0;width:auto}
+/* Payroll & Timesheet: approved table fits the page; line items fold away */
+.pr-bar{display:flex;justify-content:flex-end;gap:8px;margin:0 0 10px}
+#timesheets-content table.payroll-fit{width:100%;table-layout:auto;border-collapse:collapse}
+#timesheets-content .payroll-fit th,#timesheets-content .payroll-fit td{padding:10px 7px!important;font-size:12.5px;white-space:normal;vertical-align:top}
+#timesheets-content .payroll-fit td.pr-money,#timesheets-content .payroll-fit td.pr-dates{white-space:nowrap}
+#timesheets-content .payroll-fit tfoot td{background:#F6F9FA;font-weight:700}
+.pr-amt{font-weight:600}.pr-amt.pos{color:#3122D3}.pr-amt.neg{color:var(--red)}
+.pr-sub{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap}
+.pr-dash{color:var(--muted)}
+.pr-items{margin-top:3px;font-size:11px}
+.pr-items summary{cursor:pointer;color:var(--volt);list-style:none;font-weight:500}
+.pr-items summary::-webkit-details-marker{display:none}
+.pr-items summary::before{content:"▸ "}.pr-items[open] summary::before{content:"▾ "}
+.pr-items ul{list-style:none;margin:4px 0 0;padding:6px 8px;background:#F6F9FA;border-radius:6px;min-width:170px;max-width:240px;white-space:normal}
+.pr-items li{display:flex;justify-content:space-between;gap:10px;padding:2px 0;color:var(--text)}
+.pr-items li b{font-weight:600;white-space:nowrap}
+.pr-note{font-size:11.5px;color:var(--muted);line-height:1.4;max-width:200px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:help}
+.pr-paydate input{padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;width:132px}
+.pr-paydate .btn{padding:3px 9px!important;font-size:11px!important;margin-top:4px}
+#timesheets-content .payroll-fit td.pr-act{white-space:nowrap}
+.pr-ic{padding:3px 8px!important;font-size:12px!important;background:#fffbeb!important;color:#92400e!important;border-color:#fde68a!important}
+.pr-ic.pr-del{margin-left:4px;background:#fef2f2!important;color:#dc2626!important;border-color:#fecaca!important}
 </style>
 </body>
 </html>
