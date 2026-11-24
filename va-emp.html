@@ -250,6 +250,38 @@ main{max-width:920px}
 .lines .rm:hover{color:var(--bad)}
 .totals{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:var(--halo);border-radius:10px;flex-wrap:wrap}
 .totals b{font-size:20px;font-weight:600}
+/* Daily check-out */
+.co-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--warnbg);border:1px solid #F3DFA9;color:var(--warn);border-radius:12px;padding:14px 18px;margin-bottom:16px}
+.co-banner b{color:#5C3D00}
+.co-banner .btns{display:flex;gap:8px;flex-wrap:wrap}
+.co-sec{border-top:1px solid var(--line2);padding-top:14px;display:grid;gap:10px}
+.co-sec:first-child{border-top:0;padding-top:0}
+.co-sec h3{font-size:15px;font-weight:600;letter-spacing:0;margin:0}
+.co-sec .hint{margin:0}
+.co-guide{background:var(--mist);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--mortar);line-height:1.6}
+.co-guide b{color:var(--ink);font-weight:600}
+.co-row{display:grid;grid-template-columns:2fr 1fr 2fr auto;gap:8px;align-items:end}
+.co-row.three{grid-template-columns:2fr 2fr 1.2fr auto}
+.co-row .field{font-size:12px}
+.co-row .rm{background:none;border:0;color:var(--mortar);cursor:pointer;font-size:20px;padding:6px 8px;line-height:1}
+.co-row .rm:hover{color:var(--bad)}
+.co-add{justify-self:start}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;inset:0}
+.seg span{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:500;background:#fff}
+.seg input:checked+span{background:var(--ink);border-color:var(--ink);color:#fff}
+.seg input:focus-visible+span{outline:2px solid var(--volt);outline-offset:2px}
+.yn{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.co-card{padding:16px 20px;border-bottom:1px solid var(--line2);display:grid;grid-template-columns:1fr auto;gap:4px 16px;cursor:pointer}
+.co-card:hover{background:#FAFBFF}
+.co-card:last-child{border-bottom:0}
+.co-card .t{font-weight:600}
+.co-card .m{font-size:13px;color:var(--mortar)}
+.pill.Completed{background:var(--okbg);color:var(--ok)}
+.pill.PendingTasks{background:var(--warnbg);color:var(--warn)}
+.pill.Attention{background:var(--badbg);color:var(--bad)}
+@media (max-width:720px){.co-row,.co-row.three{grid-template-columns:1fr}.co-row .rm{justify-self:end}}
 @media (max-width:720px){
   .day{grid-template-columns:1fr;gap:6px;padding:12px 14px}
   .next .wk{text-align:left}
@@ -281,6 +313,7 @@ main{max-width:920px}
       <nav class="tabs">
         <button class="tab on" data-tab="schedule">My schedule</button>
         <button class="tab" data-tab="invoices">Invoices</button>
+        <button class="tab hidden" data-tab="checkouts" id="coTab">Check-outs</button>
       </nav>
       <div class="spacer"></div>
       <button class="linkbtn" id="pwBtn">Password</button>
@@ -290,6 +323,7 @@ main{max-width:920px}
 
   <main>
     <section data-page="schedule">
+      <div id="coBanner"></div>
       <div id="nextCard"></div>
       <div class="page-head">
         <div><h1 id="hello">My schedule</h1><p id="weekSummary"></p></div>
@@ -311,6 +345,14 @@ main{max-width:920px}
         <div class="toolbar"><button class="btn btn-primary" id="newInvBtn">New invoice</button></div>
       </div>
       <div class="panel" id="invList"></div>
+    </section>
+
+    <section data-page="checkouts" class="hidden">
+      <div class="page-head">
+        <div><h1>Daily check-outs</h1><p>Your end-of-day operations report. Fill one in each day you work.</p></div>
+        <div class="toolbar"><button class="btn btn-primary" id="newCoBtn">Today's check-out</button></div>
+      </div>
+      <div class="panel" id="coList"></div>
     </section>
   </main>
 </div>
@@ -336,6 +378,24 @@ main{max-width:920px}
       <label class="field">Note to admin<textarea name="note" maxlength="1000" placeholder="Optional, e.g. covered extra hours for the client launch"></textarea></label>
     </div>
     <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="invSave">Submit invoice</button></div>
+  </form>
+</dialog>
+
+<!-- END OF DAY PROMPT -->
+<dialog id="dlgEnd">
+  <div class="dlg">
+    <div class="dlg-head"><div><h2>Finishing for the day?</h2><p id="endSub"></p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body"><p style="margin:0">If you're done for the day, fill in your daily check-out now. If you're only taking a break, you can do it when you finish.</p></div>
+    <div class="dlg-foot"><button type="button" class="btn" data-close>Just a break</button><button type="button" class="btn btn-primary" id="endCoBtn">Fill in check-out</button></div>
+  </div>
+</dialog>
+
+<!-- DAILY CHECK-OUT FORM -->
+<dialog id="dlgCo" class="wide">
+  <form id="coForm" novalidate>
+    <div class="dlg-head"><div><h2>J2 Group daily operations check-out</h2><p id="coSub"></p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body" id="coBody"></div>
+    <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="coSave">Submit check-out</button></div>
   </form>
 </dialog>
 
@@ -400,7 +460,7 @@ let busyCount = 0;
 function busy(on) { busyCount += on ? 1 : -1; $('#bar').classList.toggle('on', busyCount > 0); }
 
 /* ===== State ===== */
-const S = { token: store.get(TOKEN_KEY), user: null, shifts: [], invoices: [], settings: { currency: 'AUD' }, weekStart: mondayOf(todayYmd()), editing: null, lines: [], logs: [] };
+const S = { token: store.get(TOKEN_KEY), user: null, shifts: [], invoices: [], settings: { currency: 'AUD' }, weekStart: mondayOf(todayYmd()), editing: null, lines: [], logs: [], checkouts: [], coDate: '' };
 
 /* ===== API ===== */
 async function api(action, body = {}, tries = 3) {
@@ -438,6 +498,7 @@ function apply(d) {
   if (d.shifts) S.shifts = d.shifts.slice().sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   if (d.invoices) S.invoices = d.invoices;
   if (d.logs) S.logs = d.logs;
+  if (d.checkouts) S.checkouts = d.checkouts;
   if (d.settings) S.settings = d.settings;
 }
 async function withBtn(btn, fn, label = 'Saving…') {
@@ -474,7 +535,10 @@ $$('.tab').forEach(t => t.onclick = () => {
 });
 $$('dialog [data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
 
-function renderAll() { renderSchedule(); renderInvoices(); }
+function renderAll() {
+  $('#coTab').classList.toggle('hidden', !isMonthlyVA());
+  renderSchedule(); renderInvoices(); renderCheckouts();
+}
 
 /* ===== Schedule ===== */
 /* ===== Time logs ===== */
@@ -488,6 +552,7 @@ function loggedMins(date, includeRunning) {
 function hms(ms) { const s = Math.max(0, Math.floor(ms / 1000)); return Math.floor(s / 3600) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60); }
 
 function renderSchedule() {
+  renderCoBanner();
   const today = todayYmd();
   $('#hello').textContent = S.user ? 'Hi ' + S.user.name.split(' ')[0] : 'My schedule';
   $('#weekLabel').textContent = weekLabel(S.weekStart);
@@ -544,12 +609,155 @@ function workedLine(d) {
 
 $('#nextCard').addEventListener('click', e => {
   const st = e.target.closest('#startBtn'), sp = e.target.closest('#stopBtn');
-  if (st) withBtn(st, async () => { apply(await api('vaClockStart', { date: todayYmd() })); renderSchedule(); toast('Timer started'); }, 'Starting…');
+  if (st) {
+    const owed = missingCheckouts().filter(d => d < todayYmd());
+    if (owed.length) { toast('Submit your check-out for ' + fmtDate(owed[0], { weekday: 'short', day: 'numeric', month: 'short' }) + ' before starting.', 'bad'); return openCheckout(owed[0]); }
+    withBtn(st, async () => { apply(await api('vaClockStart', { date: todayYmd() })); renderSchedule(); toast('Timer started'); }, 'Starting…');
+  }
   if (sp) {
     const l = openLog();
-    withBtn(sp, async () => { apply(await api('vaClockStop')); renderSchedule(); if (l) toast('Stopped. You worked ' + fmtMins(runMins(l))); }, 'Stopping…');
+    withBtn(sp, async () => {
+      apply(await api('vaClockStop')); renderAll();
+      if (l) toast('Stopped. You worked ' + fmtMins(runMins(l)));
+      if (l && isMonthlyVA()) {
+        S.coDate = l.date;
+        $('#endSub').textContent = fmtDate(l.date, { weekday: 'long', day: 'numeric', month: 'long' });
+        $('#dlgEnd').showModal();
+      }
+    }, 'Stopping…');
   }
 });
+$('#endCoBtn').onclick = () => { $('#dlgEnd').close(); openCheckout(S.coDate); };
+
+/* ===== Daily check-out (fixed monthly VAs) ===== */
+const DEPTS = ['VA - Operations', 'VA - Recruitment', 'VA - HR'];
+const EODS = ['Completed', 'With Pending Tasks', 'Requires Attention'];
+const eodClass = v => v === 'Completed' ? 'Completed' : v === 'Requires Attention' ? 'Attention' : 'PendingTasks';
+function isMonthlyVA() { return !!(S.user && S.user.payType === 'Monthly'); }
+// Days with finished timer sessions but no check-out (from the day check-outs were switched on)
+function missingCheckouts() {
+  if (!isMonthlyVA()) return [];
+  const since = S.settings.checkoutSince || '9999-99-99';
+  const done = new Set(S.checkouts.map(c => c.date));
+  const running = new Set(S.logs.filter(l => !l.endAt).map(l => l.date));
+  return [...new Set(S.logs.filter(l => l.endAt && l.date >= since).map(l => l.date))]
+    .filter(d => !done.has(d) && !running.has(d)).sort();
+}
+function renderCoBanner() {
+  const miss = missingCheckouts(), el = $('#coBanner');
+  if (!miss.length) { el.innerHTML = ''; return; }
+  const today = todayYmd(), owed = miss.filter(d => d < today);
+  el.innerHTML = `<div class="co-banner"><div><b>${owed.length ? 'Daily check-out needed before you start' : 'Remember your daily check-out'}</b><br>
+    ${owed.length ? 'You have days without a check-out. Submit them to unlock Start.' : 'Fill it in when you finish for the day.'}</div>
+    <div class="btns">${miss.slice(0, 4).map(d => `<button class="btn" data-co="${d}">${d === today ? 'Today' : fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })}</button>`).join('')}</div></div>`;
+}
+$('#coBanner').addEventListener('click', e => { const b = e.target.closest('[data-co]'); if (b) openCheckout(b.dataset.co); });
+
+function coRow(kind, r = {}) {
+  const f = (k, label, ph, type = 'text') => `<label class="field">${label}<input ${type === 'date' ? 'type="date"' : ''} data-k="${k}" value="${esc(r[k] || '')}" placeholder="${ph}" maxlength="500"></label>`;
+  const cells = {
+    output: f('activity', 'Activity / deliverable', 'e.g. SQLs reviewed for Dashback') + f('quantity', 'Quantity completed', 'e.g. 24') + f('remarks', 'Remarks', 'Optional'),
+    pending: f('task', 'Task / deliverable', 'What is pending') + f('reason', 'Reason for pending', 'Why it is not done') + f('expected', 'Expected completion', '', 'date'),
+    issues: f('issue', 'Issue / blocker', 'What is blocking you') + f('action', 'Action taken', 'What you did about it') + f('assistance', 'Assistance required', 'What help you need')
+  }[kind];
+  return `<div class="co-row ${kind === 'output' ? '' : 'three'}" data-row="${kind}">${cells}<button type="button" class="rm" data-rm aria-label="Remove row">×</button></div>`;
+}
+function openCheckout(date) {
+  date = date || todayYmd();
+  const c = S.checkouts.find(x => x.date === date) || {};
+  S.coDate = date;
+  const dept = c.department || store.get('j2va_dept') || '';
+  const radios = (name, opts, val) => `<div class="seg">${opts.map(o => `<label><input type="radio" name="${name}" value="${esc(o)}" ${o === val ? 'checked' : ''}><span>${esc(o)}</span></label>`).join('')}</div>`;
+  const ta = (k, label) => `<label class="field">${label}<textarea name="${k}" maxlength="2000" rows="2">${esc(c[k] || '')}</textarea></label>`;
+  $('#coSub').textContent = c.id ? 'Editing your check-out. Submitting again replaces it.' : 'Fill this in at the end of each work day.';
+  $('#coBody').innerHTML = `
+    <div class="co-sec">
+      <div class="row2">
+        <label class="field">Date<input value="${esc(fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}" disabled></label>
+        <label class="field">Name<input value="${esc(S.user.name)}" disabled></label>
+      </div>
+      <div class="field">Department / function${radios('department', DEPTS, dept)}</div>
+    </div>
+    <div class="co-sec">
+      <h3>1. Daily output / progress</h3>
+      <div class="co-guide">Report the following based on your role:<br><b>QA:</b> number of SQLs reviewed per client.<br><b>Lead Gen Admin:</b> number of leads generated per client.<br><b>Admin Support:</b> key activities and deliverables completed, including quantities where applicable.</div>
+      <div id="coOutput">${(c.output && c.output.length ? c.output : [{}]).map(r => coRow('output', r)).join('')}</div>
+      <button type="button" class="btn co-add" data-add="output">+ Add another activity</button>
+    </div>
+    <div class="co-sec">
+      <h3>2. Task summary</h3>
+      <div class="row2">${ta('tasksAssigned', 'Tasks assigned / received')}${ta('tasksCompleted', 'Tasks completed')}</div>
+      <div class="row2">${ta('tasksInProgress', 'Tasks pending / in progress')}${ta('tasksCarriedOver', 'Tasks carried over')}</div>
+    </div>
+    <div class="co-sec">
+      <h3>3. Pending tasks</h3>
+      <div id="coPending">${(c.pending || []).map(r => coRow('pending', r)).join('')}</div>
+      <button type="button" class="btn co-add" data-add="pending">+ Add pending task</button>
+    </div>
+    <div class="co-sec">
+      <h3>4. Issues and blockers</h3>
+      <div id="coIssues">${(c.issues || []).map(r => coRow('issues', r)).join('')}</div>
+      <button type="button" class="btn co-add" data-add="issues">+ Add issue or blocker</button>
+    </div>
+    <div class="co-sec">
+      <h3>5. Management attention</h3>
+      <div class="yn"><span>Requires follow-up</span>${radios('followUp', ['Yes', 'No'], c.followUp || '')}</div>
+      <div class="yn"><span>Requires management assistance</span>${radios('mgmtAssist', ['Yes', 'No'], c.mgmtAssist || '')}</div>
+      ${ta('notes', 'Additional notes')}
+    </div>
+    <div class="co-sec">
+      <h3>End of day status</h3>
+      ${radios('eodStatus', EODS, c.eodStatus || '')}
+    </div>`;
+  $('#dlgCo').showModal();
+}
+$('#coBody').addEventListener('click', e => {
+  const add = e.target.closest('[data-add]');
+  if (add) {
+    const box = { output: '#coOutput', pending: '#coPending', issues: '#coIssues' }[add.dataset.add];
+    $(box).insertAdjacentHTML('beforeend', coRow(add.dataset.add)); $(box).lastElementChild.querySelector('input').focus();
+  }
+  const rm = e.target.closest('[data-rm]'); if (rm) rm.closest('.co-row').remove();
+});
+const coRowsOf = kind => $$(`#coBody [data-row="${kind}"]`).map(r => Object.fromEntries($$('input', r).map(i => [i.dataset.k, i.value.trim()])))
+  .filter(o => Object.values(o).some(Boolean));
+$('#coForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = $('#coForm'), radio = n => (f.querySelector(`input[name="${n}"]:checked`) || {}).value || '';
+  const val = n => (f.querySelector(`[name="${n}"]`) || {}).value || '';
+  const co = {
+    date: S.coDate, department: radio('department'), output: coRowsOf('output'),
+    tasksAssigned: val('tasksAssigned'), tasksCompleted: val('tasksCompleted'), tasksInProgress: val('tasksInProgress'), tasksCarriedOver: val('tasksCarriedOver'),
+    pending: coRowsOf('pending'), issues: coRowsOf('issues'),
+    followUp: radio('followUp'), mgmtAssist: radio('mgmtAssist'), notes: val('notes'), eodStatus: radio('eodStatus')
+  };
+  if (!co.department) return toast('Choose your department / function.', 'bad');
+  if (!co.output.some(o => o.activity)) return toast('Add at least one activity or deliverable under Daily output.', 'bad');
+  if (!co.followUp || !co.mgmtAssist) return toast('Answer both Yes / No questions under Management attention.', 'bad');
+  if (!co.eodStatus) return toast('Choose your end of day status.', 'bad');
+  withBtn($('#coSave'), async () => {
+    apply(await api('vaSubmitCheckout', { checkout: co }));
+    store.set('j2va_dept', co.department);
+    $('#dlgCo').close(); renderAll(); toast('Check-out submitted');
+  }, 'Submitting…');
+});
+$('#newCoBtn').onclick = () => openCheckout(todayYmd());
+
+function renderCheckouts() {
+  if (!isMonthlyVA()) return;
+  renderCoBanner();
+  const list = S.checkouts.slice().sort((a, b) => b.date.localeCompare(a.date));
+  if (!list.length) { $('#coList').innerHTML = `<div class="empty"><h3>No check-outs yet</h3><p>Fill one in at the end of each work day.</p></div>`; return; }
+  $('#coList').innerHTML = list.map(c => {
+    const first = c.output[0] || {};
+    const flags = [c.followUp === 'Yes' ? 'Follow-up' : '', c.mgmtAssist === 'Yes' ? 'Needs management help' : ''].filter(Boolean).join(', ');
+    return `<div class="co-card" data-open="${esc(c.date)}">
+      <div><div class="t">${fmtDate(c.date, { weekday: 'long', day: 'numeric', month: 'short' })}</div>
+      <div class="m">${esc(c.department)}. ${esc(first.activity || '')}${first.quantity ? ': ' + esc(first.quantity) : ''}${c.output.length > 1 ? ` and ${c.output.length - 1} more` : ''}${flags ? `. ${flags}` : ''}</div></div>
+      <div><span class="pill ${eodClass(c.eodStatus)}">${esc(c.eodStatus)}</span></div></div>`;
+  }).join('');
+}
+$('#coList').addEventListener('click', e => { const c = e.target.closest('[data-open]'); if (c) openCheckout(c.dataset.open); });
 setInterval(() => {
   const l = openLog(), t = $('#timer');
   if (l && t) t.textContent = hms(Date.now() - Date.parse(l.startAt));

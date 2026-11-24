@@ -122,6 +122,19 @@ td:not(:has(.chip)) .slot{height:56px}
 @keyframes pulse{50%{opacity:.35}}
 .now-tag{display:block;font-size:11.5px;margin-top:2px}
 .grid .wk{display:block;font-size:11.5px;font-weight:500;color:var(--mortar)}
+.pill.Completed{background:var(--okbg);color:var(--ok)}
+.pill.PendingTasks{background:var(--warnbg);color:var(--warn)}
+.pill.Attention{background:var(--badbg);color:var(--bad)}
+.pill.Missing{background:#EEF0F4;color:var(--mortar)}
+.flag{display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;margin:1px 4px 1px 0;background:var(--badbg);color:var(--bad)}
+.flag.fu{background:var(--warnbg);color:var(--warn)}
+.co-range{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.co-range input,.co-range select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:#fff}
+.co-view h3{font-size:15px;font-weight:600;letter-spacing:0;margin:6px 0 2px}
+.co-view .tbl td,.co-view .tbl th{padding:8px 10px}
+.co-view .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.co-view .box{background:var(--mist);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap}
+.co-view .box span{display:block;font-size:12px;color:var(--mortar);margin-bottom:2px;white-space:normal}
 .legend{display:flex;gap:16px;align-items:center;color:var(--mortar);font-size:12px;margin-top:12px;flex-wrap:wrap}
 
 /* Tables */
@@ -236,6 +249,7 @@ legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-botto
         <button class="tab on" data-tab="schedule">Schedule</button>
         <button class="tab" data-tab="invoices">Invoices <span class="count hidden" id="pendingCount"></span></button>
         <button class="tab" data-tab="vas">VAs</button>
+        <button class="tab" data-tab="checkouts">Check-outs <span class="count hidden" id="coCount"></span></button>
         <button class="tab" data-tab="settings">Settings</button>
       </nav>
       <div class="spacer"></div>
@@ -294,6 +308,23 @@ legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-botto
         <div class="toolbar"><button class="btn btn-primary" id="addUserBtn">Add VA</button></div>
       </div>
       <div class="panel scroll" id="usersWrap"></div>
+    </section>
+
+    <!-- CHECK-OUTS -->
+    <section data-page="checkouts" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Daily check-outs</h1>
+          <p>End-of-day operations reports from fixed monthly VAs. "Missing" means they logged time that day but haven't filed a report.</p>
+        </div>
+        <div class="toolbar co-range">
+          <input type="date" id="coFrom" aria-label="From"><span class="muted">to</span><input type="date" id="coTo" aria-label="To">
+          <select id="coVa" aria-label="VA"><option value="">All VAs</option></select>
+          <button class="btn" id="coLoad">Show</button>
+        </div>
+      </div>
+      <div class="filters" id="coFilters" style="margin-bottom:12px"></div>
+      <div class="panel scroll" id="coWrap"></div>
     </section>
 
     <!-- SETTINGS -->
@@ -403,6 +434,15 @@ legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-botto
     </div>
     <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="userSave">Save VA</button></div>
   </form>
+</dialog>
+
+<!-- CHECK-OUT VIEW -->
+<dialog id="dlgCoView" class="wide">
+  <div class="dlg">
+    <div class="dlg-head"><div><h2 id="coViewTitle"></h2><p id="coViewSub"></p></div><button type="button" class="x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-body co-view" id="coViewBody"></div>
+    <div class="dlg-foot"><button type="button" class="btn" data-close>Close</button></div>
+  </div>
 </dialog>
 
 <!-- INVOICE REVIEW -->
@@ -555,6 +595,7 @@ $$('.tab').forEach(t => t.onclick = () => {
 $$('dialog [data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
 
 function renderAll() {
+  if (!CO.loaded && S.token) setTimeout(loadCheckouts, 300);
   renderClientFilter(); renderSchedule(); renderInvoices(); renderUsers(); renderSettings();
 }
 
@@ -868,6 +909,80 @@ $('#exportBtn').onclick = () => {
   a.download = `va-invoices-${S.invFilter.toLowerCase()}-${todayYmd()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
 };
+
+/* ===== Daily check-outs ===== */
+const CO = { checkouts: [], logs: [], filter: 'All', loaded: false };
+const eodClass = v => v === 'Completed' ? 'Completed' : v === 'Requires Attention' ? 'Attention' : 'PendingTasks';
+const needsAttention = c => c.eodStatus === 'Requires Attention' || c.mgmtAssist === 'Yes' || c.followUp === 'Yes';
+function coDefaults() {
+  if (!$('#coFrom').value) { $('#coFrom').value = mondayOf(todayYmd()); $('#coTo').value = todayYmd(); }
+}
+async function loadCheckouts() {
+  coDefaults();
+  const from = $('#coFrom').value, to = $('#coTo').value;
+  if (!from || !to || to < from) return toast('Choose a valid date range.', 'bad');
+  try {
+    const d = await api('adminCheckouts', { from, to });
+    CO.checkouts = d.checkouts || []; CO.logs = d.logs || []; CO.loaded = true; renderCheckouts();
+  } catch (e) { toast(e.message, 'bad'); }
+}
+function coRows() {
+  const since = S.settings.checkoutSince || '9999-99-99';
+  const rows = CO.checkouts.map(c => Object.assign({ kind: 'report' }, c));
+  const have = new Set(CO.checkouts.map(c => c.userId + '|' + c.date));
+  const running = new Set(CO.logs.filter(l => !l.endAt).map(l => l.userId + '|' + l.date));
+  const seen = new Set();
+  CO.logs.forEach(l => {
+    const u = userById(l.userId), k = l.userId + '|' + l.date;
+    if (!u || u.payType !== 'Monthly' || !l.endAt || l.date < since || have.has(k) || running.has(k) || seen.has(k)) return;
+    seen.add(k); rows.push({ kind: 'missing', userId: l.userId, name: u.name, date: l.date });
+  });
+  return rows.sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
+}
+function renderCheckouts() {
+  const sel = $('#coVa'), cur = sel.value;
+  sel.innerHTML = '<option value="">All VAs</option>' + S.users.filter(u => u.payType === 'Monthly').sort(byName).map(u => `<option value="${esc(u.id)}" ${u.id === cur ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
+  const all = coRows().filter(r => !sel.value || r.userId === sel.value);
+  const att = all.filter(r => r.kind === 'report' && needsAttention(r)).length, miss = all.filter(r => r.kind === 'missing').length;
+  const cc = $('#coCount'); cc.textContent = att || ''; cc.classList.toggle('hidden', !att);
+  $('#coFilters').innerHTML = [['All', all.length], ['Needs attention', att], ['Missing', miss]].map(([f, n]) => `<button class="fchip ${CO.filter === f ? 'on' : ''}" data-cof="${f}">${f}<span>${n}</span></button>`).join('');
+  const list = all.filter(r => CO.filter === 'All' || (CO.filter === 'Missing' ? r.kind === 'missing' : r.kind === 'report' && needsAttention(r)));
+  if (!CO.loaded) { $('#coWrap').innerHTML = '<div class="empty"><p>Loading…</p></div>'; return; }
+  if (!list.length) { $('#coWrap').innerHTML = `<div class="empty"><h3>Nothing here</h3><p>${CO.filter === 'All' ? 'No check-outs in this date range yet.' : 'Nothing matches this filter.'}</p></div>`; return; }
+  $('#coWrap').innerHTML = `<table class="tbl stack"><thead><tr><th>Date</th><th>VA</th><th>Department</th><th>Output</th><th class="num">Pending</th><th class="num">Issues</th><th>Flags</th><th>Status</th></tr></thead><tbody>
+    ${list.map(r => r.kind === 'missing'
+      ? `<tr><td>${fmtDate(r.date, { weekday: 'short', day: 'numeric', month: 'short' })}</td><td class="strong">${esc(r.name)}</td><td class="muted hide-m">—</td><td class="muted small hide-m">Worked this day, no check-out filed</td><td class="num hide-m"></td><td class="num hide-m"></td><td class="hide-m"></td><td><span class="pill Missing">Missing</span></td></tr>`
+      : `<tr class="click" data-co="${esc(r.id)}"><td>${fmtDate(r.date, { weekday: 'short', day: 'numeric', month: 'short' })}</td><td class="strong">${esc(r.name)}</td><td class="hide-m">${esc(r.department)}</td>
+         <td class="small hide-m">${esc((r.output[0] || {}).activity || '')}${(r.output[0] || {}).quantity ? ': <b>' + esc(r.output[0].quantity) + '</b>' : ''}${r.output.length > 1 ? ` <span class="muted">+${r.output.length - 1} more</span>` : ''}</td>
+         <td class="num hide-m">${r.pending.length || ''}</td><td class="num hide-m">${r.issues.length || ''}</td>
+         <td class="hide-m">${r.mgmtAssist === 'Yes' ? '<span class="flag">Mgmt help</span>' : ''}${r.followUp === 'Yes' ? '<span class="flag fu">Follow-up</span>' : ''}</td>
+         <td><span class="pill ${eodClass(r.eodStatus)}">${esc(r.eodStatus)}</span></td></tr>`).join('')}
+  </tbody></table>`;
+}
+$('#coFilters').addEventListener('click', e => { const b = e.target.closest('[data-cof]'); if (b) { CO.filter = b.dataset.cof; renderCheckouts(); } });
+$('#coVa').onchange = renderCheckouts;
+$('#coLoad').onclick = loadCheckouts;
+$('#coWrap').addEventListener('click', e => { const r = e.target.closest('[data-co]'); if (r) openCoView(r.dataset.co); });
+$$('.tab[data-tab="checkouts"]').forEach(t => t.addEventListener('click', () => { if (!CO.loaded) loadCheckouts(); else renderCheckouts(); }));
+
+function openCoView(id) {
+  const c = CO.checkouts.find(x => x.id === id); if (!c) return;
+  $('#coViewTitle').textContent = `${c.name}, ${fmtDate(c.date, { weekday: 'long', day: 'numeric', month: 'long' })}`;
+  $('#coViewSub').innerHTML = `${esc(c.department)} &nbsp;<span class="pill ${eodClass(c.eodStatus)}">${esc(c.eodStatus)}</span> <span class="muted small">Submitted ${fmtStamp(c.submittedAt)}${c.updatedAt && c.updatedAt !== c.submittedAt ? ', updated ' + fmtStamp(c.updatedAt) : ''}</span>`;
+  const table = (rows, cols) => rows.length
+    ? `<div class="scroll"><table class="tbl"><thead><tr>${cols.map(([, h]) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(([k]) => `<td>${k === 'expected' && r[k] ? fmtDate(r[k]) : esc(r[k] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+    : '<p class="muted small" style="margin:0">None reported.</p>';
+  const box = (label, v) => `<div class="box"><span>${label}</span>${esc(v || '—')}</div>`;
+  $('#coViewBody').innerHTML = `
+    <h3>1. Daily output / progress</h3>${table(c.output, [['activity', 'Activity / deliverable'], ['quantity', 'Quantity'], ['remarks', 'Remarks']])}
+    <h3>2. Task summary</h3><div class="grid2">${box('Tasks assigned / received', c.tasksAssigned)}${box('Tasks completed', c.tasksCompleted)}${box('Tasks pending / in progress', c.tasksInProgress)}${box('Tasks carried over', c.tasksCarriedOver)}</div>
+    <h3>3. Pending tasks</h3>${table(c.pending, [['task', 'Task / deliverable'], ['reason', 'Reason for pending'], ['expected', 'Expected completion']])}
+    <h3>4. Issues and blockers</h3>${table(c.issues, [['issue', 'Issue / blocker'], ['action', 'Action taken'], ['assistance', 'Assistance required']])}
+    <h3>5. Management attention</h3>
+    <div class="grid2">${box('Requires follow-up', c.followUp)}${box('Requires management assistance', c.mgmtAssist)}</div>
+    ${box('Additional notes', c.notes)}`;
+  $('#dlgCoView').showModal();
+}
 
 /* ===== VAs ===== */
 function renderUsers() {
