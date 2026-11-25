@@ -432,7 +432,7 @@ legend{font-size:13px;color:var(--mortar);font-weight:500;padding:0;margin-botto
       <label class="field">Admin notes<textarea name="notes" placeholder="Only visible to admins"></textarea></label>
       <p class="hint" id="rateHint">Rate changes apply to invoices submitted from now on. Invoices already submitted keep their original rate.</p>
     </div>
-    <div class="dlg-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="userSave">Save VA</button></div>
+    <div class="dlg-foot"><button type="button" class="btn btn-danger left hidden" id="userDelete">Delete VA</button><button type="button" class="btn" data-close>Cancel</button><button class="btn btn-primary" id="userSave">Save VA</button></div>
   </form>
 </dialog>
 
@@ -1072,6 +1072,7 @@ function openUser(id) {
   togglePayFields(); f.status.value = u ? u.status : 'Active'; f.notes.value = u ? u.notes || '' : '';
   f.password.value = ''; f.password.placeholder = u ? 'Leave blank to keep the current one' : 'At least 6 characters';
   $('#rateHint').classList.toggle('hidden', !u || f.payType.value === 'Monthly');
+  $('#userDelete').classList.toggle('hidden', !u);
   $('#dlgUser').showModal();
 }
 $('#userForm').addEventListener('submit', e => {
@@ -1088,6 +1089,22 @@ $('#userForm').addEventListener('submit', e => {
     toast(S.editingUser ? 'VA saved' : 'VA added. Share the portal link and their password with them.');
   });
 });
+
+$('#userDelete').onclick = () => {
+  const u = S.editingUser; if (!u) return;
+  const pending = S.invoices.filter(i => i.userId === u.id && i.status === 'Pending').length;
+  const msg = `Permanently delete ${u.name}?\n\nThey will no longer be able to sign in, and all their scheduled shifts will be removed. ` +
+    `Their invoices, check-outs and timer history are kept for your records.` +
+    (pending ? `\n\nNote: they have ${pending} invoice${pending === 1 ? '' : 's'} still pending approval.` : '') +
+    `\n\nTip: to keep them on file without access, set Status to Inactive instead.`;
+  if (!confirm(msg)) return;
+  withBtn($('#userDelete'), async () => {
+    const d = await api('adminDeleteUser', { id: u.id });
+    S.users = d.users; S.shifts = S.shifts.filter(x => x.userId !== u.id);
+    $('#dlgUser').close(); renderClientFilter(); renderUsers(); renderSchedule();
+    toast(`${d.deleted} deleted${d.shiftsRemoved ? `, ${d.shiftsRemoved} shift${d.shiftsRemoved === 1 ? '' : 's'} removed` : ''}`);
+  });
+};
 
 /* ===== Settings ===== */
 function renderSettings() { $('#settingsForm').currency.value = S.settings.currency || 'AUD'; $$('.cur').forEach(el => el.textContent = S.settings.currency); }
